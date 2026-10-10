@@ -17,6 +17,20 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F1-T03 cerrada: inventario de DeepShip
+- **Qué se hizo:** `data-engineer` clonó la fuente en `datasets/raw/DeepShip` e hizo el
+  inventario: son 63 WAV (12/20/28/3), no 67; todos son float32 a 32 kHz y mono; hay 44 buques,
+  identificados en los `*-metafile`. David aprobó D-007 (partición por buque), D-008 (numpy y
+  scipy), DT-002 (asignación WAV → buque deducida en parte por duración), la corrección del
+  recuento en D-005 y `core.autocrlf=false` en D-006.
+- **Qué quedó a medias:** nada de F1-T03. El inventario (`outputs/inventory/
+  deepship_inventory.csv`) está fuera de git; F1-T06 versionará la tabla WAV → buque.
+- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `datasets/README.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** D-007, D-008 y DT-002 en [DECISIONS.md](DECISIONS.md); hay 12, 20, 28
+  y 3 WAV en las carpetas de `datasets/raw/DeepShip/`.
+- **Siguiente paso exacto:** F1-T04: escribir en el README los comandos de descarga y probarlos
+  en una carpeta temporal limpia.
+
 ## 2026-10-10 · F1-T01 cerrada: fuente y licencia de DeepShip
 - **Qué se hizo:** se fijó la fuente (subconjunto público de GitHub, commit `77725726a33d`) y
   se documentó que no tiene licencia explícita (uso académico con cita, sin redistribuir). David

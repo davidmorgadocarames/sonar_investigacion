@@ -64,6 +64,9 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   La partición (F1-T06) garantizará al menos una grabación de cada clase en cada partición, y
   F3 dará intervalos por bootstrap. Si más adelante se consigue el dataset completo, se apuntará
   como una decisión nueva.
+- **Corrección (2026-10-11):** el recuento original contaba el `*-metafile` de cada carpeta
+  como si fuera una grabación. Son **63 WAV**: Cargo 12, Passengership 20, Tanker 28 y Tug 3
+  (inventario F1-T03). La decisión no cambia.
 
 ### D-006 · Los datos le llegan al amigo con comandos git en el README
 - **Fecha:** 2026-10-11
@@ -78,9 +81,39 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   garantiza que cada fichero es idéntico byte a byte, sin mantener checksums propios.
 - **Riesgo aceptado:** si la fuente desaparece o se reescribe su historial, la descarga deja de
   funcionar y habrá que buscar otra fuente.
+- **Ajuste (2026-10-11):** el `git clone` lleva `-c core.autocrlf=false`. Sin esa opción, en
+  Windows git cambia los finales de línea del `README.txt` de la fuente (a los WAV no les
+  afecta), y la promesa de ficheros idénticos byte a byte no se cumpliría.
+
+### D-007 · Partición por buque
+- **Fecha:** 2026-10-11
+- **Contexto:** el inventario (F1-T03) muestra que los números de fichero identifican
+  grabaciones, no buques. El nombre del buque está en el `*-metafile` de cada clase. Hay 44
+  buques; algunos tienen varias grabaciones (KIRKEHOLMEN tiene 7 de las 28 de Tanker).
+- **Alternativas:** (a) partir por grabación; (b) partir por buque.
+- **Decisión:** (b). El grupo de partición es el nombre del buque dentro de su clase. La tabla
+  que asigna cada WAV a su buque se versiona en `datasets/manifests/`, indicando si la fila se
+  unió por id o se dedujo por duración. Los casos dudosos se juntan en un solo grupo:
+  Passengership 30 y 37 van con COLUMBIA, y todos los "QUEEN OF" (nombre cortado) forman un
+  único grupo.
+- **Motivo:** partir por grabación pondría el mismo buque en train y en test (regla 5). Juntar
+  grupos dudosos nunca provoca fugas; solo resta flexibilidad al repartir.
+- **Consecuencia:** Tug tiene 3 buques, así que cada partición tendrá exactamente una grabación
+  de Tug.
+
+### D-008 · numpy y scipy para leer los WAV
+- **Fecha:** 2026-10-11
+- **Contexto:** todos los WAV son float32 y el módulo `wave` de la biblioteca estándar no los
+  lee. El control de calidad (F1-T05) necesita leer las muestras.
+- **Alternativas:** (a) `numpy` + `scipy.io.wavfile`; (b) `soundfile` (libsndfile); (c) `numpy`
+  + un lector RIFF propio.
+- **Decisión:** (a), con versiones fijadas en `requirements.txt`. Entran en F1-T05.
+- **Motivo:** numpy y scipy harán falta igualmente en F2 para LOFAR y DEMON, así que no se añade
+  ninguna dependencia que no se fuera a usar.
 
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
 |---|---|---|---|---|---|
 | DT-001 | El UID 1000 del usuario `app` está fijo en la imagen. | Es el UID habitual del primer usuario en Linux, y en Docker Desktop (Windows y macOS) no afecta. | En Linux, con otro UID, el contenedor no puede escribir en los volúmenes montados (`outputs/`). | En F4, si el friend-tester lo detecta. | Abierta |
+| DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06/T07: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Abierta |

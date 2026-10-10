@@ -43,11 +43,11 @@ quedan a alto nivel.
 
 - [x] F1-T01 · Confirmar la licencia y la fuente oficial de DeepShip · David · licencia y URL anotadas en `datasets/README.md`, sin "PENDIENTE DE VERIFICAR"
 - [x] F1-T02 · Proponer cómo le llegan los datos al amigo (depende de F1-T01) · orquestador → aprobación de David · decisión aprobada y apuntada en DECISIONS.md (D-005 y D-006)
-- [ ] F1-T03 · Inventariar DeepShip: estructura de carpetas, metadatos y si identifican el buque · data-engineer · informe con conteos por clase, buque y grabación, y unidad de partición elegida (buque o grabación) con su justificación
-- [ ] F1-T04 · Comandos de descarga en el README (git clone + checkout del commit fijado, D-006) · orquestador · probados en una carpeta temporal limpia: dejan 67 WAV en `datasets/raw/DeepShip` (13/21/29/4 por clase) y `git status` del proyecto no muestra ningún audio
+- [x] F1-T03 · Inventariar DeepShip: estructura de carpetas, metadatos y si identifican el buque · data-engineer · informe con conteos por clase, buque y grabación, y unidad de partición elegida (buque o grabación) con su justificación (resultado: 63 WAV, 44 buques, partición por buque, D-007)
+- [ ] F1-T04 · Comandos de descarga en el README (`git clone -c core.autocrlf=false` + checkout del commit fijado, D-006) · orquestador · probados en una carpeta temporal limpia: dejan 63 WAV en `datasets/raw/DeepShip` (12/20/28/3 por clase), todos los ficheros idénticos byte a byte a los de la fuente, y `git status` del proyecto no muestra ningún audio
 - [ ] F1-T05 · Subcomando `qc`: frecuencia de muestreo, duración, offset DC y saturación · orquestador · los tests con señales sintéticas (offset conocido, recorte conocido) pasan; `qc` escribe un CSV en `outputs/qc/`
-- [ ] F1-T06 · Manifiesto de partición train/val/test en `datasets/manifests/` · data-engineer · determinista (semilla fijada), estratificado por clase y versionado; dos ejecuciones dan el mismo fichero
-- [ ] F1-T07 · Comprobación de fugas en `tools/` · data-engineer · falla si un buque o una grabación aparece en dos particiones; tiene un test con un caso con fuga y otro sin ella
+- [ ] F1-T06 · Manifiesto de partición train/val/test en `datasets/manifests/` · data-engineer · incluye la tabla WAV → buque (D-007) con el origen de cada asignación (id o duración); partición por buque, determinista (semilla fijada), con al menos un buque de cada clase en cada partición; dos ejecuciones dan el mismo fichero
+- [ ] F1-T07 · Comprobación de fugas en `tools/` · data-engineer · falla si un buque o una grabación aparece en dos particiones; tiene un test con un caso con fuga y otro sin ella, y un test que comprueba que la duración de cada WAV coincide con la de su fila del metafile en los 61 casos verificados (paga DT-002)
 - [ ] F1-T08 · Pasada del reviewer sobre F1 · reviewer · ningún hallazgo crítico ni alto abierto
 
 ## F2 · Señal
@@ -62,6 +62,8 @@ quedan a alto nivel.
 - **Objetivo:** una línea base clásica (rasgos + regresión logística o random forest) frente a
   una CNN pequeña en PyTorch.
 - **Entregable:** subcomandos `train` y `evaluate`, y pesos exportados a `models/`.
+- **Nota:** Tug solo tiene 3 buques, así que su métrica en test saldrá de una sola grabación.
+  Al detallar F3, valorar una validación cruzada agrupada por buque además del bootstrap.
 - **Criterio de salida:** F1 macro, matriz de confusión e intervalos por bootstrap sobre test
   para los dos modelos; `evaluate` funciona en CPU con los pesos versionados.
 
