@@ -1,11 +1,18 @@
-# Audio
+# Audio: nunca entra en git sin aprobación expresa (regla 4)
 *.wav
 *.flac
+*.mp3
+*.ogg
+*.aif
+*.aiff
 
-# Datasets y salidas
-datasets/raw/
-datasets/processed/
-outputs/
+# Datos y salidas: se conserva solo el .gitkeep para que la carpeta exista al clonar
+datasets/raw/*
+!datasets/raw/.gitkeep
+datasets/processed/*
+!datasets/processed/.gitkeep
+outputs/*
+!outputs/.gitkeep
 
 # Secretos
 .env
@@ -13,3 +20,5 @@ outputs/
 # Python
 __pycache__/
 .venv/
+.pytest_cache/
+.ruff_cache/

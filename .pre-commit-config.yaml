@@ -3,3 +3,23 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=10240"]
+
+  - repo: local
+    hooks:
+      - id: forbid-audio
+        name: Forbid audio files (rule 4)
+        language: fail
+        entry: "Audio files must not be committed without explicit approval"
+        files: '(?i)\.(wav|flac|mp3|ogg|aiff?)$'
