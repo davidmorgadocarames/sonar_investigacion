@@ -22,9 +22,8 @@ Plantilla:
   con límite de 10 MB, forbid-audio), Docker CPU con usuario no root (UID 1000), override GPU,
   CLI vacía con 5 subcomandos y smoke test, documentos de gobierno y 3 subagentes. Se comprobó
   que un `.wav` y un fichero de 11 MB forzados son rechazados por pre-commit.
-- **Qué quedó a medias:** nada de F0. Hay 3 decisiones y 1 deuda propuestas a David en el chat
-  y pendientes de aprobación, todavía no apuntadas en DECISIONS.md: dependencias por fase,
-  `.gitkeep` en las carpetas montadas, tests en Docker, y el UID 1000 fijo.
+- **Qué quedó a medias:** nada de F0. Las propuestas D-002, D-003, D-004 y DT-001 fueron
+  aprobadas por David y están apuntadas en DECISIONS.md.
 - **Ficheros tocados:** `.gitignore`, `.pre-commit-config.yaml`, `Dockerfile`, `compose.yaml`,
   `compose.gpu.yaml`, `.dockerignore`, `requirements.txt`, `src/sonar_pipeline/*`,
   `tests/test_cli.py`, `CLAUDE.md`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md`, `README.md`,
