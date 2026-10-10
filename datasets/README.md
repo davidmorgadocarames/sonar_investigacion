@@ -17,8 +17,13 @@
 - **Cita:** Irfan, M. et al. (2021). *DeepShip: An underwater acoustic benchmark dataset and a
   separability based deep learning framework for ship classification.* Expert Systems with
   Applications, 183, 115270.
-- **Cómo obtenerlo:** se decide en F1 (tarea F1-T02). La decisión quedará en
-  [DECISIONS.md](../DECISIONS.md).
+- **Alcance:** solo se usa este subconjunto, para entrenar y para evaluar
+  ([D-005](../DECISIONS.md)).
+- **Cómo obtenerlo:** con los comandos git del [README](../README.md), que clonan la fuente en
+  `raw/DeepShip` y la fijan en el commit indicado arriba ([D-006](../DECISIONS.md)). Los comandos
+  se añaden en la tarea F1-T04.
+- **Riesgo conocido:** si los autores borran el repositorio o reescriben su historial, la
+  descarga deja de funcionar.
 
 ## Estructura
 

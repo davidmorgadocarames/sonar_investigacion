@@ -49,6 +49,36 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** se prueba exactamente el entorno con el que se ejecuta la pipeline, sin depender
   del Python del host.
 
+### D-005 · Alcance de los datos: solo el subconjunto público de DeepShip
+- **Fecha:** 2026-10-11
+- **Contexto:** David no tiene el dataset completo de DeepShip, que se pide por correo a los
+  autores. El repositorio público tiene 67 grabaciones: Cargo 13, Passengership 21, Tanker 29 y
+  Tug 4 (ver [datasets/README.md](datasets/README.md)).
+- **Alternativas:** (a) pedir el dataset completo y esperar; (b) trabajar solo con el
+  subconjunto público.
+- **Decisión:** (b). El proyecto usa solo el subconjunto de
+  https://github.com/irfankamboh/DeepShip, fijado en el commit
+  `77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6`, para entrenar y para evaluar.
+- **Motivo:** está disponible ya y es suficiente para un ejercicio de principio a fin.
+- **Consecuencias:** con 4 grabaciones de Tug, las métricas de esa clase serán muy inestables.
+  La partición (F1-T06) garantizará al menos una grabación de cada clase en cada partición, y
+  F3 dará intervalos por bootstrap. Si más adelante se consigue el dataset completo, se apuntará
+  como una decisión nueva.
+
+### D-006 · Los datos le llegan al amigo con comandos git en el README
+- **Fecha:** 2026-10-11
+- **Contexto:** DeepShip no tiene licencia explícita y no se redistribuye (regla 4). El amigo
+  solo tiene git y Docker.
+- **Alternativas:** (a) subir los audios a este repositorio; (b) descarga manual; (c) script en
+  `tools/` con verificación SHA-256; (d) comandos git en el README que clonan la fuente fijada
+  en un commit.
+- **Decisión:** (d). El README incluye los comandos para clonar `irfankamboh/DeepShip` en
+  `datasets/raw/DeepShip` y fijarlo en el commit `77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6`.
+- **Motivo:** solo hace falta git, no se redistribuye nada y el checkout de un commit concreto
+  garantiza que cada fichero es idéntico byte a byte, sin mantener checksums propios.
+- **Riesgo aceptado:** si la fuente desaparece o se reescribe su historial, la descarga deja de
+  funcionar y habrá que buscar otra fuente.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

@@ -21,13 +21,15 @@ Plantilla:
 - **Qué se hizo:** se fijó la fuente (subconjunto público de GitHub, commit `77725726a33d`) y
   se documentó que no tiene licencia explícita (uso académico con cita, sin redistribuir). David
   no tiene el dataset completo: se usa solo el subconjunto.
-- **Qué quedó a medias:** F1-T02 en curso. Hay dos propuestas pendientes de aprobación en el
-  chat (D-005: alcance de datos; D-006: cómo le llegan los datos al amigo).
-- **Ficheros tocados:** `datasets/README.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** leer [datasets/README.md](datasets/README.md); ya no queda ningún
-  "PENDIENTE DE VERIFICAR".
-- **Siguiente paso exacto:** con D-005 y D-006 aprobadas, cerrar F1-T02 y lanzar F1-T03
-  (inventario) con `data-engineer`.
+- **Qué quedó a medias:** nada. Después, el 2026-10-11, David aprobó D-005 (solo el
+  subconjunto) y D-006 (descarga con comandos git en el README). F1-T02 está cerrada y F1-T04
+  se ha reformulado según D-006.
+- **Ficheros tocados:** `datasets/README.md`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md`.
+- **Cómo verificarlo:** leer [datasets/README.md](datasets/README.md) (ya no queda ningún
+  "PENDIENTE DE VERIFICAR") y D-005 y D-006 en [DECISIONS.md](DECISIONS.md).
+- **Siguiente paso exacto:** lanzar F1-T03 (inventario: ¿los números de fichero identifican
+  buques o grabaciones?) con `data-engineer`, sobre un clon de la fuente en
+  `datasets/raw/DeepShip`.
 
 ## 2026-10-10 · F0 Setup cerrada
 - **Qué se hizo:** estructura del repositorio, pre-commit (gitleaks, ruff, check-added-large-files
