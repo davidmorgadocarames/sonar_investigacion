@@ -76,6 +76,16 @@ Una tarea está hecha cuando se cumplen las cuatro cosas:
 7. Escribir la entrada de HANDOFF.md.
 8. Hacer el commit y el push, y comprobar que `git log origin/main -1` coincide con `HEAD`.
 
+## Inicio y cierre de fase
+
+- **Al empezar una fase:** leer CLAUDE.md, HANDOFF.md y PLAN.md. Proponer a David las tareas de
+  la fase, comparándolas con las que haya en PLAN.md, y esperar su aprobación antes de empezar.
+- **Durante la fase:** tarea a tarea: hacerla o delegarla, verificar su criterio de aceptación,
+  commit y push.
+- **Al cerrar la fase:** pasar el `reviewer` y enseñar sus hallazgos a David; proponer las
+  decisiones o deudas surgidas (regla 2); actualizar PLAN.md y HANDOFF.md.
+- **Lo que no esté en ninguna tarea se pregunta a David antes de hacerlo.**
+
 ## Comandos de verificación
 
 ```bash
