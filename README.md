@@ -26,7 +26,7 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    cd sonar_investigacion
    ```
 
-2. Construye la imagen. La primera vez tarda unos minutos:
+2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 205 MB:
 
    ```bash
    docker compose build
@@ -47,7 +47,9 @@ Los audios **no están en este repositorio**. Se descargan del repositorio públ
 autores de DeepShip, fijado en una versión concreta para que todos usemos exactamente los mismos
 ficheros. Licencia, contenido y detalles: [datasets/README.md](datasets/README.md).
 
-Necesitas unos **1,2 GB** libres. Desde la carpeta `sonar_investigacion`, ejecuta estos dos
+Necesitas unos **1,2 GB** libres: unos 700 MB de audio y unos 500 MB del historial de git de
+DeepShip (la carpeta `.git`), que es lo que permite comprobar que los ficheros están íntegros.
+Desde la carpeta `sonar_investigacion`, ejecuta estos dos
 comandos (el primero tarda alrededor de un minuto, según tu conexión):
 
 ```bash
