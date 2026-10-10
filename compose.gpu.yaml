@@ -1,0 +1,17 @@
+# Optional NVIDIA override:
+#   docker compose -f compose.yaml -f compose.gpu.yaml build
+#   docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline <command>
+# Requires the NVIDIA Container Toolkit. Adjust the CUDA index to the host driver.
+services:
+  pipeline:
+    build:
+      args:
+        TORCH_INDEX_URL: https://download.pytorch.org/whl/cu128
+    image: sonar-pipeline:gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

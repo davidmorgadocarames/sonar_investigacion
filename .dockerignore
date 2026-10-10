@@ -1,0 +1,24 @@
+# Data and weights arrive through volumes, never inside the image.
+.git
+.gitignore
+.gitattributes
+.pre-commit-config.yaml
+.claude/
+.venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+.env
+datasets/
+models/
+outputs/
+tools/
+*.md
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.aif
+*.aiff
+compose*.yaml
+Dockerfile

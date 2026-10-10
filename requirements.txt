@@ -1,0 +1,4 @@
+# Versiones fijadas (regla 6). Las dependencias se añaden en la tarea que las necesita.
+# PyTorch se instala desde el índice indicado por TORCH_INDEX_URL en el Dockerfile
+# (CPU por defecto: https://download.pytorch.org/whl/cpu).
+pytest==9.1.1

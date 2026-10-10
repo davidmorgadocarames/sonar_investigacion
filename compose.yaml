@@ -1,0 +1,8 @@
+services:
+  pipeline:
+    build: .
+    image: sonar-pipeline:latest
+    volumes:
+      - ./datasets:/app/datasets
+      - ./models:/app/models
+      - ./outputs:/app/outputs
