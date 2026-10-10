@@ -1,0 +1,15 @@
+# Audio
+*.wav
+*.flac
+
+# Datasets y salidas
+datasets/raw/
+datasets/processed/
+outputs/
+
+# Secretos
+.env
+
+# Python
+__pycache__/
+.venv/
