@@ -26,8 +26,7 @@
 - **Alcance:** solo se usa este subconjunto, para entrenar y para evaluar
   ([D-005](../DECISIONS.md)).
 - **Cómo obtenerlo:** con los comandos git del [README](../README.md), que clonan la fuente en
-  `raw/DeepShip` y la fijan en el commit indicado arriba ([D-006](../DECISIONS.md)). Los comandos
-  se añaden en la tarea F1-T04.
+  `raw/DeepShip` y la fijan en el commit indicado arriba ([D-006](../DECISIONS.md)).
 - **Riesgo conocido:** si los autores borran el repositorio o reescriben su historial, la
   descarga deja de funcionar.
 

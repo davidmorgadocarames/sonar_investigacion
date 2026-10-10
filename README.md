@@ -43,8 +43,32 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
 
 ## Datos
 
-*Pendiente (fase F1).* Aquí se explicará cómo obtener el conjunto de test de DeepShip. Mientras
-tanto, consulta [datasets/README.md](datasets/README.md).
+Los audios **no están en este repositorio**. Se descargan del repositorio público de los
+autores de DeepShip, fijado en una versión concreta para que todos usemos exactamente los mismos
+ficheros. Licencia, contenido y detalles: [datasets/README.md](datasets/README.md).
+
+Necesitas unos **1,2 GB** libres. Desde la carpeta `sonar_investigacion`, ejecuta estos dos
+comandos (el primero tarda alrededor de un minuto, según tu conexión):
+
+```bash
+git clone -c core.autocrlf=false https://github.com/irfankamboh/DeepShip.git datasets/raw/DeepShip
+git -C datasets/raw/DeepShip checkout 77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6
+```
+
+El segundo comando muestra un aviso de *detached HEAD*. Es normal: significa que estás en esa
+versión fija.
+
+Para comprobar que la descarga es correcta:
+
+```bash
+git -C datasets/raw/DeepShip status
+```
+
+Debe decir `HEAD detached at 7772572` y `nothing to commit, working tree clean`. Eso garantiza
+que los ficheros son idénticos a los de la versión fijada. Deben quedar 63 ficheros `.wav`
+repartidos en `Cargo/` (12), `Passengership/` (20), `Tanker/` (28) y `Tug/` (3).
+
+Si ya lo habías descargado, no hace falta repetirlo.
 
 ## Evaluación con los pesos entrenados
 
