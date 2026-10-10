@@ -17,6 +17,18 @@ Plantilla:
 
 ---
 
+## 2026-10-10 · F1-T01 cerrada: fuente y licencia de DeepShip
+- **Qué se hizo:** se fijó la fuente (subconjunto público de GitHub, commit `77725726a33d`) y
+  se documentó que no tiene licencia explícita (uso académico con cita, sin redistribuir). David
+  no tiene el dataset completo: se usa solo el subconjunto.
+- **Qué quedó a medias:** F1-T02 en curso. Hay dos propuestas pendientes de aprobación en el
+  chat (D-005: alcance de datos; D-006: cómo le llegan los datos al amigo).
+- **Ficheros tocados:** `datasets/README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer [datasets/README.md](datasets/README.md); ya no queda ningún
+  "PENDIENTE DE VERIFICAR".
+- **Siguiente paso exacto:** con D-005 y D-006 aprobadas, cerrar F1-T02 y lanzar F1-T03
+  (inventario) con `data-engineer`.
+
 ## 2026-10-10 · F0 Setup cerrada
 - **Qué se hizo:** estructura del repositorio, pre-commit (gitleaks, ruff, check-added-large-files
   con límite de 10 MB, forbid-audio), Docker CPU con usuario no root (UID 1000), override GPU,

@@ -4,8 +4,19 @@
 
 - **Contenido:** grabaciones de ruido radiado por buques, en 4 clases: Cargo, Passengership,
   Tanker y Tug.
-- **Fuente oficial:** PENDIENTE DE VERIFICAR (tarea F1-T01 en [PLAN.md](../PLAN.md)).
-- **Licencia:** PENDIENTE DE VERIFICAR. Hasta confirmarla, no se redistribuye nada.
+- **Fuente:** https://github.com/irfankamboh/DeepShip, último commit
+  `77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6` (2023-03-23), revisado el 2026-10-10.
+  - Es un **subconjunto** del dataset: 67 WAV, unos 733 MB en total (Cargo 13,
+    Passengership 21, Tanker 29, Tug 4).
+  - El dataset completo (47 h y 265 buques, según el README de la fuente) se pide por correo a
+    los autores. Este proyecto no lo usa.
+- **Licencia:** **sin licencia explícita.** El repositorio no tiene fichero LICENSE y su README
+  no dice nada sobre el uso. Se asume que puede usarse con fines académicos citando a los
+  autores; es un supuesto de David que los autores no han confirmado. **No se redistribuye**:
+  ningún audio de DeepShip se sube a este repositorio ni a ningún otro sitio.
+- **Cita:** Irfan, M. et al. (2021). *DeepShip: An underwater acoustic benchmark dataset and a
+  separability based deep learning framework for ship classification.* Expert Systems with
+  Applications, 183, 115270.
 - **Cómo obtenerlo:** se decide en F1 (tarea F1-T02). La decisión quedará en
   [DECISIONS.md](../DECISIONS.md).
 

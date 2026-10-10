@@ -41,8 +41,8 @@ quedan a alto nivel.
   `datasets/manifests/`; la comprobación de fugas pasa; la pasada del reviewer no deja
   hallazgos graves abiertos.
 
-- [ ] F1-T01 · Confirmar la licencia y la fuente oficial de DeepShip · David · licencia y URL anotadas en `datasets/README.md`, sin "PENDIENTE DE VERIFICAR"
-- [ ] F1-T02 · Proponer cómo le llegan los datos al amigo (depende de F1-T01) · orquestador → aprobación de David · decisión aprobada y apuntada en DECISIONS.md
+- [x] F1-T01 · Confirmar la licencia y la fuente oficial de DeepShip · David · licencia y URL anotadas en `datasets/README.md`, sin "PENDIENTE DE VERIFICAR"
+- [~] F1-T02 · Proponer cómo le llegan los datos al amigo (depende de F1-T01) · orquestador → aprobación de David · decisión aprobada y apuntada en DECISIONS.md
 - [ ] F1-T03 · Inventariar DeepShip: estructura de carpetas, metadatos y si identifican el buque · data-engineer · informe con conteos por clase, buque y grabación, y unidad de partición elegida (buque o grabación) con su justificación
 - [ ] F1-T04 · Script de obtención en `tools/` con verificación SHA-256 · data-engineer · al re-ejecutarlo verifica sin volver a descargar; si cambia un byte de un fichero, falla con un mensaje claro
 - [ ] F1-T05 · Subcomando `qc`: frecuencia de muestreo, duración, offset DC y saturación · orquestador · los tests con señales sintéticas (offset conocido, recorte conocido) pasan; `qc` escribe un CSV en `outputs/qc/`
