@@ -107,6 +107,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Vessel table with the duration of every WAV (default: %(default)s).",
     )
     train.add_argument(
+        "--device",
+        default="auto",
+        help="cnn models: auto (CUDA if available, else CPU), cpu or cuda (default: auto).",
+    )
+    train.add_argument(
+        "--max-epochs",
+        type=int,
+        default=60,
+        help="cnn models: maximum epochs per run (default: %(default)s, D-018).",
+    )
+    train.add_argument(
         "--bootstrap",
         type=int,
         default=2000,
@@ -255,6 +266,44 @@ def train_baseline(args: argparse.Namespace) -> int:
     return 0
 
 
+def train_cnn_model(args: argparse.Namespace) -> int:
+    from sonar_pipeline.cnn import train_cnn
+
+    report = train_cnn(
+        args.processed_dir,
+        args.models_dir,
+        name=args.model.replace("-", "_"),
+        device_name=args.device,
+        n_bootstrap=args.bootstrap,
+        max_epochs=args.max_epochs,
+    )
+    t = report["training"]
+    c = report["config"]
+    print(
+        f"CNN on {t['device']}: {len(t['search'])} configurations x seed {c['seeds'][0]}, then "
+        f"{len(t['seeds'])} seeds, in {t['total_seconds']:.0f} s (test not used)."
+    )
+    for run in t["search"]:
+        print(
+            f"  lr={run['lr']:g} wd={run['weight_decay']:g}: val F1 macro "
+            f"{run['best_val_f1_macro']:.3f} (epoch {run['best_epoch']}/{run['epochs_run']}, "
+            f"{run['seconds']:.0f} s)"
+        )
+    print(
+        f"  chosen lr={c['lr']:g} wd={c['weight_decay']:g}; seeds "
+        + ", ".join(f"{r['seed']}: {r['best_val_f1_macro']:.3f}" for r in t["seeds"])
+        + f" (mean {t['seed_val_f1_mean']:.3f} +- {t['seed_val_f1_std']:.3f}); kept seed {c['seed']}"
+    )
+    print(
+        f"  {report['cost']['parameters']} parameters, "
+        f"{report['cost']['flops_per_segment'] / 1e6:.1f} MFLOPs per segment"
+    )
+    print("Val scores of the kept model:")
+    print_val_scores(report["val"])
+    print(f"Written to {args.models_dir / (report['model'] + '.pt')} and its .json")
+    return 0
+
+
 def cmd_train(args: argparse.Namespace) -> int:
     if args.permutation_test and args.model != "baseline":
         print("--permutation-test is only for --model baseline.", file=sys.stderr)
@@ -263,6 +312,8 @@ def cmd_train(args: argparse.Namespace) -> int:
         return train_duration(args)
     if args.model == "baseline":
         return train_baseline(args)
+    if args.model == "cnn":
+        return train_cnn_model(args)
     print(f"'train --model {args.model}' is not implemented yet (F3).", file=sys.stderr)
     return 1
 

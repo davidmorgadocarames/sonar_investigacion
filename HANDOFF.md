@@ -17,6 +17,26 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T07 cerrada: CNN sin aumento entrenada en GPU
+- **Qué se hizo:** `src/sonar_pipeline/cnn.py` y `train --model cnn` (`--device`, `--max-epochs`).
+  Pooling fijo en vez de adaptativo para que CUDA sea determinista (comprobado en la RTX 4060).
+  0,24 s por época en GPU frente a 1,5 s en CPU (datos aleatorios). Con el visto bueno de David
+  se entrenó en GPU: 21 s para 4 configuraciones + 2 semillas. Elegida lr=1e-3, wd=1e-3, semilla
+  0. Val: F1 macro 0,376 por segmento (IC 0,29-0,43) y 0,365 por grabación, igual que la línea
+  base (0,381), pero muy desigual: Tug 0,94, Passengership 0,37, Cargo 0,13, Tanker 0,07; casi
+  todo Cargo y Tanker se predice como Passengership. Dentro de época: Cargo frente a Tug 0,83 y
+  Passengership frente a Tanker 0,47 por segmento. Semillas: 0,376 / 0,309 / 0,332. **Fuerte
+  sobreajuste:** el mejor val llega en la época 3-5 y la pérdida de train baja a 0,06 mientras
+  val cae. 79 076 parámetros, 75 MFLOPs por segmento. Pesos en `models/cnn.pt` (328 kB) y
+  `models/cnn.json`. 203 tests.
+- **Qué quedó a medias:** nada. F3-T08 (aumento de datos) ataca justo el sobreajuste.
+- **Ficheros tocados:** `src/sonar_pipeline/{cnn,__main__}.py`, `tests/test_cnn.py`,
+  `tests/test_duration_check.py`, `models/cnn.{pt,json}`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
+  train --model cnn` (mismas cifras: determinista).
+- **Siguiente paso exacto:** F3-T08: CNN con aumento; código y tests, estimación de tiempo y
+  visto bueno de David antes de entrenar.
+
 ## 2026-10-11 · F3-T06 cerrada: test de permutación de la línea base
 - **Qué se hizo:** con el visto bueno de David, `train --model baseline --permutation-test 200`
   (3 min 42 s en CPU; scikit-learn no usa GPU). Validación cruzada por buque: F1 macro real 0,370
@@ -86,19 +106,3 @@ Plantilla:
   tests/test_metrics.py`.
 - **Siguiente paso exacto:** F3-T05: clasificador trivial de DT-005 (solo duración de la
   grabación). Es un ajuste de regresión logística de segundos: avisar a David igualmente.
-
-## 2026-10-11 · F3-T03 cerrada: módulo de datos
-- **Qué se hizo:** `src/sonar_pipeline/dataset.py`: `CLASSES` en orden fijo (Cargo,
-  Passengership, Tanker, Tug); `load_split` carga una partición y falla si un segmento del `.npz`
-  es de otra partición en `index.csv`, si falta alguno o si hay clases desconocidas;
-  `class_weights` (n / (k · n_k), como `balanced`; falla si falta una clase);
-  `baseline_features` (media temporal del LOFAR + DEMON, 1302 columnas); `aggregate_by_recording`
-  (media de probabilidades; falla si una grabación mezcla etiquetas). 10 tests, uno sobre los
-  rasgos reales: 1077/380/432 segmentos, todas las clases en cada partición, ninguna grabación ni
-  buque en dos particiones. 166 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/dataset.py`, `tests/test_dataset.py`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
-  tests/test_dataset.py`.
-- **Siguiente paso exacto:** F3-T04: módulo de métricas y estructura de `metrics.json`.
