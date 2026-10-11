@@ -267,16 +267,17 @@ def train_baseline(args: argparse.Namespace) -> int:
 
 
 def train_cnn_model(args: argparse.Namespace) -> int:
-    from sonar_pipeline.cnn import train_cnn
+    from sonar_pipeline.cnn import train_cnn, train_cnn_aug
 
-    report = train_cnn(
-        args.processed_dir,
-        args.models_dir,
-        name=args.model.replace("-", "_"),
-        device_name=args.device,
-        n_bootstrap=args.bootstrap,
-        max_epochs=args.max_epochs,
-    )
+    options = {
+        "device_name": args.device,
+        "n_bootstrap": args.bootstrap,
+        "max_epochs": args.max_epochs,
+    }
+    if args.model == "cnn-aug":
+        report = train_cnn_aug(args.processed_dir, args.models_dir, **options)
+    else:
+        report = train_cnn(args.processed_dir, args.models_dir, name="cnn", **options)
     t = report["training"]
     c = report["config"]
     print(
@@ -300,6 +301,12 @@ def train_cnn_model(args: argparse.Namespace) -> int:
     )
     print("Val scores of the kept model:")
     print_val_scores(report["val"])
+    if "comparison" in report:
+        cmp = report["comparison"]
+        print(
+            f"  same seeds on val: cnn {cmp['cnn_seed_val_f1_mean']:.3f} "
+            f"vs cnn-aug {cmp['cnn_aug_seed_val_f1_mean']:.3f} (mean F1 macro)"
+        )
     print(f"Written to {args.models_dir / (report['model'] + '.pt')} and its .json")
     return 0
 
@@ -312,7 +319,7 @@ def cmd_train(args: argparse.Namespace) -> int:
         return train_duration(args)
     if args.model == "baseline":
         return train_baseline(args)
-    if args.model == "cnn":
+    if args.model in ("cnn", "cnn-aug"):
         return train_cnn_model(args)
     print(f"'train --model {args.model}' is not implemented yet (F3).", file=sys.stderr)
     return 1

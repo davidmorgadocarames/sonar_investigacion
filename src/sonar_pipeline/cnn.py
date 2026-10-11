@@ -47,6 +47,14 @@ DROPOUT = 0.3
 LEAKY_SLOPE = 0.01
 POOLED_BINS = 8  # frequency positions kept by each branch before the head
 
+# Data augmentation for cnn-aug (F3-T08, D-018): train only, each with probability 0.5.
+AUG_PROBABILITY = 0.5
+AUG_LOFAR_MASKS = 2  # up to 2 frequency bands masked in the LOFARgram
+AUG_LOFAR_MASK_HZ = 100.0  # each at most 100 Hz wide
+AUG_TIME_MASK_FRAMES = 2  # one block of up to 2 frames
+AUG_SHIFT_FRAMES = 2  # circular time shift of up to +-2 frames
+AUG_DEMON_MASK_HZ = 10 / 3  # one DEMON band at most 3.3 Hz wide
+
 
 def conv_block_2d(c_in, c_out, kernel, pool):
     return nn.Sequential(
@@ -256,6 +264,114 @@ def to_tensors(train, val, device: torch.device) -> dict:
         "val_lofar": torch.as_tensor(val.lofar, device=device),
         "val_demon": torch.as_tensor(val.demon, device=device),
     }
+
+
+def make_augment(
+    lofar_fill: float,
+    demon_fill: float,
+    lofar_bin_hz: float,
+    demon_bin_hz: float,
+    probability: float = AUG_PROBABILITY,
+):
+    """Return augment(lofar, demon, generator) for one training minibatch.
+
+    Masked values are set to the train mean of their branch (0 after normalisation). Every
+    random draw comes from `generator`, so a seed gives the same augmentation. The inputs are
+    not modified in place.
+    """
+    lofar_width = max(1, round(AUG_LOFAR_MASK_HZ / lofar_bin_hz))
+    demon_width = max(1, round(AUG_DEMON_MASK_HZ / demon_bin_hz))
+
+    def augment(lofar: torch.Tensor, demon: torch.Tensor, generator: torch.Generator):
+        def draw(high: int) -> int:
+            return int(torch.randint(high, (1,), generator=generator))
+
+        def happens() -> bool:
+            return float(torch.rand(1, generator=generator)) < probability
+
+        lofar, demon = lofar.clone(), demon.clone()
+        n_frames, n_bins = lofar.shape[1:]
+        for i in range(len(lofar)):
+            if happens():  # frequency bands of the LOFARgram
+                for _ in range(1 + draw(AUG_LOFAR_MASKS)):
+                    width = 1 + draw(min(lofar_width, n_bins))
+                    start = draw(n_bins - width + 1)
+                    lofar[i, :, start : start + width] = lofar_fill
+            if happens():  # a block of frames
+                width = 1 + draw(min(AUG_TIME_MASK_FRAMES, n_frames))
+                start = draw(n_frames - width + 1)
+                lofar[i, start : start + width, :] = lofar_fill
+            if happens():  # circular time shift of 1 to AUG_SHIFT_FRAMES frames
+                shift = 1 + draw(AUG_SHIFT_FRAMES)
+                if happens():
+                    shift = -shift
+                lofar[i] = torch.roll(lofar[i], shifts=shift, dims=0)
+            if happens():  # a DEMON band
+                width = 1 + draw(min(demon_width, demon.shape[1]))
+                start = draw(demon.shape[1] - width + 1)
+                demon[i, start : start + width] = demon_fill
+        return lofar, demon
+
+    augment.config = {
+        "probability": probability,
+        "lofar_masks": f"1 to {AUG_LOFAR_MASKS} bands of 1 to {lofar_width} bins "
+        f"(up to {AUG_LOFAR_MASK_HZ:g} Hz)",
+        "time_mask": f"1 block of 1 to {AUG_TIME_MASK_FRAMES} frames",
+        "time_shift": f"circular, 1 to {AUG_SHIFT_FRAMES} frames either way",
+        "demon_mask": f"1 band of 1 to {demon_width} bins (up to {AUG_DEMON_MASK_HZ:.1f} Hz)",
+        "fill": "train mean of the branch",
+    }
+    return augment
+
+
+def train_cnn_aug(
+    processed_dir: Path,
+    models_dir: Path,
+    device_name: str = "auto",
+    n_bootstrap: int = 2000,
+    max_epochs: int = MAX_EPOCHS,
+    patience: int = PATIENCE,
+    seeds: tuple[int, ...] = SEEDS,
+) -> dict:
+    """The CNN of F3-T07 with the same lr, weight decay and seeds, trained with augmentation.
+
+    Reads the configuration from models/cnn.json, so the plain CNN must be trained first.
+    """
+    import json
+
+    plain = json.loads((models_dir / "cnn.json").read_text(encoding="utf-8"))
+    train = load_split(processed_dir, "train")
+    augment = make_augment(
+        lofar_fill=float(train.lofar.mean()),
+        demon_fill=float(train.demon.mean()),
+        lofar_bin_hz=float(train.lofar_hz[1] - train.lofar_hz[0]),
+        demon_bin_hz=float(train.demon_hz[1] - train.demon_hz[0]),
+    )
+    report = train_cnn(
+        processed_dir,
+        models_dir,
+        name="cnn_aug",
+        device_name=device_name,
+        n_bootstrap=n_bootstrap,
+        max_epochs=max_epochs,
+        patience=patience,
+        lr_grid=(plain["config"]["lr"],),
+        weight_decay_grid=(plain["config"]["weight_decay"],),
+        seeds=seeds,
+        augment=augment,
+        augment_config=augment.config,
+    )
+    report["comparison"] = {
+        "against": "cnn (same lr, weight decay and seeds, without augmentation), on val",
+        "cnn_seed_val_f1": [r["best_val_f1_macro"] for r in plain["training"]["seeds"]],
+        "cnn_aug_seed_val_f1": [
+            r["best_val_f1_macro"] for r in report["training"]["seeds"]
+        ],
+        "cnn_seed_val_f1_mean": plain["training"]["seed_val_f1_mean"],
+        "cnn_aug_seed_val_f1_mean": report["training"]["seed_val_f1_mean"],
+    }
+    write_metrics(models_dir / "cnn_aug.json", report)
+    return report
 
 
 def load_cnn(path: Path, device: torch.device | str = "cpu") -> SonarCNN:

@@ -183,3 +183,82 @@ def test_cli_trains_the_cnn(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "CNN on cpu: 4 configurations" in out and "test not used" in out
     assert (tmp_path / "m" / "cnn.pt").is_file()
+
+
+# --------------------------------------------------------------------------- augmentation
+
+
+def batch(n=6):
+    lofar = torch.arange(n * 11 * 1001, dtype=torch.float32).reshape(n, 11, 1001)
+    demon = torch.arange(n * 301, dtype=torch.float32).reshape(n, 301) + 1.0
+    return lofar, demon
+
+
+def test_augment_never_applies_with_probability_zero():
+    from sonar_pipeline.cnn import make_augment
+
+    augment = make_augment(-1.0, -2.0, 2.0, 1 / 3, probability=0.0)
+    lofar, demon = batch()
+    a, b = augment(lofar, demon, torch.Generator().manual_seed(0))
+    assert torch.equal(a, lofar) and torch.equal(b, demon)
+
+
+def test_augment_masks_and_shifts_with_probability_one():
+    from sonar_pipeline.cnn import make_augment
+
+    augment = make_augment(-1.0, -2.0, 2.0, 1 / 3, probability=1.0)
+    lofar, demon = batch()
+    original = lofar.clone()
+    a, b = augment(lofar, demon, torch.Generator().manual_seed(0))
+    assert torch.equal(lofar, original)  # inputs untouched
+    for i in range(len(a)):
+        masked_bins = (a[i] == -1.0).all(dim=0)  # whole frequency columns
+        assert (
+            1 <= int(masked_bins.sum()) <= 2 * 50
+        )  # 1-2 bands of at most 50 bins (100 Hz)
+        masked_frames = (a[i] == -1.0).all(dim=1)
+        assert 1 <= int(masked_frames.sum()) <= 2  # one block of 1-2 frames
+        demon_masked = int((b[i] == -2.0).sum())
+        assert 1 <= demon_masked <= 10  # one DEMON band of at most 10 bins (3.3 Hz)
+        # The time shift is a circular roll: every original frame is still there.
+        kept = a[i][~masked_frames][:, ~masked_bins]
+        frames = {tuple(f.tolist()) for f in original[i][:, ~masked_bins]}
+        assert all(tuple(f.tolist()) in frames for f in kept)
+        assert not torch.equal(a[i][~masked_frames], original[i][~masked_frames])
+
+
+def test_augment_is_reproducible_with_a_seed():
+    from sonar_pipeline.cnn import make_augment
+
+    augment = make_augment(0.0, 0.0, 2.0, 1 / 3)
+    lofar, demon = batch()
+    a1, b1 = augment(lofar, demon, torch.Generator().manual_seed(7))
+    a2, b2 = augment(lofar, demon, torch.Generator().manual_seed(7))
+    assert torch.equal(a1, a2) and torch.equal(b1, b2)
+
+
+def test_cnn_aug_needs_the_plain_cnn_first(tmp_path):
+    from sonar_pipeline.cnn import train_cnn_aug
+
+    folder = write_toy(tmp_path / "p")
+    with pytest.raises(FileNotFoundError):
+        train_cnn_aug(folder, tmp_path / "m", device_name="cpu", n_bootstrap=10)
+
+
+def test_cli_trains_cnn_aug_with_the_cnn_configuration(tmp_path, capsys):
+    folder = write_toy(tmp_path / "p")
+    base = ["--processed-dir", str(folder), "--models-dir", str(tmp_path / "m")]
+    base += ["--device", "cpu", "--max-epochs", "2", "--bootstrap", "20"]
+    assert main(["train", "--model", "cnn", *base]) == 0
+    assert main(["train", "--model", "cnn-aug", *base]) == 0
+    plain = json.loads((tmp_path / "m" / "cnn.json").read_text("utf-8"))
+    aug = json.loads((tmp_path / "m" / "cnn_aug.json").read_text("utf-8"))
+    assert (aug["config"]["lr"], aug["config"]["weight_decay"]) == (
+        plain["config"]["lr"],
+        plain["config"]["weight_decay"],
+    )
+    assert len(aug["training"]["search"]) == 1 and len(aug["training"]["seeds"]) == 3
+    assert aug["config"]["augment"]["probability"] == 0.5
+    assert len(aug["comparison"]["cnn_seed_val_f1"]) == 3
+    assert "same seeds on val" in capsys.readouterr().out
+    assert (tmp_path / "m" / "cnn_aug.pt").is_file()

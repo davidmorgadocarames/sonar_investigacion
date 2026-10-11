@@ -17,6 +17,26 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T08 cerrada: CNN con aumento de datos
+- **Qué se hizo:** `make_augment` y `train_cnn_aug` en `cnn.py`, `train --model cnn-aug`: misma
+  lr y weight decay que `models/cnn.json` y mismas semillas; solo en train y con p = 0,5 cada
+  una: 1-2 bandas de LOFAR de hasta 100 Hz, un bloque de 1-2 tramas, desplazamiento circular de
+  ±1-2 tramas y una banda de DEMON de hasta 3,3 Hz, rellenas con la media de train.
+  Reproducible (comprobado en CUDA). 0,27 s por época en GPU. Con el visto bueno de David se
+  entrenó en 14 s. Val: semillas 0,536 / 0,357 / 0,272 (media 0,388 ± 0,110) frente a la CNN sin
+  aumento 0,376 / 0,309 / 0,332 (media 0,339 ± 0,028). Modelo guardado (semilla 0): F1 macro
+  0,536 por segmento (IC 0,40-0,62) y 0,554 por grabación; dentro de época, Cargo frente a Tug
+  0,93 y Passengership frente a Tanker 0,79. **Ojo:** quedarse con la mejor semilla en val
+  infla la cifra de val; la comparación justa es la media por semillas, y la mejora (+0,05) es
+  menor que la variación entre semillas. Pesos en `models/cnn_aug.{pt,json}`. 207 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/{cnn,__main__}.py`, `tests/test_cnn.py`,
+  `tests/test_duration_check.py`, `models/cnn_aug.{pt,json}`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
+  train --model cnn-aug`.
+- **Siguiente paso exacto:** F3-T09: `evaluate`, test una sola vez con los tres modelos (sin
+  entrenamiento); `metrics.json` y figuras.
+
 ## 2026-10-11 · F3-T07 cerrada: CNN sin aumento entrenada en GPU
 - **Qué se hizo:** `src/sonar_pipeline/cnn.py` y `train --model cnn` (`--device`, `--max-epochs`).
   Pooling fijo en vez de adaptativo para que CUDA sea determinista (comprobado en la RTX 4060).
@@ -88,21 +108,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline train --model duration`.
 - **Siguiente paso exacto:** F3-T06: línea base (regresión logística). **Avisar a David con una
   estimación de tiempo antes de entrenar**; commit del modelo antes del test de permutación.
-
-## 2026-10-11 · F3-T04 cerrada: métricas y `metrics.json`
-- **Qué se hizo:** `src/sonar_pipeline/metrics.py`: F1 macro y por clase (sobre las 4 clases);
-  matriz de confusión en cuentas y normalizada por clase real; ROC una frente al resto (Pfa, Pd,
-  AUC, Pd a Pfa = 1 % interpolada); bootstrap de 2000 remuestreos de grabaciones dentro de cada
-  clase (percentiles del 95 %); `evaluate_split` por segmento y por grabación; coste (`torch_cost`
-  con el contador de FLOPs de PyTorch, `linear_model_cost`); `stopwatch`; hardware (CPU, hilos,
-  GPU, versiones); trazabilidad (de `features_meta.json` más un hash del contenido de los arrays,
-  porque los bytes del zip cambian); `write_metrics` (JSON estricto, NaN a null, claves
-  ordenadas, LF). El esquema de `metrics.json` está en el docstring del módulo. 15 tests con casos
-  calculados a mano (uno demuestra que se remuestrean grabaciones y no segmentos). 181 tests.
-- **Qué quedó a medias:** nada. Ojo: pre-commit no revisa ficheros nuevos sin `git add -N`.
-- **Ficheros tocados:** `src/sonar_pipeline/metrics.py`, `tests/test_metrics.py`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
-  tests/test_metrics.py`.
-- **Siguiente paso exacto:** F3-T05: clasificador trivial de DT-005 (solo duración de la
-  grabación). Es un ajuste de regresión logística de segundos: avisar a David igualmente.
