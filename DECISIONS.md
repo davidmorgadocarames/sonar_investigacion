@@ -436,6 +436,33 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** el amigo puede leer el informe y las figuras sin ejecutar nada y reproducirlos con
   Docker; nada que no se pueda regenerar sin mirar test se recalcula. Aprobado por David.
 
+### D-022 · Licencia MIT para el código y la documentación
+- **Fecha:** 2026-10-11
+- **Contexto:** la revisión de F4 señaló que el proyecto no tenía licencia propia antes de `v0.1`.
+- **Alternativas:** (a) sin licencia (todos los derechos reservados) mientras el repositorio sea
+  privado; (b) una licencia abierta.
+- **Decisión:** (b), **MIT**, © 2026 David Morgado Carames, en `LICENSE`. Cubre el código y la
+  documentación. **No** cubre los datos de DeepShip (no se distribuyen) ni los pesos de `models/`,
+  que derivan de DeepShip y siguen el mismo supuesto de uso académico con cita (D-006, D-014).
+- **Motivo:** David quiere poder compartir el proyecto. Aprobado por David.
+
+### D-023 · Reproducción fuera de x86-64 y Docker sin root
+- **Fecha:** 2026-10-11
+- **Contexto:** la revisión de F4 señaló que la reproducción exacta solo está comprobada en
+  x86-64 (Intel Core i7-14700KF) y que el esquema de usuario de DT-001 no sirve tal cual con
+  Docker sin root (*rootless*) ni con Podman. David pidió soluciones en lugar de deudas.
+- **Decisión:**
+  - **Procesadores:** el README declara la reproducción exacta como comprobada en x86-64 y
+    advierte de que en ARM puede variar la última cifra; `tools/check_reproduction.py` compara
+    `metrics.json` con `docs/results/eval2.json` (mismos pesos y cifras de test dentro de
+    ±0,005). La prueba real en ARM, emulada con `docker buildx --platform linux/arm64`, queda en
+    F5 (opcional).
+  - **Docker sin root y Podman:** el README indica `HOST_UID=0` y `HOST_GID=0` en `.env`, porque
+    en esos modos el `root` del contenedor es el usuario del host. Comprobado que la imagen
+    funciona con el UID 0 (tests e informe idéntico); sin probar en un Docker *rootless* real.
+- **Motivo:** dar al amigo un criterio claro y una salida en esos casos sin añadir
+  infraestructura. Aprobado por David.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

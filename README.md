@@ -7,10 +7,43 @@ Passengership, Tanker, Tug):
 WAV → control de calidad → preprocesado → LOFAR y DEMON → clasificador → evaluación → informe
 ```
 
-**Resultado en una frase:** solo una línea base sencilla supera al azar (F1 macro 0,374 frente a
-0,238), y dentro de cada época de grabación ningún modelo se distingue del azar, así que con estos
-datos no se puede afirmar que se reconozca la firma del buque. Informe completo:
-[docs/report.md](docs/report.md).
+**Resultado en una frase:** solo una línea base sencilla supera al azar con todo su intervalo
+(F1 macro 0,374, IC 0,27-0,47, frente a 0,238), y dentro de cada época de grabación ningún modelo
+lo supera, así que con estos datos no se puede afirmar que se reconozca la firma del buque.
+Informe completo: [docs/report.md](docs/report.md).
+
+## En gráficas
+
+Las figuras completas, con sus cifras, están en el informe; estas son las principales.
+
+**Datos.** Minutos de audio por clase y partición; ningún buque está en dos particiones.
+
+![Minutos por clase y partición](docs/figures/data_minutes.png)
+
+**Señal.** Validación con señales sintéticas: un tono de 440 Hz aparece en su bin del LOFAR y
+una modulación de 12 Hz en el del DEMON.
+
+![Validación LOFAR](docs/figures/signal/validation_lofar.png)
+![Validación DEMON](docs/figures/signal/validation_demon.png)
+
+**Un buque real.** LOFARgram y DEMON de una grabación de Passengership (líneas tonales arriba;
+armónicos del paso de pala abajo).
+
+![Ejemplo Passengership](docs/figures/signal/example_passengership.png)
+
+**Resultados en test (ronda 2, final).** F1 macro con intervalo del 95 % frente al azar medido,
+con 4 clases y dentro de cada época de grabación.
+
+![F1 con intervalos](docs/figures/eval2/results_f1.png)
+
+**Matrices de confusión (ronda 2).** Por segmento y por grabación.
+
+![Matrices de confusión](docs/figures/eval2/results_confusion.png)
+
+**Qué bandas usa cada modelo (sobre val).** Comparadas con las bandas que más difieren entre
+épocas de grabación.
+
+![Interpretabilidad por bandas](docs/figures/eval2/interpretability_bands.png)
 
 ## Requisitos
 
@@ -52,9 +85,14 @@ se usa, así que no necesitas un entorno virtual ni preocuparte por las versione
    usuario al fichero `.env` (se crea si no existe). En Windows y macOS no hace falta.
 
    ```bash
-   echo "HOST_UID=$(id -u)" >> .env
-   echo "HOST_GID=$(id -g)" >> .env
+   printf '\nHOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
    ```
+
+   El salto de línea inicial evita pegarse a la última línea del `.env` de la opción B.
+
+   **Con Docker sin root (*rootless*) o con Podman** el usuario `root` del contenedor ya
+   corresponde a tu usuario del host: en ese caso pon en `.env` `HOST_UID=0` y `HOST_GID=0`
+   (comprobado que la imagen funciona con el UID 0; sin probar en un Docker *rootless* real).
 
 4. Construye la imagen. La primera vez tarda unos minutos; la imagen de la opción A ocupa unos
    1,9 GB:
@@ -80,8 +118,9 @@ docker compose run --rm --entrypoint python pipeline -m pytest -rs
 Tarda alrededor de un minuto. Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
 lista los tests saltados y por qué: sin los datos descargados se saltan los que los necesitan
 (dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
-features first`), y en la opción A se salta el de determinismo en CUDA (dice `no CUDA here`).
-Saltarse no es un error.
+features first`). En la opción A se salta el de determinismo en CUDA (dice `no CUDA here`) y
+en la opción B el que comprueba el error sin GPU (dice `this machine has CUDA`). Saltarse no es
+un error.
 
 ## Datos
 
@@ -130,7 +169,7 @@ docker compose run --rm pipeline features
   fijada (SHA-256 de `datasets/manifests/vessels.csv`), quita el offset DC de cada grabación, la
   corta en segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación
   de la cavitación, 0 a 100 Hz) de cada segmento. Debe decir `63 recordings, 1889 segments` y
-  escribir en `datasets/processed/` unos 85 MB: un `features_<partición>.npz` por partición
+  escribir en `datasets/processed/` unos 82 MB: un `features_<partición>.npz` por partición
   (train, val y test), `index.csv` (una fila por segmento) y `features_meta.json` (parámetros
   usados). Esa carpeta no se sube a git.
 
@@ -159,13 +198,24 @@ docker compose run --rm pipeline evaluate
 
 Tarda unos 30 segundos en CPU. Puntúa la partición de test con los tres modelos y escribe
 `outputs/results/metrics.json` y las figuras `outputs/figures/results_*.png`. Debe mostrar estas
-cifras de F1 macro por segmento, idénticas a las del informe (`docs/results/eval2.json`):
+cifras de F1 macro por segmento, idénticas a las del informe (`docs/results/eval2.json`). La
+reproducción exacta está comprobada en x86-64 (ver "Equipo de referencia"); en otros
+procesadores, sobre todo ARM (Apple Silicon), puede variar la última cifra:
 
 | Modelo | Debe salir |
 |---|---|
 | `baseline` | `segment F1 0.374 (0.27-0.47)` |
 | `cnn` | `segment F1 0.115 (0.07-0.16)` |
 | `cnn_aug` | `segment F1 0.252 (0.17-0.34)` |
+
+Para comprobarlo de una vez (mismos pesos y todas las cifras de test dentro de ±0,005, que
+admite variaciones de la última cifra en otros procesadores):
+
+```bash
+docker compose run --rm --entrypoint python pipeline tools/check_reproduction.py
+```
+
+Debe decir `Reproduces the reference evaluation`.
 
 Si comparas tu `metrics.json` con `docs/results/eval2.json`, el `code_sha256` será distinto: el
 código cambió después de la evaluación 2 sin afectar a las cifras (detalle en
@@ -193,15 +243,28 @@ Reentrenar **sobrescribe los pesos de `models/`**. Para volver a los versionados
 |---|---|---|---|
 | `docker compose run --rm pipeline train --model duration` | Comprobación de DT-005: clasificador que solo ve la duración de la grabación | segundos | — |
 | `docker compose run --rm pipeline train --model baseline` | Línea base (regresión logística) | ~30 s | (usa CPU) |
-| `docker compose run --rm pipeline train --model cnn` | CNN: 4 configuraciones y 3 semillas | ~2-3 min (estimado) | ~40 s |
-| `docker compose run --rm pipeline train --model cnn-aug` | CNN con aumento de datos (necesita `cnn` antes) | ~1-2 min (estimado) | ~30 s |
+| `docker compose run --rm pipeline train --model cnn` | CNN: 4 configuraciones y 3 semillas | ~2-3 min (estimado) | ~40 s (23 s de entrenamiento) |
+| `docker compose run --rm pipeline train --model cnn-aug` | CNN con aumento de datos (necesita `cnn` antes) | ~1-2 min (estimado) | ~30 s (15 s de entrenamiento) |
 | `docker compose run --rm pipeline train --model baseline --permutation-test 200` | Test de permutación de la línea base | ~18 min | (usa CPU) |
 
-- La línea base y la comprobación de duración dan exactamente los mismos resultados en cualquier
-  máquina.
+- Los tiempos son los del equipo de referencia (abajo) e incluyen arrancar el contenedor; los de
+  las CNN en CPU son una estimación a partir del tiempo por época medido.
+- La línea base y la comprobación de duración dan exactamente los mismos resultados en x86-64;
+  en otros procesadores puede variar la última cifra.
 - Las CNN son deterministas en el mismo tipo de dispositivo, pero los pesos versionados se
   entrenaron en GPU (una RTX 4060): reentrenar en CPU, o en otra GPU, da pesos y cifras algo
   distintos.
+
+## Equipo de referencia
+
+Todos los tiempos y resultados de este README se midieron en:
+
+| Componente | Detalle |
+|---|---|
+| CPU | Intel Core i7-14700KF (28 hilos), x86-64 |
+| GPU | NVIDIA GeForce RTX 4060, 8 GB (driver 610.62; PyTorch 2.14.1 con CUDA 13.0) |
+| Sistema | Windows 10 Pro con Docker Desktop (WSL2) |
+| Imágenes | `sonar-pipeline:latest` (CPU, 1,9 GB) y `sonar-pipeline:gpu` (9,4 GB) |
 
 ## Limitaciones
 
@@ -221,10 +284,16 @@ Están explicadas en el informe ([docs/report.md](docs/report.md), sección 5). 
 |---|---|
 | `datasets/` | Manifiestos versionados (`manifests/`); audios y rasgos, no (`raw/`, `processed/`). |
 | `models/` | Pesos entrenados y su configuración, versionados. |
-| `docs/` | Informe, resúmenes de resultados y figuras, versionados. |
+| `docs/` | Informe, resúmenes de resultados y figuras, versionados (montada en el contenedor para `report`). |
 | `outputs/` | Resultados y figuras de cada ejecución. No se suben a git. |
 | `src/sonar_pipeline/` | Código de la pipeline. |
 | `tests/`, `tools/` | Tests y scripts de apoyo. |
+
+## Licencia
+
+El código y la documentación están bajo la licencia MIT ([LICENSE](LICENSE)), © 2026 David
+Morgado Carames. No cubre los datos de DeepShip (no se distribuyen aquí) ni los pesos de
+`models/`, que derivan de DeepShip y siguen su mismo supuesto de uso académico (D-022).
 
 ## Cita
 

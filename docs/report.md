@@ -4,9 +4,10 @@
 
 ## Resumen
 
-- Solo la **línea base** (regresión logística sobre LOFAR y DEMON promediados) supera al azar en test: F1 macro 0,374 frente a un azar medido de 0,238 (p = 0,040 en el test de permutación).
-- Las dos CNN no generalizan: 0,115 sin aumento y 0,252 con aumento.
-- Dentro de cada época de grabación (Cargo frente a Tug, Passengership frente a Tanker) ningún modelo se distingue del azar: con estos datos **no se puede afirmar que se reconozca la firma del buque** (ver Limitaciones).
+- En test (4 clases, por segmento) supera al azar medido (0,238) con todo su intervalo: **Línea base** 0,374 (0,27-0,47).
+- CNN sin aumento 0,115 (0,07-0,16), por debajo del azar; CNN con aumento 0,252 (0,17-0,34), sin distinguirse del azar.
+- Validación cruzada por buque sobre train + val (no es test): línea base 0,370 ± 0,113; test de permutación entre buques, **p = 0,040**.
+- Dentro de cada época de grabación (Cargo frente a Tug, Passengership frente a Tanker) ningún modelo supera al azar con todo su intervalo: con estos datos **no se puede afirmar que se reconozca la firma del buque** (ver Limitaciones).
 
 ## 1. Datos
 
@@ -82,7 +83,7 @@ Interpretabilidad (sobre val):
 
 ### Ronda 1
 
-Primera evaluación de test, antes de los arreglos (figuras copiadas tal cual; el azar se suponía 0,25 y 0,5).
+Primera evaluación de test, antes de los arreglos (figuras copiadas tal cual; el azar se suponía 0,25 y 0,5, y la Pd a Pfa = 1 % de sus ROC está interpolada con menos de 100 negativos).
 
 | Modelo | Val (segmento) | Val, media de semillas | Test (segmento) | Test (grabación) | Test 2016: Passeng. vs Tanker | Test 2017: Cargo vs Tug |
 |---|---|---|---|---|---|---|
@@ -109,12 +110,14 @@ Interpretabilidad (sobre val):
 
 ## 5. Limitaciones
 
-- **Clase y época coinciden** (DT-005): Cargo y Tug se grabaron en 2017 y Passengership y Tanker en 2016. El resultado de 4 clases no distingue el tipo de buque de las condiciones de grabación; solo las comparaciones dentro de una época están libres de ese efecto, y ahí ningún modelo supera al azar.
+- **Clase y época coinciden** (DT-005): Cargo y Tug se grabaron en 2017 y Passengership y Tanker en 2016. El resultado de 4 clases no distingue el tipo de buque de las condiciones de grabación; solo las comparaciones dentro de una época están libres de ese efecto, y ahí ningún modelo supera al azar con todo su intervalo. Un clasificador que solo ve la duración de la grabación obtiene en val un F1 macro de 0,932 por segmento y 0,800 por grabación (azar medido 0,246 y 0,199).
 - **Pocos buques:** 43 en total. Tug tiene 3 (una sola grabación en test): su resultado no es fiable, y las demás clases también tienen pocos buques.
+- **Modelos inestables:** la CNN con aumento guardada da en val, por grabación, 0,071 frente a un azar de 0,199; F1 de val entre semillas: CNN sin aumento 0,329 ± 0,069, CNN con aumento 0,297 ± 0,044.
 - **La ROC es de clasificación** (una clase frente al resto), no de detección: DeepShip no tiene grabaciones de solo fondo (DT-007). La Pd a Pfa = 1 % no se puede medir con menos de 100 negativos.
 - **Azar medido:** con clases desequilibradas el azar no es 0,25 exacto; se mide con un clasificador aleatorio sobre las etiquetas reales.
 - **Dos evaluaciones de test:** la segunda se hizo después de ver la primera; los arreglos vinieron de la revisión del código, no de las cifras.
 - La validación cruzada de la línea base mezcla folds de 3 y 4 clases (Tug falta en 3 de 5), y el C elegido (10) está en el borde de la rejilla.
+- **Reproducción exacta comprobada en x86-64** (Intel Core i7-14700KF, imagen CPU); en otros procesadores, sobre todo ARM, puede variar la última cifra.
 
 ## 6. Procedencia y reproducibilidad
 

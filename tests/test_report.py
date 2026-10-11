@@ -115,3 +115,45 @@ def test_collect_figures_fails_on_a_missing_figure(tmp_path):
 
 def test_spanish_number_format():
     assert num(0.3739) == "0,374" and num(None) == "—" and num(95.38, 1) == "95,4"
+
+
+def test_round_one_branch_without_measured_chance(versioned, tmp_path):
+    # Round 1 summaries have no measured chance and a permutation with C fixed.
+    results, manifests = versioned
+    eval1 = json.loads((results / "eval1.json").read_text(encoding="utf-8"))
+
+    def strip(node):
+        if isinstance(node, dict):
+            return {k: strip(v) for k, v in node.items() if k != "chance_f1_macro"}
+        return node
+
+    eval1 = strip(eval1)
+    eval1["permutation_test"] = {
+        "procedure": None,
+        "n_permutations": 9,
+        "observed_f1_macro": 0.5,
+        "null_mean": 0.3,
+        "null_p95": 0.45,
+        "p_value": 0.1,
+    }
+    (results / "eval1.json").write_text(json.dumps(eval1), encoding="utf-8")
+    assert report(results, manifests, tmp_path) == 0
+    text = (tmp_path / "docs" / "report.md").read_text(encoding="utf-8")
+    assert "*Azar (supuesto)*" in text
+    assert "C fijo" in text
+
+
+def test_versioned_report_is_up_to_date(tmp_path):
+    # docs/report.md must be what `report` writes from the versioned summaries (B2, F4 review).
+    docs = ROOT / "docs"
+    manifests = ROOT / "datasets" / "manifests"
+    if not (docs / "results" / "eval2.json").is_file() or not manifests.is_dir():
+        pytest.skip("docs/ or datasets/ not mounted (use docker compose)")
+    from sonar_pipeline.report import run_report
+
+    out = run_report(
+        docs / "results", tmp_path / "figures", manifests, tmp_path / "report.md"
+    )
+    assert out.read_text(encoding="utf-8") == (docs / "report.md").read_text(
+        encoding="utf-8"
+    )

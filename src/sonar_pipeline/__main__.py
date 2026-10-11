@@ -408,10 +408,7 @@ def cmd_train(args: argparse.Namespace) -> int:
         return train_duration(args)
     if args.model == "baseline":
         return train_baseline(args)
-    if args.model in ("cnn", "cnn-aug"):
-        return train_cnn_model(args)
-    print(f"'train --model {args.model}' is not implemented yet (F3).", file=sys.stderr)
-    return 1
+    return train_cnn_model(args)  # cnn or cnn-aug: argparse only accepts TRAIN_MODELS
 
 
 def cmd_interpretability(args: argparse.Namespace) -> int:
@@ -529,11 +526,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
-    if args.command in HANDLERS:
-        return HANDLERS[args.command](args)
-    phase = COMMANDS[args.command][1]
-    print(f"'{args.command}' is not implemented yet (phase {phase}).", file=sys.stderr)
-    return 1
+    return HANDLERS[args.command](args)
 
 
 if __name__ == "__main__":

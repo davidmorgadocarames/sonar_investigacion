@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 
 from sonar_pipeline import params
+from sonar_pipeline.baseline import C_GRID
 from sonar_pipeline.dataset import CLASSES
 
 FIGURE_GROUPS = {
@@ -251,16 +252,181 @@ def round_section(summary: dict, title: str, folder: str, note: str) -> list[str
     ]
 
 
+def position(scores: dict | None) -> str | None:
+    """'above' or 'below' when the whole 95 % interval is on one side of the measured chance,
+    'chance' when it contains it, None when there is no measured chance (round 1)."""
+    if scores is None or scores.get("chance_f1_macro") is None:
+        return None
+    lo, hi = scores["ci95"]
+    if lo > scores["chance_f1_macro"]:
+        return "above"
+    if hi < scores["chance_f1_macro"]:
+        return "below"
+    return "chance"
+
+
+def names(models: list[str]) -> str:
+    labels = [MODEL_NAMES.get(m, m) for m in models]
+    return (
+        labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " y " + labels[-1]
+    )
+
+
+def summary_lines(eval2: dict) -> list[str]:
+    """Conclusions read from the numbers: nothing here is written by hand."""
+    models = eval2["models"]
+    tests = {n: m["test"]["segment"] for n, m in models.items()}
+    chance = next(iter(tests.values()))["chance_f1_macro"]
+    groups = {
+        pos: [n for n, s in tests.items() if position(s) == pos]
+        for pos in ("above", "below", "chance")
+    }
+    lines = []
+    if groups["above"]:
+        lines.append(
+            f"- En test (4 clases, por segmento) supera al azar medido ({num(chance)}) con todo su "
+            f"intervalo: "
+            + "; ".join(
+                f"**{MODEL_NAMES[n]}** {interval(tests[n])}" for n in groups["above"]
+            )
+            + "."
+        )
+    else:
+        lines.append(
+            f"- En test (4 clases, por segmento) ningún modelo supera al azar medido ({num(chance)}) con todo su intervalo."
+        )
+    rest = [
+        f"{MODEL_NAMES[n]} {interval(tests[n])}, "
+        + (
+            "por debajo del azar"
+            if n in groups["below"]
+            else "sin distinguirse del azar"
+        )
+        for n in groups["below"] + groups["chance"]
+    ]
+    if rest:
+        lines.append("- " + "; ".join(rest) + ".")
+    permutation = eval2.get("permutation_test")
+    cv = models.get("baseline", {}).get("grouped_cv")
+    if permutation and cv:
+        lines.append(
+            f"- Validación cruzada por buque sobre train + val (no es test): línea base "
+            f"{num(cv['mean'])} ± {num(cv['std'])}; test de permutación entre buques, "
+            f"**p = {num(permutation['p_value'])}**."
+        )
+    era_above = [
+        (n, era)
+        for n, m in models.items()
+        for era, e in m["test"]["within_era"].items()
+        if position(e["segment"]) == "above"
+    ]
+    if era_above:
+        lines.append(
+            "- Dentro de una época supera al azar con todo su intervalo: "
+            + "; ".join(f"{MODEL_NAMES[n]} en {era}" for n, era in era_above)
+            + "."
+        )
+    else:
+        lines.append(
+            "- Dentro de cada época de grabación (Cargo frente a Tug, Passengership frente a "
+            "Tanker) ningún modelo supera al azar con todo su intervalo: con estos datos **no se "
+            "puede afirmar que se reconozca la firma del buque** (ver Limitaciones)."
+        )
+    return lines
+
+
+def limitation_lines(eval2: dict) -> list[str]:
+    models = eval2["models"]
+    lines = []
+    duration = eval2.get("dt005_duration_val")
+    era_above = any(
+        position(e["segment"]) == "above"
+        for m in models.values()
+        for e in m["test"]["within_era"].values()
+    )
+    text = (
+        "- **Clase y época coinciden** (DT-005): Cargo y Tug se grabaron en 2017 y Passengership "
+        "y Tanker en 2016. El resultado de 4 clases no distingue el tipo de buque de las "
+        "condiciones de grabación; solo las comparaciones dentro de una época están libres de "
+        "ese efecto"
+        + (
+            ", y ahí ningún modelo supera al azar con todo su intervalo."
+            if not era_above
+            else "."
+        )
+    )
+    if duration:
+        text += (
+            f" Un clasificador que solo ve la duración de la grabación obtiene en val un F1 macro "
+            f"de {num(duration['segment']['f1_macro'])} por segmento y "
+            f"{num(duration['recording']['f1_macro'])} por grabación (azar medido "
+            f"{num(duration['segment']['chance_f1_macro'])} y "
+            f"{num(duration['recording']['chance_f1_macro'])})."
+        )
+    lines.append(text)
+    lines.append(
+        "- **Pocos buques:** 43 en total. Tug tiene 3 (una sola grabación en test): su resultado "
+        "no es fiable, y las demás clases también tienen pocos buques."
+    )
+    unstable = []
+    for n, m in models.items():
+        rec = m["val"]["recording"]
+        if position(rec) == "below" or (
+            rec.get("chance_f1_macro") is not None
+            and rec["f1_macro"] < rec["chance_f1_macro"]
+        ):
+            unstable.append(
+                f"la {MODEL_NAMES[n]} guardada da en val, por grabación, "
+                f"{num(rec['f1_macro'])} frente a un azar de {num(rec['chance_f1_macro'])}"
+            )
+    seeds = [
+        f"{MODEL_NAMES[n]} {num(m['val_f1_seed_mean'])} ± {num(m['val_f1_seed_std'])}"
+        for n, m in models.items()
+        if "val_f1_seed_mean" in m
+    ]
+    if unstable or seeds:
+        lines.append(
+            "- **Modelos inestables:** "
+            + "; ".join(
+                unstable
+                + ([f"F1 de val entre semillas: {', '.join(seeds)}"] if seeds else [])
+            )
+            + "."
+        )
+    lines += [
+        (
+            "- **La ROC es de clasificación** (una clase frente al resto), no de detección: DeepShip "
+            "no tiene grabaciones de solo fondo (DT-007). La Pd a Pfa = 1 % no se puede medir con "
+            "menos de 100 negativos."
+        ),
+        (
+            "- **Azar medido:** con clases desequilibradas el azar no es 0,25 exacto; se mide con un "
+            "clasificador aleatorio sobre las etiquetas reales."
+        ),
+        (
+            "- **Dos evaluaciones de test:** la segunda se hizo después de ver la primera; los "
+            "arreglos vinieron de la revisión del código, no de las cifras."
+        ),
+    ]
+    c = models.get("baseline", {}).get("config", {}).get("c")
+    lines.append(
+        "- La validación cruzada de la línea base mezcla folds de 3 y 4 clases (Tug falta en 3 de "
+        "5)"
+        + (
+            f", y el C elegido ({c:g}) está en el borde de la rejilla."
+            if c in (min(C_GRID), max(C_GRID))
+            else "."
+        )
+    )
+    lines.append(
+        "- **Reproducción exacta comprobada en x86-64** (Intel Core i7-14700KF, imagen CPU); en "
+        "otros procesadores, sobre todo ARM, puede variar la última cifra."
+    )
+    return lines
+
+
 def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
     final = eval2["models"]
-    base = final["baseline"]["test"]["segment"]
-    chance = base.get("chance_f1_macro")
-    permutation = eval2.get("permutation_test")
-    p_text = (
-        f" (p = {num(permutation['p_value'])} en el test de permutación)"
-        if permutation
-        else ""
-    )
     lines = [
         "# Informe de resultados · sonar_investigacion",
         "",
@@ -271,20 +437,7 @@ def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
         "",
         "## Resumen",
         "",
-        (
-            f"- Solo la **línea base** (regresión logística sobre LOFAR y DEMON promediados) supera "
-            f"al azar en test: F1 macro {num(base['f1_macro'])} frente a un azar medido de "
-            f"{num(chance)}{p_text}."
-        ),
-        (
-            f"- Las dos CNN no generalizan: {num(final['cnn']['test']['segment']['f1_macro'])} sin "
-            f"aumento y {num(final['cnn_aug']['test']['segment']['f1_macro'])} con aumento."
-        ),
-        (
-            "- Dentro de cada época de grabación (Cargo frente a Tug, Passengership frente a Tanker) "
-            "ningún modelo se distingue del azar: con estos datos **no se puede afirmar que se "
-            "reconozca la firma del buque** (ver Limitaciones)."
-        ),
+        *summary_lines(eval2),
         "",
         *data_lines,
         *signal_section(),
@@ -328,37 +481,12 @@ def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
             "Ronda 1",
             "eval1",
             "Primera evaluación de test, antes de los arreglos (figuras copiadas tal cual; el azar "
-            "se suponía 0,25 y 0,5).",
+            "se suponía 0,25 y 0,5, y la Pd a Pfa = 1 % de sus ROC está interpolada con menos de "
+            "100 negativos).",
         ),
         "## 5. Limitaciones",
         "",
-        (
-            "- **Clase y época coinciden** (DT-005): Cargo y Tug se grabaron en 2017 y Passengership "
-            "y Tanker en 2016. El resultado de 4 clases no distingue el tipo de buque de las "
-            "condiciones de grabación; solo las comparaciones dentro de una época están libres de "
-            "ese efecto, y ahí ningún modelo supera al azar."
-        ),
-        (
-            "- **Pocos buques:** 43 en total. Tug tiene 3 (una sola grabación en test): su resultado "
-            "no es fiable, y las demás clases también tienen pocos buques."
-        ),
-        (
-            "- **La ROC es de clasificación** (una clase frente al resto), no de detección: DeepShip "
-            "no tiene grabaciones de solo fondo (DT-007). La Pd a Pfa = 1 % no se puede medir con "
-            "menos de 100 negativos."
-        ),
-        (
-            "- **Azar medido:** con clases desequilibradas el azar no es 0,25 exacto; se mide con un "
-            "clasificador aleatorio sobre las etiquetas reales."
-        ),
-        (
-            "- **Dos evaluaciones de test:** la segunda se hizo después de ver la primera; los "
-            "arreglos vinieron de la revisión del código, no de las cifras."
-        ),
-        (
-            "- La validación cruzada de la línea base mezcla folds de 3 y 4 clases (Tug falta en 3 de "
-            "5), y el C elegido (10) está en el borde de la rejilla."
-        ),
+        *limitation_lines(eval2),
         "",
         "## 6. Procedencia y reproducibilidad",
         "",

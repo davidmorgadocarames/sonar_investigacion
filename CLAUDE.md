@@ -103,5 +103,5 @@ git status --short --untracked-files=all  # no debe aparecer ningún audio
   la imagen `PYTHONPATH=/app/src`.
 - Scripts de apoyo (descarga, checksums, fugas) en `tools/`.
 - Las señales sintéticas solo existen en `tests/`. **No hay modo demo con datos sintéticos.**
-- Volúmenes: `datasets/`, `models/` y `outputs/`. Los pesos se versionan en `models/` solo si
+- Volúmenes: `datasets/`, `models/`, `outputs/` y `docs/`. Los pesos se versionan en `models/` solo si
   ocupan menos de 10 MB.

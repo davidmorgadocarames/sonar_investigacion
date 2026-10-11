@@ -49,9 +49,11 @@ cambia después, aquí se anotan las diferencias y si afectan a las cifras.
 
 El `code_sha256` es el hash de los `.py` de `src/sonar_pipeline/` (`features.code_sha256`). Para
 los commits de la tabla se recalculó desde el historial de git; los JSON de la ronda 2 lo
-registran y coinciden con `ab383dd`.
+registran y coinciden con `ab383dd`. El **código de v0.1** (final de F4) tiene `code_sha256`
+`b4b6638e…`. Lo que cambió en F4 (figura de datos, `report`, CLI, usuario del contenedor) no
+toca el cálculo de rasgos, modelos ni métricas, así que no afecta a ninguna cifra.
 
-| Resultado | Commit del código | `code_sha256` | Diferencias con el código final (`5d8d820`) | ¿Afectan a las cifras? |
+| Resultado | Commit del código | `code_sha256` | Diferencias con el código de v0.1 (`b4b6638e…`) | ¿Afectan a las cifras? |
 |---|---|---|---|---|
 | Ronda 1 · línea base y su permutación | `6a08569` | `3e96833a…` | Permutación con C fijo (sin elegirlo dentro); sin hash de código ni hardware en los JSON | Sí en la permutación (p igual, 0,040, al repetirla) |
 | Ronda 1 · CNN | `43cfb1e` | `06fdd962…` | Pooling con ceros (2 de 8 posiciones de DEMON siempre a 0); lr en coseno sin efecto; hilos sin fijar | **Sí** (por eso se reentrenó) |
@@ -62,10 +64,11 @@ registran y coinciden con `ab383dd`.
 | Ronda 2 · evaluación de test | `ab383dd` | `3393ae4f…` | `evaluate` sin hilos fijados: corrió con 14 hilos (el entrenamiento, con 4); sin el campo `evaluation` (añadido después con `evaluate --refresh`, sin puntuar test); sin el arreglo B5 | No. **Comprobado en F4-T06** (fila siguiente): con el código final y 4 hilos, las cifras salen idénticas |
 | Reproducción de la evaluación 2 (F4-T06, friend-tester, clon limpio) | `b581d0c` | `5abdb24b…` | Código final de F4 con 4 hilos; puntúa test solo para comprobar que se reproduce, sin ajustar nada | No: F1, intervalos y `weights_sha256` idénticos a `eval2.json` en los tres modelos |
 | Ronda 2 · permutación e interpretabilidad | `ab383dd` | `3393ae4f…` | Ninguna que les afecte | No |
-| Ronda 2 · comprobación de DT-005 (duración, solo val) | `5d8d820` | `aade7670…` | Es el código final; regenerada para quitar el azar fijo y la Pd interpolada | — |
-| Figuras de la ronda 2 | `5d8d820` (`--plot-only`) | `aade7670…` | Redibujadas desde `metrics.json` con el arreglo B5, sin puntuar test | — |
+| Ronda 2 · comprobación de DT-005 (duración, solo val) | `5d8d820` | `aade7670…` | Regenerada para quitar el azar fijo y la Pd interpolada; después solo cambió lo de F4 | No |
+| Figuras de la ronda 2 (`docs/figures/eval2/`) | `5d8d820` (`--plot-only`) | `aade7670…` | Redibujadas desde `metrics.json` con el arreglo B5, sin puntuar test | No |
+| Figuras de la ronda 1 (`docs/figures/eval1/`) | `b23c8ac` (resultados) y `d544a71` (interpretabilidad) | `96168c20…` y `19490ca8…` | Copiadas tal cual: azar dibujado en 0,25 y 0,5; Pd a Pfa = 1 % interpolada con < 100 negativos; modelos de la ronda 1 | Sí en esas marcas; no en F1 ni en las matrices |
 | Figuras de señal (`docs/figures/signal/`) | `9f1f99b` (`features --figures` y tests de figuras, F2-T10) | `c867b025…` | Mismo LOFAR y DEMON que el código final (después solo cambiaron los modelos y la evaluación) | No |
-| Figura de datos e informe (`docs/figures/data_minutes.png`, `docs/report.md`) | commit de F4-T03 (`report`) | — | Se regeneran con `report` desde lo versionado; la regeneración da los mismos bytes | — |
+| Figura de datos e informe (`docs/figures/data_minutes.png`, `docs/report.md`) | commit de F4-T07 (etiqueta `v0.1`) | `b4b6638e…` | Es el código de v0.1; `report` los regenera desde lo versionado con los mismos bytes (lo comprueba un test) | — |
 
 Los pesos de cada ronda están en git: ronda 1 en `6a08569` (línea base), `43cfb1e` (CNN) y
 `ed9db91` (CNN con aumento); ronda 2 en `b43315c`.

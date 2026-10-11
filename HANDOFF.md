@@ -17,6 +17,33 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4 Entrega cerrada (F4-T07) y etiqueta `v0.1`
+- **Qué se hizo:** pasada del reviewer sobre F4: sin hallazgos críticos ni altos; 5 medios y 11
+  bajos, todos resueltos con la aprobación de David. Informe: conclusiones calculadas desde los
+  JSON (por encima o por debajo del azar solo si todo el intervalo lo está), p de la validación
+  cruzada separado de test, DT-005 con la cifra de la duración (0,93 / 0,80), CNN con aumento a
+  0,071 por grabación en val, Pd interpolada en la ronda 1; tests de la rama de la ronda 1 y de
+  que `docs/report.md` está al día. README: sección "En gráficas" con las figuras principales,
+  "Equipo de referencia" (i7-14700KF, RTX 4060 8 GB, driver 610.62, Windows 10 + Docker Desktop
+  WSL2), reproducción exacta comprobada en x86-64, tiempos aclarados, `.env` de Linux con
+  `printf`, Docker sin root y Podman con `HOST_UID=0` (comprobado que la imagen funciona con el
+  UID 0), `tools/check_reproduction.py` (±0,005; tu `metrics.json` lo pasa) y licencia. Tabla de
+  procedencia: código de `v0.1` con `code_sha256` `b4b6638e…`, filas de las figuras de la ronda 1
+  y del informe; lo cambiado en F4 no afecta a ninguna cifra (comprobado con git). D-022 (MIT, ©
+  2026 David Morgado Carames; no cubre datos ni pesos) y D-023 (reproducción fuera de x86-64 y
+  Docker sin root); la prueba ARM emulada queda en F5. CLAUDE.md con el volumen `docs/`, ruta
+  genérica en PLAN, código muerto quitado. 251 tests.
+- **Qué quedó a medias:** nada de F4. F5 (mejoras opcionales: atención, sobreajuste de las CNN,
+  prueba en ARM) solo si David la pide.
+- **Ficheros tocados:** `LICENSE`, `README.md`, `CLAUDE.md`, `docs/report.md`,
+  `docs/results/README.md`, `src/sonar_pipeline/{report,__main__}.py`,
+  `tools/check_reproduction.py`, `tests/test_{report,check_reproduction}.py`, `DECISIONS.md`,
+  `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `git show v0.1`; en un clon limpio, seguir el README y ejecutar
+  `tools/check_reproduction.py`.
+- **Siguiente paso exacto:** ninguno obligatorio. Si David quiere seguir, detallar F5 con el
+  procedimiento de inicio de fase.
+
 ## 2026-10-11 · F4-T06 cerrada: el friend-tester reproduce la evaluación 2
 - **Qué se hizo:** con el visto bueno de David, el friend-tester clonó `b581d0c` en una carpeta
   temporal (ya borrada) y siguió solo el README por la opción A (CPU), sin entrenar: build
@@ -85,20 +112,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline report` y comprobar que `git status`
   no cambia.
 - **Siguiente paso exacto:** F4-T04: README completo.
-
-## 2026-10-11 · F4-T02 cerrada: figura de minutos por clase y partición
-- **Qué se hizo:** `data_minutes` y `plot_data_minutes` en `figures.py`: minutos de audio,
-  grabaciones y buques por clase y partición a partir de `vessels.csv` y `split.csv`, sin audio;
-  barras agrupadas con los colores 4-6 de la paleta (los 1-3 son los modelos). Dos tests (uno
-  sobre los manifiestos reales: 95,4 min, 43 buques, Tug 1/1/1). `report` la guardará en
-  `docs/figures/` (F4-T03). 237 tests.
-- **Excepción a la regla 9 (aprobada expresamente por David, solo esta vez):** F4-T01 había
-  quedado en dos commits publicados (`034ae48` y `28e24a1`, por un fallo del script que escribía
-  HANDOFF). Se unieron en uno (`4a44343`, contenido idéntico, mismo árbol) y se publicó con
-  `git push --force-with-lease`. La regla 9 sigue vigente.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/figures.py`, `tests/test_figures.py`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
-  tests/test_figures.py`.
-- **Siguiente paso exacto:** F4-T03: subcomando `report`.
