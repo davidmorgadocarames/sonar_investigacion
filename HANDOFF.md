@@ -17,6 +17,25 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T12 cerrada: permutación con C dentro y segunda evaluación de test
+- **Qué se hizo:** con el visto bueno de David: (5) test de permutación con la elección de C
+  dentro de cada permutación, 17,5 min en CPU (se estimaron 8-10): F1 real 0,370 frente a media
+  nula 0,272 (p95 0,364; rango 0,161-0,428), 7/200, **p = 0,040** (igual que sin la elección
+  dentro); (6) **segunda y última evaluación de test** (30 s): F1 macro por segmento línea base
+  0,374 (igual), **CNN 0,115** (antes 0,167), **CNN con aumento 0,252** (antes 0,185); azar
+  medido 0,238 (por grabación 0,212; dentro de época 0,493 y 0,468). La CNN lo predice casi todo
+  como Passengership; la CNN con aumento, casi todo como Cargo y nunca Tug. Dentro de época:
+  CNN con aumento 0,59 en Passengership frente a Tanker y CNN 0,63 en Cargo frente a Tug (IC muy
+  anchos). (7) Interpretabilidad (32 s): igual para la línea base; las CNN siguen dependiendo de
+  0-40 y 80-120 Hz; solapamiento con las bandas de época 2/5, 2/5 y 1/5. Primera evaluación en
+  `outputs/results/eval1/`.
+- **Qué quedó a medias:** nada de F3-T12. Falta la nueva pasada del reviewer (F3-T11) y el
+  cierre de F3.
+- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md` (resultados en `outputs/`, no versionados).
+- **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --plot-only` redibuja las
+  figuras desde `metrics.json` sin volver a puntuar test.
+- **Siguiente paso exacto:** F3-T11: pasar otra vez el reviewer sobre F3-T12 y cerrar F3.
+
 ## 2026-10-11 · F3-T12 en curso: arreglos de la revisión y modelos reentrenados
 - **Qué se hizo:** revisión de F3 sin hallazgos críticos ni altos; David aprobó arreglar todo lo
   que no daba una salida correcta sin cambiar nada para mejorar la cifra (ajuste 2 de D-018,
@@ -93,23 +112,3 @@ Plantilla:
   train --model cnn-aug`.
 - **Siguiente paso exacto:** F3-T09: `evaluate`, test una sola vez con los tres modelos (sin
   entrenamiento); `metrics.json` y figuras.
-
-## 2026-10-11 · F3-T07 cerrada: CNN sin aumento entrenada en GPU
-- **Qué se hizo:** `src/sonar_pipeline/cnn.py` y `train --model cnn` (`--device`, `--max-epochs`).
-  Pooling fijo en vez de adaptativo para que CUDA sea determinista (comprobado en la RTX 4060).
-  0,24 s por época en GPU frente a 1,5 s en CPU (datos aleatorios). Con el visto bueno de David
-  se entrenó en GPU: 21 s para 4 configuraciones + 2 semillas. Elegida lr=1e-3, wd=1e-3, semilla
-  0. Val: F1 macro 0,376 por segmento (IC 0,29-0,43) y 0,365 por grabación, igual que la línea
-  base (0,381), pero muy desigual: Tug 0,94, Passengership 0,37, Cargo 0,13, Tanker 0,07; casi
-  todo Cargo y Tanker se predice como Passengership. Dentro de época: Cargo frente a Tug 0,83 y
-  Passengership frente a Tanker 0,47 por segmento. Semillas: 0,376 / 0,309 / 0,332. **Fuerte
-  sobreajuste:** el mejor val llega en la época 3-5 y la pérdida de train baja a 0,06 mientras
-  val cae. 79 076 parámetros, 75 MFLOPs por segmento. Pesos en `models/cnn.pt` (328 kB) y
-  `models/cnn.json`. 203 tests.
-- **Qué quedó a medias:** nada. F3-T08 (aumento de datos) ataca justo el sobreajuste.
-- **Ficheros tocados:** `src/sonar_pipeline/{cnn,__main__}.py`, `tests/test_cnn.py`,
-  `tests/test_duration_check.py`, `models/cnn.{pt,json}`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
-  train --model cnn` (mismas cifras: determinista).
-- **Siguiente paso exacto:** F3-T08: CNN con aumento; código y tests, estimación de tiempo y
-  visto bueno de David antes de entrenar.
