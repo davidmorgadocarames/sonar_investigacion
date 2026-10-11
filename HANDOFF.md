@@ -23,9 +23,8 @@ Plantilla:
   `51564cf1…b5a7`), aprobado por David: 57/20/23 % de minutos en total, Tug 1/1/1, sin fugas.
   4 tests permanentes sobre el split versionado; 71 tests en total. Notas añadidas en F3 y F4
   (peso de test, empates en Tanker, propuesta de resultados con JSON, ROC Pd/Pfa y SHAP).
-- **Qué quedó a medias:** D-013 dice "con semilla fijada" (David prefiere mantenerlo), pero
-  `make_split.py` no usa semilla porque no tiene azar; pendiente de que David decida si se ajusta
-  el código o se deja así.
+- **Qué quedó a medias:** nada. D-013 conserva "con semilla fijada" y lleva una nota de ajuste
+  aprobada por David: la búsqueda es exacta y sin azar, así que la semilla no interviene.
 - **Ficheros tocados:** `tools/make_split.py`, `datasets/manifests/split.csv`,
   `tests/test_make_split.py`, `tests/test_split_data.py`, `datasets/README.md`, `DECISIONS.md`,
   `PLAN.md`, `HANDOFF.md`.

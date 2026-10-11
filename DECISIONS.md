@@ -184,6 +184,11 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** los segmentos del modelo salen de los minutos, no de los ficheros, cuyas
   duraciones van de 6 s a 204 s. Con tan pocos buques el reparto será aproximado; la tabla real
   de minutos por partición y clase se revisa con David antes del commit.
+- **Ajuste (2026-10-11):** `tools/make_split.py` hace una búsqueda exacta (ramificación y poda)
+  sin azar, así que la semilla no interviene: el mismo `vessels.csv` da siempre el mismo
+  `split.csv`. Los empates (varios repartos con el mismo coste, como en Tanker) se resuelven en
+  un orden fijo: grupos por duración descendente y luego por nombre, probando train < val < test.
+  David aprobó la partición resultante (SHA-256 `51564cf1…b5a7`).
 
 ## Deuda técnica
 
