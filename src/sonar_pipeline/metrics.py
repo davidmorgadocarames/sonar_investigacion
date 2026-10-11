@@ -23,9 +23,11 @@ Layout of ``outputs/results/metrics.json`` (filled by F3-T05 to F3-T10):
     }
 
     SCORES = {n, f1_macro, f1_per_class, ci95 {f1_macro, f1_per_class}, confusion,
-              confusion_normalized, roc {class: {pfa, pd, auc, pd_at_pfa_1pct}}}
+              confusion_normalized, chance_f1_macro,
+              roc {class: {pfa, pd, auc, n_negatives, pd_at_pfa_1pct (null if < 100 neg.)}}}
     ERA_SCORES = {era: {classes, segment: PAIR, recording: PAIR}}  (ERAS in dataset.py)
-    PAIR = {n, f1_macro, f1_per_class, accuracy, auc, ci95 {f1_macro, f1_per_class}}
+    PAIR = {n, f1_macro, f1_per_class, accuracy, auc, ci95 {f1_macro, f1_per_class},
+            chance_f1_macro}
 
 The within-era scores (DT-005) only keep the two classes recorded in the same era and decide
 between them with their two probabilities: Cargo vs Tug (2017), Passengership vs Tanker (2016).
@@ -79,7 +81,12 @@ def pd_at_pfa(pfa: np.ndarray, pd: np.ndarray, target: float = PFA_TARGET) -> fl
 
 
 def roc_one_vs_rest(y_true: np.ndarray, probabilities: np.ndarray) -> dict:
-    """ROC of every class against the rest: Pfa (false positive rate), Pd, AUC, Pd at 1 %."""
+    """Classification ROC of every class against the rest (not a detection ROC: DeepShip has no
+    vessel-free recordings, DT-007). Pfa is the fraction of other-class rows taken for the class.
+
+    Pd at Pfa = 1 % is null when there are fewer than 1 / 1 % = 100 negatives: the first possible
+    Pfa step would be above 1 % and the value would only be an interpolation (D-018 adj. 2).
+    """
     result = {}
     for k, name in enumerate(CLASSES):
         positive = y_true == k
@@ -87,11 +94,14 @@ def roc_one_vs_rest(y_true: np.ndarray, probabilities: np.ndarray) -> dict:
             result[name] = None  # undefined without both positives and negatives
             continue
         pfa, pd, _ = roc_curve(positive, probabilities[:, k])
+        negatives = int((~positive).sum())
+        measurable = negatives * PFA_TARGET >= 1
         result[name] = {
             "pfa": pfa.tolist(),
             "pd": pd.tolist(),
             "auc": float(roc_auc_score(positive, probabilities[:, k])),
-            "pd_at_pfa_1pct": pd_at_pfa(pfa, pd),
+            "n_negatives": negatives,
+            "pd_at_pfa_1pct": pd_at_pfa(pfa, pd) if measurable else None,
         }
     return result
 
@@ -142,6 +152,28 @@ def bootstrap_f1(
     }
 
 
+def chance_f1_macro(
+    y_true: np.ndarray,
+    labels: list[int] | None = None,
+    n_draws: int = 500,
+    seed: int = 0,
+) -> float:
+    """Mean macro F1 of a classifier that answers uniformly at random among `labels`, on these
+    true labels: the real chance level (not exactly 1 / n_classes with unbalanced classes)."""
+    labels = list(range(len(CLASSES))) if labels is None else labels
+    rng = np.random.default_rng(seed)
+    predictions = rng.choice(labels, size=(n_draws, len(y_true)))  # one row per draw
+    f1 = []
+    for k in labels:  # F1 of class k in every draw at once (same as f1_scores)
+        predicted, true = predictions == k, (y_true == k)[None, :]
+        tp = (predicted & true).sum(axis=1)
+        denominator = predicted.sum(axis=1) + true.sum()
+        f1.append(
+            np.divide(2 * tp, denominator, out=np.zeros(n_draws), where=denominator > 0)
+        )
+    return float(np.mean(f1))
+
+
 def scores(
     probabilities: np.ndarray,
     y_true: np.ndarray,
@@ -161,6 +193,7 @@ def scores(
         "confusion": counts,
         "confusion_normalized": normalised,
         "roc": roc_one_vs_rest(y_true, probabilities),
+        "chance_f1_macro": chance_f1_macro(y_true, seed=seed),
     }
 
 
@@ -193,6 +226,7 @@ def pair_scores(
         "ci95": bootstrap_f1(
             truth, y_pred, groups[keep], n_bootstrap, seed, labels=[a, b]
         ),
+        "chance_f1_macro": chance_f1_macro(truth, [a, b], seed=seed),
     }
 
 

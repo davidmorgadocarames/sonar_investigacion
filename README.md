@@ -40,7 +40,7 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    ```
 
    Debe mostrar los comandos `qc`, `features`, `train`, `evaluate` y `report`. Por ahora
-   están implementados `qc` y `features`; los demás llegan en fases posteriores.
+   están implementados `qc`, `features`, `train` y `evaluate`; `report` llega en la fase F4.
 
 ## Datos
 

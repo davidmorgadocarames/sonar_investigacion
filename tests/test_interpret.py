@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from test_evaluate import write_toy
+from test_cnn import write_toy  # train and val only: no test file at all
 
 from sonar_pipeline.__main__ import main
 from sonar_pipeline.baseline import train_baseline

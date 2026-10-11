@@ -68,7 +68,7 @@ def test_roc_auc_by_hand():
 
 
 def test_perfectly_separated_roc():
-    y = np.array([0, 0, 1, 1, 2, 2, 3, 3])
+    y = np.repeat([0, 1, 2, 3], 40)  # 120 negatives per class: Pd at 1 % is measurable
     roc = roc_one_vs_rest(y, one_hot_probs(y))
     for name in CLASSES:
         assert roc[name]["auc"] == 1.0
@@ -222,3 +222,35 @@ def test_evaluate_split_reports_both_eras():
     assert eras["2016"]["classes"] == ["Passengership", "Tanker"]
     assert eras["2017"]["classes"] == ["Cargo", "Tug"]
     assert eras["2017"]["segment"]["n"] == 8 and eras["2017"]["recording"]["n"] == 4
+
+
+def test_pd_at_1pct_is_null_with_fewer_than_100_negatives():
+    y = np.array([0] * 10 + [1] * 50)  # Cargo has 50 negatives
+    probs = one_hot_probs(y)
+    roc = roc_one_vs_rest(y, probs)
+    assert roc["Cargo"]["n_negatives"] == 50
+    assert roc["Cargo"]["pd_at_pfa_1pct"] is None
+    y = np.array([0] * 10 + [1] * 100)
+    assert roc_one_vs_rest(y, one_hot_probs(y))["Cargo"]["pd_at_pfa_1pct"] == 1.0
+
+
+def test_measured_chance_level():
+    from sonar_pipeline.metrics import chance_f1_macro
+
+    balanced = np.repeat([0, 1, 2, 3], 50)
+    assert chance_f1_macro(balanced) == pytest.approx(0.25, abs=0.02)
+    pair = np.repeat([0, 3], 50)
+    assert chance_f1_macro(pair, [0, 3]) == pytest.approx(0.5, abs=0.03)
+    skewed = np.array([0] * 180 + [1] * 10 + [2] * 5 + [3] * 5)
+    assert chance_f1_macro(skewed) < 0.22  # unbalanced: below 1 / 4
+
+
+def test_chance_matches_f1_scores_draw_by_draw():
+    from sonar_pipeline.metrics import chance_f1_macro
+
+    y = np.array([0] * 7 + [1] * 3 + [2] * 5 + [3] * 2)
+    rng = np.random.default_rng(5)
+    expected = np.mean(
+        [f1_scores(y, p)[0] for p in rng.choice(range(4), size=(50, len(y)))]
+    )
+    assert chance_f1_macro(y, n_draws=50, seed=5) == pytest.approx(expected)

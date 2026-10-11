@@ -124,3 +124,28 @@ def test_evaluate_needs_every_model(tmp_path):
     folder = write_toy(tmp_path / "p")
     with pytest.raises(FileNotFoundError, match="baseline.npz"):
         run(folder, tmp_path / "m", tmp_path)
+
+
+def test_plot_only_redraws_from_metrics_json(trained, tmp_path, monkeypatch):
+    folder, models = trained
+    assert run(folder, models, tmp_path) == 0
+    for png in (tmp_path / "f").iterdir():
+        png.unlink()
+
+    def no_scoring(*args, **kwargs):
+        raise AssertionError("plot-only must not score test")
+
+    monkeypatch.setattr("sonar_pipeline.evaluate.evaluate_split", no_scoring)
+    argv = ["evaluate", "--plot-only", "--results-dir", str(tmp_path / "r")]
+    assert main([*argv, "--figures-dir", str(tmp_path / "f")]) == 0
+    assert len(list((tmp_path / "f").iterdir())) == 4
+
+
+def test_metrics_record_training_hardware_and_code(trained, tmp_path):
+    folder, models = trained
+    assert run(folder, models, tmp_path) == 0
+    metrics = json.loads((tmp_path / "r" / "metrics.json").read_text("utf-8"))
+    assert len(metrics["code_sha256"]) == 64
+    for entry in metrics["models"].values():
+        assert entry["training_hardware"]["device"] == "cpu"
+        assert len(entry["training_code_sha256"]) == 64

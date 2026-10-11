@@ -134,3 +134,45 @@ def test_permutation_test_needs_a_trained_model(tmp_path):
 def test_permutation_test_only_for_baseline(tmp_path, capsys):
     assert main(["train", "--model", "cnn", "--permutation-test", "3"]) == 1
     assert "only for --model baseline" in capsys.readouterr().err
+
+
+def test_cv_folds_never_share_a_vessel():
+    from sonar_pipeline.baseline import CV_FOLDS, cv_folds
+
+    y = np.repeat([0, 1, 2, 3], 30)
+    groups = np.array(
+        [f"{k}-{i // 3}" for i, k in enumerate(y)]
+    )  # 10 vessels per class
+    folds = cv_folds(y, groups)
+    assert len(folds) == CV_FOLDS
+    for train_rows, held_out in folds:
+        assert not set(groups[train_rows]) & set(groups[held_out])
+    held = np.concatenate([h for _, h in folds])
+    assert sorted(held.tolist()) == list(
+        range(len(y))
+    )  # every row held out exactly once
+
+
+def test_select_c_matches_the_trained_choice(tmp_path):
+    from sonar_pipeline.baseline import select_c
+
+    folder = write_toy(tmp_path / "p")
+    assert train(folder, tmp_path / "m") == 0
+    report = json.loads((tmp_path / "m" / "baseline.json").read_text("utf-8"))
+    trainset, val = load_split(folder, "train"), load_split(folder, "val")
+    chosen = select_c(
+        baseline_features(trainset), trainset.labels, baseline_features(val), val.labels
+    )
+    assert chosen == report["config"]["c"]
+    assert report["code_sha256"] and len(report["code_sha256"]) == 64
+
+
+def test_permutation_test_chooses_c_inside_every_permutation(tmp_path):
+    folder = write_toy(tmp_path / "p")
+    assert train(folder, tmp_path / "m") == 0
+    results = tmp_path / "r"
+    extra = ["--permutation-test", "4", "--results-dir", str(results)]
+    assert train(folder, tmp_path / "m", *extra) == 0
+    result = json.loads((results / "permutation_test.json").read_text("utf-8"))
+    assert len(result["null_c"]) == 4 and set(result["null_c"]) <= set(C_GRID)
+    assert result["c"] == result["saved_c"]

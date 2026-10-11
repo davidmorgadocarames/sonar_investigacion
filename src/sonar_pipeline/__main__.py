@@ -176,6 +176,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="cpu (reference, default), cuda or auto.",
     )
     evaluate.add_argument(
+        "--plot-only",
+        action="store_true",
+        help="Redraw the result figures from metrics.json without scoring test again.",
+    )
+    evaluate.add_argument(
         "--interpretability",
         action="store_true",
         help="Instead of scoring test, compute the interpretability on val with the frozen "
@@ -403,6 +408,12 @@ def cmd_interpretability(args: argparse.Namespace) -> int:
 def cmd_evaluate(args: argparse.Namespace) -> int:
     if args.interpretability:
         return cmd_interpretability(args)
+    if args.plot_only:
+        from sonar_pipeline.evaluate import plot_from_metrics
+
+        for path in plot_from_metrics(args.results_dir, args.figures_dir):
+            print(f"Figure: {path}")
+        return 0
     from sonar_pipeline.evaluate import evaluate_models
 
     result = evaluate_models(

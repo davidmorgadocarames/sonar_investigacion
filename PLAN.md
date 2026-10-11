@@ -108,6 +108,7 @@ quedan a alto nivel.
 - [x] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` (con la métrica general de 4 clases y la de dentro de cada época, y el clasificador de duración de DT-005 como referencia) y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
 - [x] F3-T10 · Interpretabilidad · orquestador · línea base: importancia por permutación de bandas de frecuencia; CNN: saliencia por gradientes y oclusión sobre el LOFARgram; mapas en `.npz` y PNG, resumen por banda y clase en `metrics.json`; comprobar si las bandas importantes son líneas fijas compartidas por todos los buques de una época (50/60 Hz, armónicos del equipo), señal de que se aprende la época (DT-005)
 - [~] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
+- [~] F3-T12 · Arreglar los hallazgos de la revisión de F3 y reentrenar (aprobado por David; ajuste 2 de D-018) · orquestador · pooling sin ceros con test de formas reales; hilos fijados; generadores separados; ReduceLROnPlateau; Pd a Pfa = 1 % no medible si hay pocos negativos y ROC de clasificación; hash de código y hardware de entrenamiento; permutación con C dentro; azar medido; tests de folds por buque, interpretabilidad sin test y determinismo en CUDA; figuras desde `metrics.json`; reentrenar las dos CNN (y la línea base solo para trazabilidad) y repetir la permutación, **con aviso y estimación de tiempo a David antes de cada paso**; segunda y última evaluación de test, conservando la primera en `outputs/results/eval1/`
 
 ## F4 · Entrega
 
@@ -123,6 +124,11 @@ quedan a alto nivel.
   Passengership y Tanker en 2016), así que el resultado de 4 clases no distingue el tipo de
   buque de las condiciones de grabación; solo las comparaciones dentro de una época están
   libres de ese efecto; Tug depende de una sola grabación en test.
+- **Nota (revisión de F3, aprobada por David):** el informe muestra las dos evaluaciones de test
+  (la primera y la de después de los arreglos de F3-T12) y explica por qué hubo una segunda;
+  declara que Tug no es fiable y que las demás clases tienen pocos buques; la ROC es de
+  clasificación (DT-007: la detección frente a ruido no se puede medir con DeepShip); el azar
+  de referencia es el medido, no 0,25 fijo; la validación cruzada mezcla folds de 3 y 4 clases.
 - **Nota (propuesta de resultados):** el subcomando `report` genera la sección de resultados del
   README y las figuras solo a partir de `metrics.json`. Las figuras del README deben quedar
   versionadas fuera de `outputs/` (p. ej. `docs/figures/`), lo que requiere una decisión. Incluir

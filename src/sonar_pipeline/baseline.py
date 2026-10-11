@@ -6,7 +6,8 @@
   timing, hardware, traceability and the vessel-grouped cross-validation).
 - Cross-validation: stratified and grouped by vessel, 5 folds over train + val.
 - Permutation test (a separate step, after the model is committed): class labels are shuffled
-  between vessel groups and the same cross-validation is repeated.
+  between vessel groups and the whole procedure is repeated, choice of C on val included (D-018
+  adjustment 2), so the p-value is not optimistic.
 
 Test is never loaded here.
 """
@@ -21,6 +22,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from sonar_pipeline.dataset import CLASSES, baseline_features, load_split
+from sonar_pipeline.features import code_sha256
 from sonar_pipeline.metrics import (
     evaluate_split,
     f1_scores,
@@ -51,13 +53,35 @@ def present_f1_macro(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return macro
 
 
+def cv_folds(y: np.ndarray, groups: np.ndarray, seed: int = SEED) -> list[tuple]:
+    """(train rows, held-out rows) of a stratified cross-validation grouped by vessel."""
+    folds = StratifiedGroupKFold(n_splits=CV_FOLDS, shuffle=True, random_state=seed)
+    return list(folds.split(np.zeros(len(y)), y, groups))
+
+
+def select_c(
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    x_val: np.ndarray,
+    y_val: np.ndarray,
+    c_grid: tuple[float, ...] = C_GRID,
+) -> float:
+    """The C with the best segment-level macro F1 on val; ties go to the smaller C."""
+    best_c, best_score = None, -1.0
+    for c in c_grid:
+        model = make_model(c).fit(x_train, y_train)
+        score = present_f1_macro(y_val, model.predict(x_val))
+        if score > best_score:
+            best_c, best_score = c, score
+    return best_c
+
+
 def grouped_cv(
     x: np.ndarray, y: np.ndarray, groups: np.ndarray, c: float, seed: int = SEED
 ) -> list[float]:
     """Macro F1 of every fold of a stratified, vessel-grouped cross-validation."""
-    folds = StratifiedGroupKFold(n_splits=CV_FOLDS, shuffle=True, random_state=seed)
     scores = []
-    for train_rows, test_rows in folds.split(x, y, groups):
+    for train_rows, test_rows in cv_folds(y, groups, seed):
         model = make_model(c).fit(x[train_rows], y[train_rows])
         scores.append(present_f1_macro(y[test_rows], model.predict(x[test_rows])))
     return scores
@@ -160,6 +184,7 @@ def train_baseline(
             "seconds": cv_time["seconds"],
         },
         "hardware": hardware("cpu"),
+        "code_sha256": code_sha256(),
         "traceability": traceability(processed_dir),
         "weights": weights_path.name,
     }
@@ -185,12 +210,13 @@ def permutation_test(
     n_permutations: int = PERMUTATIONS,
     seed: int = SEED,
 ) -> dict:
-    """Shuffle classes between vessel groups and repeat the grouped cross-validation.
+    """Shuffle classes between vessel groups and repeat the whole procedure: choose C on val
+    (fit on train), then the grouped cross-validation on train + val with that C.
 
     p = (1 + number of permutations scoring >= the real labels) / (1 + n_permutations).
-    Uses the C saved in models/baseline.json, so the model must be trained first.
+    Reads models/baseline.json, so the model must be trained (and committed) first.
     """
-    c = json.loads((models_dir / "baseline.json").read_text(encoding="utf-8"))[
+    saved_c = json.loads((models_dir / "baseline.json").read_text(encoding="utf-8"))[
         "config"
     ]["c"]
     train = load_split(processed_dir, "train")
@@ -198,23 +224,32 @@ def permutation_test(
     x = np.vstack([baseline_features(train), baseline_features(val)])
     y = np.concatenate([train.labels, val.labels])
     groups = np.concatenate([train.vessel_group, val.vessel_group])
+    n_train = len(train)
+
+    def procedure(labels: np.ndarray) -> tuple[float, float]:
+        c = select_c(x[:n_train], labels[:n_train], x[n_train:], labels[n_train:])
+        return c, float(np.mean(grouped_cv(x, labels, groups, c)))
 
     rng = np.random.default_rng(seed)
     with stopwatch() as elapsed:
-        observed = float(np.mean(grouped_cv(x, y, groups, c)))
-        null = []
+        observed_c, observed = procedure(y)
+        null, null_c = [], []
         for _ in range(n_permutations):
-            shuffled = shuffle_by_group(y, groups, rng)
-            null.append(float(np.mean(grouped_cv(x, shuffled, groups, c))))
+            c, score = procedure(shuffle_by_group(y, groups, rng))
+            null.append(score)
+            null_c.append(c)
     exceed = int(np.sum(np.array(null) >= observed))
     result = {
         "model": "baseline",
-        "c": c,
+        "c": observed_c,
+        "saved_c": saved_c,
+        "procedure": "C chosen on val inside every permutation, then grouped CV",
         "unit": "vessel group (labels shuffled between groups)",
         "n_permutations": n_permutations,
         "seed": seed,
         "observed_f1_macro": observed,
         "null_f1_macro": null,
+        "null_c": null_c,
         "null_mean": float(np.mean(null)),
         "null_p95": float(np.percentile(null, 95)),
         "exceed": exceed,

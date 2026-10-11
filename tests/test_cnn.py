@@ -74,7 +74,23 @@ def test_forward_shape_and_size_on_real_input_shapes():
 def test_pool_to_averages_equal_groups():
     x = torch.arange(12.0).reshape(1, 1, 12)
     assert pool_to(x, 4).flatten().tolist() == [1.0, 4.0, 7.0, 10.0]
-    assert pool_to(torch.ones(1, 1, 31), 8).shape == (1, 1, 8)  # padded up to 32
+
+
+@pytest.mark.parametrize("size", [18, 31])  # DEMON and LOFAR lengths before the head
+def test_pool_to_has_no_dead_positions_on_real_shapes(size):
+    # Review of F3 (M2): zero padding left DEMON positions 6 and 7 always at 0.
+    pooled = pool_to(torch.ones(1, 1, size), 8)
+    assert pooled.flatten().tolist() == [1.0] * 8
+    x = torch.randn(1, 1, size, requires_grad=True)
+    pool_to(x, 8).sum().backward()
+    assert torch.all(x.grad > 0)  # every input reaches the output
+
+
+def test_real_branch_lengths_before_pooling():
+    model = SonarCNN().eval()
+    lofar = model.lofar(torch.zeros(1, 1, 11, 1001)).mean(dim=2)
+    demon = model.demon(torch.zeros(1, 1, 301))
+    assert lofar.shape[-1] == 31 and demon.shape[-1] == 18
 
 
 def test_weight_decay_skips_biases_and_batchnorm():
@@ -262,3 +278,70 @@ def test_cli_trains_cnn_aug_with_the_cnn_configuration(tmp_path, capsys):
     assert len(aug["comparison"]["cnn_seed_val_f1"]) == 3
     assert "same seeds on val" in capsys.readouterr().out
     assert (tmp_path / "m" / "cnn_aug.pt").is_file()
+
+
+# --------------------------------------------------------------------------- review of F3
+
+
+def test_threads_are_fixed():
+    from sonar_pipeline.cnn import TORCH_THREADS, set_determinism
+
+    set_determinism(0)
+    assert torch.get_num_threads() == TORCH_THREADS
+
+
+def test_augmentation_has_its_own_generator(tmp_path):
+    from sonar_pipeline.cnn import AUGMENT_SEED_OFFSET
+
+    common = toy_inputs(write_toy(tmp_path / "p"))
+    seen = []
+
+    def spy(lofar, demon, generator):
+        seen.append(generator.initial_seed())
+        return lofar, demon
+
+    train_run(lr=1e-3, weight_decay=0.0, seed=4, max_epochs=1, augment=spy, **common)
+    assert set(seen) == {
+        4 + AUGMENT_SEED_OFFSET
+    }  # not the shuffling generator (seed 4)
+
+
+def test_same_minibatch_order_with_and_without_augmentation(tmp_path):
+    # With separate generators, an identity augmentation must not change the run.
+    common = toy_inputs(write_toy(tmp_path / "p"))
+
+    def identity(lofar, demon, generator):
+        torch.rand(5, generator=generator)  # consumes random numbers, changes nothing
+        return lofar, demon
+
+    plain = train_run(lr=1e-3, weight_decay=0.0, seed=2, max_epochs=3, **common)
+    augmented = train_run(
+        lr=1e-3, weight_decay=0.0, seed=2, max_epochs=3, augment=identity, **common
+    )
+    assert plain.history == augmented.history
+
+
+def test_learning_rate_halves_when_val_stalls(tmp_path):
+    from sonar_pipeline.cnn import PLATEAU_FACTOR
+
+    common = toy_inputs(write_toy(tmp_path / "p"))
+    run = train_run(
+        lr=1e-3, weight_decay=0.0, seed=0, max_epochs=25, patience=25, **common
+    )
+    rates = sorted({round(h["lr"], 12) for h in run.history}, reverse=True)
+    assert rates[0] == pytest.approx(1e-3)
+    assert len(rates) >= 2 and rates[1] == pytest.approx(1e-3 * PLATEAU_FACTOR)
+
+
+def test_same_seed_gives_the_same_run_on_cuda(tmp_path):
+    if not torch.cuda.is_available():
+        pytest.skip("no CUDA here: run in the GPU image (compose.gpu.yaml)")
+    common = toy_inputs(write_toy(tmp_path / "p"))
+    device = torch.device("cuda")
+    common["device"] = device
+    common["tensors"] = {k: v.to(device) for k, v in common["tensors"].items()}
+    a = train_run(lr=1e-3, weight_decay=1e-2, seed=3, max_epochs=3, **common)
+    b = train_run(lr=1e-3, weight_decay=1e-2, seed=3, max_epochs=3, **common)
+    assert a.history == b.history
+    for key in a.state:
+        assert torch.equal(a.state[key], b.state[key])

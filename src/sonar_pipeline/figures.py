@@ -270,9 +270,9 @@ def _f1_point(scores: dict | None) -> tuple[float, float, float] | None:
 def plot_f1_intervals(models: dict, path: Path) -> Path:
     """Test macro F1 with its 95 % bootstrap interval: 4 classes and within each era."""
     groups = [
-        ("4 clases", None, 0.25),
-        ("2016: Passeng. vs Tanker", "2016", 0.5),
-        ("2017: Cargo vs Tug", "2017", 0.5),
+        ("4 clases", None),
+        ("2016: Passeng. vs Tanker", "2016"),
+        ("2017: Cargo vs Tug", "2017"),
     ]
     names = list(models)
     fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), layout="constrained", sharey=True)
@@ -285,14 +285,18 @@ def plot_f1_intervals(models: dict, path: Path) -> Path:
     )
     offsets = np.linspace(-0.22, 0.22, len(names))
     for ax, level in zip(axes, ("segment", "recording"), strict=True):
-        for g, (_, era, chance) in enumerate(groups):
+        for g, (_, era) in enumerate(groups):
+            first = models[names[0]]["test"]
+            reference = first[level] if era is None else first["within_era"][era][level]
+            # Measured chance (random classifier on the true labels), same for every model.
+            chance = reference["chance_f1_macro"] if reference else 0.0
             ax.plot(
                 [g - 0.35, g + 0.35],
                 [chance, chance],
                 color=MUTED,
                 lw=1,
                 ls="--",
-                label="azar" if g == 0 else None,
+                label="azar (medido)" if g == 0 else None,
             )
             for offset, name in zip(offsets, names, strict=True):
                 test = models[name]["test"]
@@ -332,7 +336,8 @@ def plot_roc(models: dict, path: Path, level: str = "segment") -> Path:
         1, len(classes), figsize=(13, 3.6), layout="constrained", sharey=True
     )
     fig.suptitle(
-        f"Test: curvas ROC {LEVEL_LABELS[level]}, una clase frente al resto",
+        f"Test: ROC de clasificación {LEVEL_LABELS[level]}, una clase frente al resto "
+        "(no de detección: sin grabaciones de solo fondo)",
         color=INK,
         fontsize=11,
         x=0.02,
@@ -354,6 +359,20 @@ def plot_roc(models: dict, path: Path, level: str = "segment") -> Path:
                 label=f"{MODEL_LABELS[name]} (AUC {roc['auc']:.2f})",
             )
         ax.axvline(0.01, color=MUTED, linewidth=1, linestyle=":")
+        rocs = [e["test"][level]["roc"][cls] for e in models.values()]
+        negatives = next((r["n_negatives"] for r in rocs if r), 0)
+        if (
+            0 < negatives < 100
+        ):  # Pd at Pfa = 1 % is null in metrics.json (D-018 adj. 2)
+            ax.text(
+                0.011,
+                0.5,
+                f"Pfa = 1 % no medible ({negatives} negativos)",
+                color=MUTED,
+                fontsize=6.5,
+                rotation=90,
+                va="center",
+            )
         ax.set_xscale("log")
         ax.set_xlim(floor, 1)
         ax.set_ylim(0, 1.02)

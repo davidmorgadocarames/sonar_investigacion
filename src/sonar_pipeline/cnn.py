@@ -1,13 +1,16 @@
 """CNN (F3-T07, D-018): two branches, LOFARgram (2D) and DEMON (1D), joined by a small head.
 
-Training: AdamW (no weight decay on biases or BatchNorm), cosine learning rate, minibatches of 32
-shuffled with a fixed seed, class-weighted cross-entropy, at most 60 epochs with early stopping
-(patience 10) on the segment-level macro F1 of val. Search lr x weight decay with one seed, then
-train the best configuration with 3 seeds and keep the best on val.
+Training: AdamW (no weight decay on biases or BatchNorm), learning rate halved when val macro F1
+stops improving for 3 epochs (ReduceLROnPlateau), minibatches of 32 shuffled with a fixed seed,
+class-weighted cross-entropy, at most 60 epochs with early stopping (patience 10) on the
+segment-level macro F1 of val. Search lr x weight decay with one seed, then train the best
+configuration with 3 seeds and keep the best on val.
 
-Reproducibility: seeds fixed, deterministic algorithms required. The pooling is fixed-size
-(no adaptive pooling, whose CUDA backward is not deterministic). The input normalisation (mean
-and standard deviation of each branch on train) is stored in the weights as buffers.
+Reproducibility: seeds fixed, CPU threads fixed, deterministic algorithms required. Shuffling and
+augmentation use separate generators, so cnn and cnn-aug see the minibatches in the same order.
+The pooling splits the frequency axis into equal groups without padding (no adaptive pooling,
+whose CUDA backward is not deterministic). The input normalisation (mean and standard deviation of
+each branch on train) is stored in the weights as buffers. (D-018 adjustment 2.)
 
 Test is never loaded here.
 """
@@ -20,6 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from sonar_pipeline.dataset import CLASSES, class_weights, load_split
+from sonar_pipeline.features import code_sha256
 from sonar_pipeline.metrics import (
     evaluate_split,
     f1_scores,
@@ -35,7 +39,6 @@ os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
 import torch  # after the environment variable
 from torch import nn
-from torch.nn import functional as F
 
 LR_GRID = (1e-3, 3e-4)
 WEIGHT_DECAY_GRID = (1e-3, 1e-2)
@@ -43,6 +46,10 @@ SEEDS = (0, 1, 2)
 BATCH_SIZE = 32
 MAX_EPOCHS = 60
 PATIENCE = 10
+PLATEAU_FACTOR = 0.5  # lr multiplied by this when val macro F1 stalls
+PLATEAU_PATIENCE = 3  # epochs without improvement before lowering the lr
+TORCH_THREADS = 4  # fixed CPU threads (D-018 adjustment 2)
+AUGMENT_SEED_OFFSET = 10_000  # augmentation generator seed = run seed + offset
 DROPOUT = 0.3
 LEAKY_SLOPE = 0.01
 POOLED_BINS = 8  # frequency positions kept by each branch before the head
@@ -75,14 +82,17 @@ def conv_block_1d(c_in, c_out, kernel, pool):
 
 
 def pool_to(x: torch.Tensor, bins: int) -> torch.Tensor:
-    """Average the last axis into `bins` equal groups (zero-padded at the end if needed).
+    """Average the last axis into `bins` contiguous groups, with no padding.
 
-    A fixed average pooling: deterministic on CUDA, unlike adaptive pooling.
+    Group i covers [floor(i * size / bins), ceil((i + 1) * size / bins)), as adaptive average
+    pooling does, but built from slices and means, which are deterministic on CUDA.
     """
-    size = x.shape[-1]
-    width = -(-size // bins)
-    x = F.pad(x, (0, width * bins - size))
-    return F.avg_pool1d(x, width)
+    size = x.shape[-1]  # with size < bins, groups overlap but none is empty
+    groups = [
+        x[..., (i * size) // bins : -(-((i + 1) * size) // bins)].mean(dim=-1)
+        for i in range(bins)
+    ]
+    return torch.stack(groups, dim=-1)
 
 
 class SonarCNN(nn.Module):
@@ -140,6 +150,7 @@ def set_determinism(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.set_num_threads(TORCH_THREADS)
     torch.use_deterministic_algorithms(True)
     torch.backends.cudnn.benchmark = False
 
@@ -209,9 +220,12 @@ def train_run(
     optimizer = torch.optim.AdamW(
         split_parameters(model), lr=lr, weight_decay=weight_decay
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max_epochs)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="max", factor=PLATEAU_FACTOR, patience=PLATEAU_PATIENCE
+    )
     loss_fn = nn.CrossEntropyLoss(weight=weights.to(device))
-    generator = torch.Generator().manual_seed(seed)
+    generator = torch.Generator().manual_seed(seed)  # minibatch order
+    augment_generator = torch.Generator().manual_seed(seed + AUGMENT_SEED_OFFSET)
     y_train = torch.as_tensor(labels["train"], device=device)
     n = len(y_train)
 
@@ -228,13 +242,12 @@ def train_run(
                     tensors["train_demon"][rows],
                 )
                 if augment is not None:
-                    lofar, demon = augment(lofar, demon, generator)
+                    lofar, demon = augment(lofar, demon, augment_generator)
                 optimizer.zero_grad()
                 loss = loss_fn(model(lofar, demon), y_train[rows])
                 loss.backward()
                 optimizer.step()
                 total += loss.item() * len(rows)
-            scheduler.step()
             probs = predict_proba(model, tensors["val_lofar"], tensors["val_demon"])
             val_f1 = present_f1_macro(labels["val"], probs.argmax(axis=1))
             best.history.append(
@@ -242,9 +255,10 @@ def train_run(
                     "epoch": epoch,
                     "train_loss": total / n,
                     "val_f1_macro": val_f1,
-                    "lr": scheduler.get_last_lr()[0],
+                    "lr": optimizer.param_groups[0]["lr"],  # lr used in this epoch
                 }
             )
+            scheduler.step(val_f1)
             best.epochs_run = epoch
             if val_f1 > best.best_val_f1:
                 best.best_val_f1, best.best_epoch = val_f1, epoch
@@ -470,6 +484,10 @@ def train_cnn(
             "weight_decay_grid": list(weight_decay_grid),
             "seeds": list(seeds),
             "augment": augment_config,
+            "augment_seed_offset": AUGMENT_SEED_OFFSET,
+            "lr_schedule": f"ReduceLROnPlateau on val macro F1: x{PLATEAU_FACTOR} after "
+            f"{PLATEAU_PATIENCE} epochs without improvement",
+            "torch_threads": TORCH_THREADS,
             "selection": "segment-level macro F1 on val (early stopping and choice)",
         },
         "cost": torch_cost(cpu_model, example),
@@ -487,6 +505,7 @@ def train_cnn(
         "inference": {"seconds": inference_time["seconds"], "segments": len(val)},
         "val": evaluate_split(probabilities, val.labels, val.wav_path, n_bootstrap),
         "hardware": hardware(str(device)),
+        "code_sha256": code_sha256(),
         "traceability": traceability(processed_dir),
         "weights": weights_path.name,
     }

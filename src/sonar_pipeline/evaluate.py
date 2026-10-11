@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 
 from sonar_pipeline.dataset import CLASSES, baseline_features, load_split
+from sonar_pipeline.features import code_sha256
 from sonar_pipeline.metrics import (
     evaluate_split,
     hardware,
@@ -94,6 +95,8 @@ def evaluate_models(
             ),
             "weights": weights_path.name,
             "weights_sha256": sha256_file(weights_path),
+            "training_hardware": trained.get("hardware"),
+            "training_code_sha256": trained.get("code_sha256"),
         }
         for key in ("grouped_cv", "comparison"):
             if key in trained:
@@ -105,6 +108,7 @@ def evaluate_models(
         "classes": list(CLASSES),
         "traceability": traceability(processed_dir),
         "hardware": hardware(device_name),
+        "code_sha256": code_sha256(),
         "models": models,
         "dt005": read_json(results_dir / "dt005_duration.json"),
         "permutation_test": read_json(results_dir / "permutation_test.json"),
@@ -116,3 +120,15 @@ def evaluate_models(
 
         payload["figures"] = [str(p) for p in plot_results(models, figures_dir)]
     return payload
+
+
+def plot_from_metrics(results_dir: Path, figures_dir: Path) -> list[Path]:
+    """Redraw the result figures from metrics.json, without scoring test again."""
+    from sonar_pipeline.figures import plot_results
+
+    metrics = read_json(results_dir / "metrics.json")
+    if metrics is None:
+        raise FileNotFoundError(
+            f"{results_dir / 'metrics.json'} not found: run evaluate first"
+        )
+    return plot_results(metrics["models"], figures_dir)
