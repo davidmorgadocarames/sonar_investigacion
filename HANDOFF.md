@@ -90,3 +90,20 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --plot-only` redibuja las
   figuras desde `metrics.json` sin volver a puntuar test.
 - **Siguiente paso exacto:** F3-T11: pasar otra vez el reviewer sobre F3-T12 y cerrar F3.
+
+## 2026-10-11 · F3-T12 en curso: arreglos de la revisión y modelos reentrenados
+- **Qué se hizo:** revisión de F3 sin hallazgos críticos ni altos; David aprobó arreglar todo lo
+  que no daba una salida correcta sin cambiar nada para mejorar la cifra (ajuste 2 de D-018,
+  DT-005 reformulada, DT-007 nueva; commit `ab383dd`). Primera evaluación guardada en
+  `outputs/results/eval1/` y `outputs/figures/eval1/`. Con el visto bueno de David: línea base
+  reentrenada en CPU (pesos idénticos, SHA-256 `1968677a…`); CNN y CNN con aumento reentrenadas
+  en GPU (23 s y 15 s). Val: CNN elegida lr=1e-3, wd=1e-2; semillas 0,391 / 0,364 / 0,233 (media
+  0,329 ± 0,069); CNN con aumento 0,358 / 0,256 / 0,277 (media 0,297 ± 0,044). El mejor val sigue
+  en la época 3 y el lr se reduce a la mitad hacia la época 7.
+- **Qué quedó a medias:** por petición de David, parada tras el commit de los modelos: falta el
+  test de permutación con C dentro (~8-10 min CPU), la segunda y última evaluación de test y la
+  interpretabilidad, con su visto bueno.
+- **Ficheros tocados:** `models/{baseline,cnn,cnn_aug}.{npz,pt,json}`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
+  train --model cnn` (determinista: mismas cifras).
+- **Siguiente paso exacto:** con el visto bueno de David, pasos 5-7 de F3-T12.
