@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4-T04 cerrada: README completo
+- **Qué se hizo:** README reescrito: resultado en una frase con enlace al informe; requisitos y
+  por qué no hace falta virtualenv (D-021); opción A (CPU) y B (GPU NVIDIA con `.env`);
+  "Comprobar la instalación" con `-rs` y qué saltos son normales; datos; QC y rasgos; evaluar
+  con los pesos entrenados (cifras que deben salir, idénticas a `docs/results/eval2.json`);
+  `report`; reentrenar (tiempos: medidos en GPU y para la línea base, estimados para las CNN en
+  CPU; los pesos versionados se entrenaron en GPU); limitaciones; carpetas; cita exacta de
+  DeepShip y supuesto de licencia. **Corrección encontrada al probarlo:** en Windows `.env` con
+  solo `COMPOSE_FILE=compose.yaml:compose.gpu.yaml` falla (el separador por defecto es `;`);
+  hace falta `COMPOSE_PATH_SEPARATOR=:` delante. Comprobado con `docker compose config
+  --images` (da `sonar-pipeline:gpu`) y corregido en el README y en `compose.gpu.yaml`. D-019 cita
+  la versión antigua: pendiente de que David apruebe el ajuste (regla 2). Sin entrenamientos.
+- **Qué quedó a medias:** el ajuste de D-019 y la nota de Linux (UID), que llega con F4-T05.
+- **Ficheros tocados:** `README.md`, `compose.gpu.yaml`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer el README; `docker compose config --images` con y sin `.env`.
+- **Siguiente paso exacto:** F4-T05: pagar DT-001 (UID y GID del host).
+
 ## 2026-10-11 · F4-T03 cerrada: subcomando `report` e informe
 - **Qué se hizo:** `src/sonar_pipeline/report.py` y `report` (`--results-dir`, `--figures-dir`,
   `--manifests-dir`, `--output`, `--collect-figures DIR`). `report --collect-figures
@@ -90,22 +107,3 @@ Plantilla:
   las tareas (README con opciones A y B, "Comprobar la instalación", subcomando `report`,
   figuras versionadas, limitaciones declaradas, friend-tester, etiqueta `v0.1`, DT-001) y
   esperar su aprobación.
-
-## 2026-10-11 · F3-T12 cerrada: permutación con C dentro y segunda evaluación de test
-- **Qué se hizo:** con el visto bueno de David: (5) test de permutación con la elección de C
-  dentro de cada permutación, 17,5 min en CPU (se estimaron 8-10): F1 real 0,370 frente a media
-  nula 0,272 (p95 0,364; rango 0,161-0,428), 7/200, **p = 0,040** (igual que sin la elección
-  dentro); (6) **segunda y última evaluación de test** (30 s): F1 macro por segmento línea base
-  0,374 (igual), **CNN 0,115** (antes 0,167), **CNN con aumento 0,252** (antes 0,185); azar
-  medido 0,238 (por grabación 0,212; dentro de época 0,493 y 0,468). La CNN lo predice casi todo
-  como Passengership; la CNN con aumento, casi todo como Cargo y nunca Tug. Dentro de época:
-  CNN con aumento 0,59 en Passengership frente a Tanker y CNN 0,63 en Cargo frente a Tug (IC muy
-  anchos). (7) Interpretabilidad (32 s): igual para la línea base; las CNN siguen dependiendo de
-  0-40 y 80-120 Hz; solapamiento con las bandas de época 2/5, 2/5 y 1/5. Primera evaluación en
-  `outputs/results/eval1/`.
-- **Qué quedó a medias:** nada de F3-T12. Falta la nueva pasada del reviewer (F3-T11) y el
-  cierre de F3.
-- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md` (resultados en `outputs/`, no versionados).
-- **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --plot-only` redibuja las
-  figuras desde `metrics.json` sin volver a puntuar test.
-- **Siguiente paso exacto:** F3-T11: pasar otra vez el reviewer sobre F3-T12 y cerrar F3.
