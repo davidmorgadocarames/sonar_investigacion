@@ -130,6 +130,32 @@ def test_ambiguous_alignment_fails(tmp_path):
         bvt.build_table(tmp_path)
 
 
+def test_repeated_id_for_unpaired_wav_fails(tmp_path):
+    # WAV 2 (6 s) matches no duration, and id 2 appears twice in the same block (a repeated
+    # id does not open a new block). Taking the first row would be a silent guess (DT-006).
+    lines = [
+        meta_line(1, "A", 10),
+        meta_line(2, "B", 20),
+        meta_line(2, "C", 25),
+        meta_line(3, "D", 30),
+    ]
+    make_class(tmp_path, "Passengership", lines, {1: 10, 2: 6, 3: 30})
+    parsed = bvt.parse_metafile(tmp_path / "Passengership" / "passengership-metafile")
+    assert [r.block for r in parsed] == [1] * 4
+    with pytest.raises(bvt.AlignmentError, match=r"id 2 is repeated in block 1"):
+        bvt.build_table(tmp_path)
+
+
+def test_blocks_tied_without_any_duration_match_fail(tmp_path):
+    # No WAV matches any duration in either block: both blocks score 0. Picking block 1
+    # would be a silent guess.
+    block1 = [meta_line(i, f"FIRST {i}", 10 * i) for i in range(1, 4)]
+    block2 = [meta_line(i, f"SECOND {i}", 10 * i) for i in range(1, 4)]
+    make_class(tmp_path, "Tanker", block1 + block2, {2: 99})
+    with pytest.raises(bvt.AlignmentError, match="align equally well"):
+        bvt.build_table(tmp_path)
+
+
 def test_malformed_metafile_line_fails(tmp_path):
     make_class(tmp_path, "Tug", ["1,52,X,20160505,010203,10,1-2,extra\r\n"], {1: 10})
     with pytest.raises(bvt.MetafileError):

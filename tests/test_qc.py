@@ -1,13 +1,14 @@
 """QC tests with synthetic signals whose answer is known in advance."""
 
 import csv
+import hashlib
 
 import numpy as np
 import pytest
 from scipy.io import wavfile
 
 from sonar_pipeline.__main__ import main
-from sonar_pipeline.qc import analyze, run_qc
+from sonar_pipeline.qc import analyze, natural_key, run_qc
 
 FS = 32000
 
@@ -85,21 +86,42 @@ def test_run_qc_writes_one_row_per_wav(tmp_path):
     (data / "Cargo").mkdir(parents=True)
     (data / "Tug").mkdir()
     wavfile.write(data / "Cargo" / "1.wav", FS, tone(seconds=3.0))
+    wavfile.write(data / "Cargo" / "10.wav", FS, tone())
     wavfile.write(data / "Tug" / "2.wav", FS, tone(offset=0.3))
     out = tmp_path / "out" / "qc.csv"
+    before = digests(data)
 
     results = run_qc(data, out)
 
-    rows = list(csv.DictReader(out.open(encoding="utf-8")))
-    assert [r["path"] for r in rows] == ["Cargo/1.wav", "Tug/2.wav"]
-    assert [r["vessel_class"] for r in rows] == ["Cargo", "Tug"]
+    assert b"\r" not in out.read_bytes()
+    rows = list(csv.DictReader(out.open(newline="", encoding="utf-8")))
+    assert [r["path"] for r in rows] == ["Cargo/1.wav", "Cargo/10.wav", "Tug/2.wav"]
+    assert [r["vessel_class"] for r in rows] == ["Cargo", "Cargo", "Tug"]
     assert float(rows[0]["duration_s"]) == pytest.approx(3.0)
     assert rows[0]["dtype"] == "float32"
     assert rows[0]["flagged"] == "False"
-    assert rows[1]["flag_dc"] == "True"
-    assert len(results) == 2
-    # QC never touches the data.
-    assert sorted(p.name for p in data.rglob("*.wav")) == ["1.wav", "2.wav"]
+    assert rows[2]["flag_dc"] == "True"
+    assert len(results) == 3
+    # QC never touches the data: same files, same bytes.
+    assert digests(data) == before
+
+
+def digests(folder):
+    return {
+        p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in folder.rglob("*")
+        if p.is_file()
+    }
+
+
+def test_natural_key_orders_numbers_by_value():
+    paths = ["Tug/2.wav", "Cargo/10.wav", "Cargo/9.wav", "Cargo/103.wav"]
+    assert sorted(paths, key=natural_key) == [
+        "Cargo/9.wav",
+        "Cargo/10.wav",
+        "Cargo/103.wav",
+        "Tug/2.wav",
+    ]
 
 
 def test_run_qc_fails_without_wavs(tmp_path):

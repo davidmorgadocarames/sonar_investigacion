@@ -1,6 +1,6 @@
 # Versiones fijadas (regla 6). Las dependencias se añaden en la tarea que las necesita (D-002).
-# PyTorch se instala desde el índice indicado por TORCH_INDEX_URL en el Dockerfile
-# (CPU por defecto: https://download.pytorch.org/whl/cpu).
+# Todo se instala desde PyPI. PyTorch (F3) se instalará aparte, solo desde el índice
+# TORCH_INDEX_URL del Dockerfile (CPU por defecto: https://download.pytorch.org/whl/cpu).
 numpy==2.4.6
 pytest==9.1.1
 scipy==1.17.1

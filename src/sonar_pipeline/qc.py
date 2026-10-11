@@ -5,6 +5,7 @@ recordings is a separate, approved decision (task F1-T05b).
 """
 
 import csv
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -117,12 +118,20 @@ def check_file(path: Path, data_dir: Path) -> QCResult:
     )
 
 
+def natural_key(path: str) -> list:
+    """Sort key that orders numbers by value: Cargo/9.wav before Cargo/10.wav."""
+    return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", path)]
+
+
 def run_qc(data_dir: Path, output: Path) -> list[QCResult]:
-    """Check every WAV under data_dir (sorted, recursive) and write one CSV row per file."""
+    """Check every WAV under data_dir (natural order, recursive); write one LF CSV row per file."""
     wavs = sorted(
-        p
-        for p in data_dir.rglob("*")
-        if p.suffix.lower() == ".wav" and ".git" not in p.parts
+        (
+            p
+            for p in data_dir.rglob("*")
+            if p.suffix.lower() == ".wav" and ".git" not in p.parts
+        ),
+        key=lambda p: natural_key(p.relative_to(data_dir).as_posix()),
     )
     if not wavs:
         raise FileNotFoundError(f"No WAV files found under {data_dir}")
@@ -131,7 +140,7 @@ def run_qc(data_dir: Path, output: Path) -> list[QCResult]:
     output.parent.mkdir(parents=True, exist_ok=True)
     fields = [*QCResult.__dataclass_fields__, "flagged"]
     with output.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fields)
+        writer = csv.DictWriter(f, fieldnames=fields, lineterminator="\n")
         writer.writeheader()
         for r in results:
             writer.writerow({**asdict(r), "flagged": r.flagged})

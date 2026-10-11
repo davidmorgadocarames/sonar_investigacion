@@ -21,8 +21,9 @@ blocks. The table is therefore built by an explainable alignment, without hand-w
 3. The class uses the block with the best alignment (the WAVs of a class come from one block).
 4. A WAV left unpaired keeps the row whose id equals its number, marked ``id_unverified``.
 
-The script fails instead of guessing if the optimal alignment is not unique, if a row would be
-used by two WAVs, or if a metafile line does not have the expected shape.
+The script fails instead of guessing (D-010, DT-006) if two blocks align equally well, if the
+optimal alignment is not unique, if an unpaired WAV's id is missing or repeated in the block, if
+a row would be used by two WAVs, or if a metafile line does not have the expected shape.
 
 Vessel groups (D-007): class + normalised name (strip, upper case, spaces collapsed). Every name
 starting with "QUEEN OF" (a truncated name) is one group, and BOWEN QUEEN joins it as a precaution
@@ -260,7 +261,9 @@ def assign_class(
         results.append((score, block, block_rows, pairs))
     best_score = max(r[0] for r in results)
     winners = [r for r in results if r[0] == best_score]
-    if len(winners) > 1 and best_score[0] > 0:
+    if len(winners) > 1:
+        # Also when no block matches any duration (score 0): taking the first block would be
+        # a silent guess (D-010).
         raise AlignmentError(
             f"{vessel_class}: blocks {[w[1] for w in winners]} align equally well"
         )
@@ -288,6 +291,12 @@ def assign_class(
                 raise AlignmentError(
                     f"{vessel_class}: WAV {wav.number} matches no duration and no id in block "
                     f"{block}"
+                )
+            if len(by_id) > 1:
+                raise AlignmentError(
+                    f"{vessel_class}: WAV {wav.number} matches no duration and id "
+                    f"{wav.number} is repeated in block {block} "
+                    f"(lines {[r.line for r in by_id]})"
                 )
             row = by_id[0]
             source = SOURCE_ID_UNVERIFIED

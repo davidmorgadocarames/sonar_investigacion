@@ -1,7 +1,8 @@
 """Permanent checks on the versioned split manifest (F1-T06c, D-012, D-013).
 
-``datasets/manifests/split.csv`` and ``vessels.csv`` are versioned, so these tests always run:
-the split must have no leaks, every class must have a group in every split (Tug 1/1/1), and
+``datasets/manifests/split.csv`` and ``vessels.csv`` are versioned, so these tests run whenever
+``datasets/`` is there (always in a clone and with docker compose; skipped with a bare
+``docker run``): the split must have no leaks, every class must have a group in every split (Tug 1/1/1), and
 regenerating it with tools/make_split.py must give the same bytes.
 """
 
@@ -35,6 +36,10 @@ make_split = load_tool("make_split")
 
 
 def read(path):
+    if not MANIFESTS.is_dir():
+        pytest.skip(
+            f"{MANIFESTS} not found: datasets/ is not mounted (use docker compose)"
+        )
     assert path.is_file(), f"{path} is versioned and must exist"
     with path.open(newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
@@ -75,7 +80,8 @@ def test_every_class_has_a_group_in_every_split(split_rows):
     assert [len(groups[("Tug", s)]) for s in SPLITS] == [1, 1, 1]
 
 
-def test_regenerating_gives_identical_bytes(tmp_path):
+def test_regenerating_gives_identical_bytes(tmp_path, split_rows):
+    # split_rows: skip with the same reason as the other tests if datasets/ is not mounted.
     out = tmp_path / "split.csv"
     assert make_split.main(["--vessels", str(VESSELS), "--output", str(out)]) == 0
     assert out.read_bytes() == SPLIT.read_bytes()

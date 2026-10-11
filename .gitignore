@@ -1,10 +1,11 @@
 # Audio: nunca entra en git sin aprobación expresa (regla 4)
-*.wav
-*.flac
-*.mp3
-*.ogg
-*.aif
-*.aiff
+# (sin distinguir mayúsculas: Foo.WAV también queda fuera)
+*.[wW][aA][vV]
+*.[fF][lL][aA][cC]
+*.[mM][pP]3
+*.[oO][gG][gG]
+*.[aA][iI][fF]
+*.[aA][iI][fF][fF]
 
 # Datos y salidas: se conserva solo el .gitkeep para que la carpeta exista al clonar
 datasets/raw/*

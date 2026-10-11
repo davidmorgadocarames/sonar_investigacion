@@ -1,7 +1,7 @@
 """DT-002 checks on the real vessel table and, when present, on the real DeepShip WAVs.
 
-``datasets/manifests/vessels.csv`` is versioned, so its tests always run. The WAV tests need
-``datasets/raw/DeepShip`` (mounted as a volume in Docker) and are skipped if it is missing.
+``datasets/manifests/vessels.csv`` is versioned, so its tests run whenever ``datasets/`` is there
+(skipped with a bare ``docker run``). The WAV tests need ``datasets/raw/DeepShip`` (mounted as a volume in Docker) and are skipped if it is missing.
 The WAVs and metafiles are read here directly, independently of tools/build_vessel_table.py.
 """
 
@@ -23,6 +23,10 @@ UNVERIFIED = {"Passengership/30.wav", "Passengership/37.wav"}
 
 @pytest.fixture(scope="module")
 def table():
+    if not VESSELS.parent.is_dir():
+        pytest.skip(
+            f"{VESSELS.parent} not found: datasets/ is not mounted (use docker compose)"
+        )
     assert VESSELS.is_file(), f"{VESSELS} is versioned and must exist"
     with VESSELS.open(newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))

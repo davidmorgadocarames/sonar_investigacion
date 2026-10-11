@@ -91,7 +91,7 @@ Una tarea está hecha cuando se cumplen las cuatro cosas:
 ```bash
 docker compose build
 docker compose run --rm pipeline --help
-docker compose run --rm --entrypoint python pipeline -m pytest
+docker compose run --rm --entrypoint python pipeline -m pytest -rs  # -rs: lista los saltados
 python -m pre_commit run --all-files     # en esta máquina, `pre-commit` no está en el PATH
 git status --short --untracked-files=all  # no debe aparecer ningún audio
 ```

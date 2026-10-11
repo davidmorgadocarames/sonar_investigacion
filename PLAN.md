@@ -61,7 +61,7 @@ quedan a alto nivel.
   reviewer no deja hallazgos graves abiertos.
 
 - [x] F2-T01 · Pagar DT-004: test que regenera `vessels.csv` · data-engineer · el test ejecuta `build_vessel_table.py` sobre `datasets/raw/DeepShip`, escribe en una carpeta temporal y compara byte a byte con la versionada; se salta si no hay audios; pasa en Docker
-- [ ] F2-T02 · Pagar DT-006 (mejoras menores) · orquestador (+ data-engineer para `tools/`) · id repetido avisa o falla; `qc.csv` en LF y ordenado; el test de `qc` compara contenido; el test de `--help` comprueba los subcomandos de verdad; imagen base con versión exacta; `.gitignore` sin distinguir mayúsculas; los tests de datos se saltan si no hay audios; el comando de tests de CLAUDE.md y del README lleva `-rs` para que se vean los saltados (aprobado por David); cada punto con su test o verificación
+- [x] F2-T02 · Pagar DT-006 (mejoras menores) · orquestador (+ data-engineer para `tools/`) · id repetido avisa o falla; `qc.csv` en LF y ordenado; el test de `qc` compara contenido; el test de `--help` comprueba los subcomandos de verdad; imagen base con versión exacta; `.gitignore` sin distinguir mayúsculas; los tests de datos se saltan si no hay audios; el comando de tests de CLAUDE.md y del README lleva `-rs` para que se vean los saltados (aprobado por David); cada punto con su test o verificación
 - [ ] F2-T03 · Proponer parámetros de preprocesado, LOFAR, DEMON y formato de salida · orquestador → David · decisión aprobada y apuntada (D-015); si el segmento dura más de 6 s, revisar D-009
 - [ ] F2-T04 · Módulo de preprocesado: offset DC por grabación (D-009), normalización y segmentación · orquestador · tests sintéticos: el offset desaparece, número de segmentos exacto, ningún segmento cruza grabaciones, cada grabación da al menos un segmento
 - [ ] F2-T05 · LOFAR (STFT, dB, normalización de fondo) · orquestador · un tono sintético de frecuencia conocida da el máximo en su bin (±1 bin); el ruido blanco normalizado queda plano
@@ -104,6 +104,9 @@ quedan a alto nivel.
 - **Entregable:** README completo, informe de resultados (subcomando `report`) y etiqueta `v0.1`.
 - **Nota:** si el amigo no ha descargado los audios, los tests que los necesitan se saltan sin
   llamar la atención; revisarlo con el friend-tester.
+- **Nota (David, 2026-10-11):** añadir al README una sección corta "Comprobar la instalación"
+  con el comando de tests con `-rs` (`docker compose run --rm --entrypoint python pipeline -m
+  pytest -rs`), para que se vean los tests saltados y su motivo.
 - **Nota (propuesta de resultados):** el subcomando `report` genera la sección de resultados del
   README y las figuras solo a partir de `metrics.json`. Las figuras del README deben quedar
   versionadas fuera de `outputs/` (p. ej. `docs/figures/`), lo que requiere una decisión. Incluir

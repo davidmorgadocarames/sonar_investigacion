@@ -17,6 +17,26 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T02 cerrada: DT-006 pagada
+- **Qué se hizo:** `build_vessel_table.py` falla si un id está repetido y si dos bloques empatan
+  sin ninguna duración coincidente (data-engineer, D-010). `qc.csv` en LF y orden natural; el test
+  de `qc` compara SHA-256; el test de `--help` comprueba exactamente los subcomandos; imagen
+  `python:3.11.17-slim`; `requirements.txt` solo desde PyPI (`TORCH_INDEX_URL` queda para PyTorch
+  en F3); `.gitignore` sin distinguir mayúsculas; los tests de datos se saltan con `docker run`
+  sin compose (70 passed, 10 skipped); `-rs` en CLAUDE.md. DT-006 pagada (aprobado por David).
+  80 tests.
+- **Qué quedó a medias:** nada. La sección "Comprobar la instalación" del README queda como nota
+  en F4 (decisión de David).
+- **Ficheros tocados:** `tools/build_vessel_table.py`, `src/sonar_pipeline/qc.py`, `tests/test_qc.py`,
+  `tests/test_cli.py`, `tests/test_vessel_table.py`, `tests/test_split_data.py`,
+  `tests/test_vessel_table_data.py`, `Dockerfile`, `requirements.txt`, `.gitignore`, `CLAUDE.md`,
+  `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (80 passed) y `docker run --rm --entrypoint python sonar-pipeline:latest -m pytest -rs`
+  (70 passed, 10 skipped).
+- **Siguiente paso exacto:** F2-T03: proponer a David los parámetros de preprocesado, LOFAR,
+  DEMON y formato de salida (D-015).
+
 ## 2026-10-11 · F2 empezada; F2-T01 cerrada: DT-004 pagada
 - **Qué se hizo:** David aprobó las 9 tareas de F2 (en PLAN.md). `data-engineer` creó
   `tests/test_vessel_table_regen.py`: regenera `vessels.csv` desde los 63 WAV en `tmp_path` y lo
@@ -78,19 +98,3 @@ Plantilla:
   pipeline tools/check_leaks.py --similar-names`.
 - **Siguiente paso exacto:** F1-T06c: proponer a David las proporciones de la partición por buque
   (con un buque de Tug en cada partición) antes de generarla.
-
-## 2026-10-11 · F1-T06a cerrada: tabla WAV → buque
-- **Qué se hizo:** `data-engineer` creó `tools/build_vessel_table.py`, que genera
-  `datasets/manifests/vessels.csv` (63 filas, SHA-256 `ec6ad1a1…79ec`, idéntico al regenerarlo).
-  Alineamiento que conserva el orden por clase y bloque: 35 WAV por id, 26 por duración y 2 sin
-  verificar (Passengership 30 y 37, grupo COLUMBIA). 44 grupos de buque, ninguno en dos clases.
-  `tools/` ahora va dentro de la imagen (Dockerfile y .dockerignore). 17 tests nuevos (33 en
-  total).
-- **Qué quedó a medias:** tres propuestas pendientes de David (algoritmo de asignación, rutas
-  relativas a `raw/DeepShip/`, posibles nombres de buque cortados).
-- **Ficheros tocados:** `tools/build_vessel_table.py`, `tests/test_vessel_table.py`,
-  `datasets/manifests/vessels.csv`, `datasets/README.md`, `Dockerfile`, `.dockerignore`,
-  `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline
-  tools/build_vessel_table.py` y `sha256sum datasets/manifests/vessels.csv`.
-- **Siguiente paso exacto:** F1-T06b: comprobación de fugas y test de DT-002.
