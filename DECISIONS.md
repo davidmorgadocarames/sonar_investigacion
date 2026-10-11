@@ -204,6 +204,35 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** son datos factuales y pocos, y son necesarios para trazar cada asignación WAV →
   buque (D-010).
 
+### D-015 · Parámetros de preprocesado, LOFAR, DEMON y formato de los rasgos
+- **Fecha:** 2026-10-11
+- **Contexto:** F2 implementa el preprocesado y los rasgos LOFAR y DEMON (F2-T04 a F2-T07). Los
+  WAV son de 32 kHz y duran de 6 s a 204 s (95,4 min en total). Segmentos sin solapamiento que
+  saldrían: 2851 con 2 s, 1889 con 3 s y 1118 con 5 s (Tug: 296, 196 y 118).
+- **Alternativas:** segmentos de 2, 3 o 5 s; ventana de LOFAR de 0,5 s (2 Hz) o 0,25 s (4 Hz).
+- **Decisión:** todos los valores viven como constantes en un único módulo.
+  - **Preprocesado:** se resta el offset DC por grabación (D-009); segmentos de **3 s sin
+    solapamiento** (se descarta la cola que no completa un segmento); cada segmento se escala a
+    RMS = 1.
+  - **LOFAR:** diezmado de 32 a 4 kHz con filtro antialiasing; banda de 0 a 2 kHz; ventana Hann
+    de 0,5 s con avance de 0,25 s (2 Hz de resolución; 11 tramas × 1001 bins por segmento);
+    normalización de fondo con TPSW (ventana de ±20 bins, hueco de ±2 bins, recorte en la
+    segunda pasada de los valores mayores que 2 veces el fondo); salida 10·log10(potencia /
+    fondo), en dB sobre el fondo.
+  - **DEMON:** paso banda Butterworth de orden 4 de 2 a 8 kHz, en ambos sentidos; envolvente
+    |Hilbert| menos su media; diezmado a 500 Hz en dos etapas de ×8; espectro del segmento con
+    ventana Hann (0,33 Hz de resolución; 301 bins de 0 a 100 Hz); bins por debajo de 1 Hz a 0;
+    normalizado por su máximo.
+  - **Salida en `datasets/processed/`** (ignorada por git): un `.npz` por partición (`lofar`
+    (N, 11, 1001) y `demon` (N, 301) en float32, más los ejes de frecuencia); `index.csv` con
+    `segment_id`, `wav_path`, `vessel_class`, `vessel_group`, `split`, `segment_index` y
+    `start_s`; y `features_meta.json` con los parámetros, el SHA-256 de `split.csv` y el commit
+    del proyecto. Determinista, sin azar.
+- **Motivo:** 3 s es habitual con DeepShip, cabe dos veces en la grabación más corta (D-009 no
+  cambia) y deja 196 segmentos de Tug. Escalar por segmento quita el nivel absoluto, que depende
+  de la distancia (atenúa DT-005). La ventana de 0,5 s prima la resolución en frecuencia, que es
+  para lo que sirve LOFAR; en 3 s las líneas tonales son estables y el eje del tiempo aporta poco.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

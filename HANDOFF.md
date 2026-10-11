@@ -17,6 +17,18 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T03 cerrada: parámetros de la señal (D-015)
+- **Qué se hizo:** `.dockerignore` excluye el audio en cualquier carpeta y sin distinguir
+  mayúsculas (commit aparte, pedido por David). David aprobó D-015: segmentos de 3 s sin
+  solapamiento (1889 en total, Tug 67/66/63), RMS = 1 por segmento, LOFAR a 4 kHz con ventana de
+  0,5 s y TPSW (11 × 1001), DEMON de 2 a 8 kHz con envolvente de Hilbert a 500 Hz (301 bins,
+  0 a 100 Hz), y un `.npz` por partición más `index.csv` y `features_meta.json`.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `.dockerignore`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer D-015 en DECISIONS.md.
+- **Siguiente paso exacto:** F2-T04: módulo de preprocesado (offset DC por grabación, RMS = 1,
+  segmentos de 3 s) con tests sintéticos; los parámetros como constantes en un único módulo.
+
 ## 2026-10-11 · F2-T02 cerrada: DT-006 pagada
 - **Qué se hizo:** `build_vessel_table.py` falla si un id está repetido y si dos bloques empatan
   sin ninguna duración coincidente (data-engineer, D-010). `qc.csv` en LF y orden natural; el test
@@ -82,19 +94,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline tools/check_leaks.py`
   (OK) y los tests en Docker.
 - **Siguiente paso exacto:** F1-T08: pasada del reviewer y cierre de F1.
-
-## 2026-10-11 · F1-T06b cerrada: comprobación de fugas
-- **Qué se hizo:** `data-engineer` creó `tools/check_leaks.py` (falla si un buque o una
-  grabación, también por SHA-256, aparece en dos particiones, o si el split no cuadra con
-  `vessels.csv`) y `--similar-names` para DT-003. Tests de fugas y de DT-002 sobre los datos
-  reales (recalcula SHA-256 y duración de los 63 WAV). David aprobó D-011 (BOWEN QUEEN se une a
-  "QUEEN OF": 43 grupos) y D-012 (formato de `split.csv`); DT-002 y DT-003 pagadas. 56 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `tools/check_leaks.py`, `tools/build_vessel_table.py`,
-  `tests/test_check_leaks.py`, `tests/test_vessel_table_data.py`, `tests/test_vessel_table.py`,
-  `datasets/manifests/vessels.csv`, `datasets/README.md`, `DECISIONS.md`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** los tests en Docker y `docker compose run --rm --entrypoint python
-  pipeline tools/check_leaks.py --similar-names`.
-- **Siguiente paso exacto:** F1-T06c: proponer a David las proporciones de la partición por buque
-  (con un buque de Tug en cada partición) antes de generarla.
