@@ -13,11 +13,12 @@ datasets/
 models/
 outputs/
 *.md
-*.wav
-*.flac
-*.mp3
-*.ogg
-*.aif
-*.aiff
+# Audio anywhere in the context, case-insensitive (same extensions as .gitignore).
+**/*.[wW][aA][vV]
+**/*.[fF][lL][aA][cC]
+**/*.[mM][pP]3
+**/*.[oO][gG][gG]
+**/*.[aA][iI][fF]
+**/*.[aA][iI][fF][fF]
 compose*.yaml
 Dockerfile
