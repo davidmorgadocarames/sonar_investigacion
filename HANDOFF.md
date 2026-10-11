@@ -17,6 +17,25 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T05 cerrada: comprobación de DT-005 y métrica por época
+- **Qué se hizo:** `train --model duration` (`src/sonar_pipeline/duration_check.py`): regresión
+  logística solo con la duración de la grabación, ajustada en train y puntuada en val (test no se
+  carga); escribe `outputs/results/dt005_duration.json`. Resultado en val: F1 macro 0,93 por
+  segmento y 0,80 por grabación (azar ~0,25); la duración separa las épocas ({Cargo, Tug} 2017,
+  ~180-200 s; {Passengership, Tanker} 2016, casi todas cortas). David aprobó: DT-005 sigue
+  abierta; ajuste de D-018 con métricas dentro de cada época (`ERAS` en `dataset.py`,
+  `pair_scores` en `metrics.py`, en `evaluate_split`); comprobación de bandas en F3-T10;
+  limitación declarada en F4. Dentro de cada época la duración también acierta en val (Cargo
+  frente a Tug 1,00 con solo 3 grabaciones; Passengership frente a Tanker 0,86 por segmento y
+  0,60 por grabación): es casualidad de pocos datos y los modelos no ven la duración. `train`
+  acepta `baseline`, `cnn` y `cnn-aug`, aún sin implementar. 190 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/{duration_check,dataset,metrics,__main__}.py`,
+  `tests/test_{duration_check,metrics,dataset}.py`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline train --model duration`.
+- **Siguiente paso exacto:** F3-T06: línea base (regresión logística). **Avisar a David con una
+  estimación de tiempo antes de entrenar**; commit del modelo antes del test de permutación.
+
 ## 2026-10-11 · F3-T04 cerrada: métricas y `metrics.json`
 - **Qué se hizo:** `src/sonar_pipeline/metrics.py`: F1 macro y por clase (sobre las 4 clases);
   matriz de confusión en cuentas y normalizada por clase real; ROC una frente al resto (Pfa, Pd,
@@ -83,20 +102,3 @@ Plantilla:
 - **Siguiente paso exacto:** F3-T02: proponer D-019 (scikit-learn y PyTorch CPU). **Antes de
   cualquier entrenamiento o test de permutación, avisar a David con una estimación de tiempo; y
   hacer commit de un modelo entrenado antes de permutar.** Test no se mira hasta F3-T09.
-
-## 2026-10-11 · F2 Señal cerrada (F2-T09)
-- **Qué se hizo:** pasada del reviewer sobre F2: sin hallazgos críticos ni altos; los 2 medios y
-  los 9 bajos se arreglaron en F2-T10 (ajuste 2 de D-015 y D-017, aprobados por David). Criterio
-  de salida cumplido: un tono conocido aparece en el LOFAR en su bin y una modulación conocida en
-  el DEMON en su bin, con controles negativos que hacen fallar los tests si se rompe el
-  antialiasing o el paso banda. Entregable: subcomando `features` (1889 segmentos, unos 85 MB en
-  `datasets/processed/`) y figuras en `outputs/figures/`.
-- **Qué quedó a medias:** nada de F2. F3 no tiene tareas detalladas. Deudas abiertas: DT-001
-  (UID, F4) y DT-005 (clase frente a época, a vigilar en F3).
-- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
-  (152 passed).
-- **Siguiente paso exacto:** empezar F3 con el procedimiento de inicio de fase: proponer a David
-  las tareas (incluidas las notas de F3 en PLAN.md: pesos por clase, validación cruzada por buque,
-  `metrics.json`, DT-005, scikit-learn, PyTorch CPU, dónde se guardan y versionan los pesos) y
-  **avisar a David antes de lanzar cualquier entrenamiento**.

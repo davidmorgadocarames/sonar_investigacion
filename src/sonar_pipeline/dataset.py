@@ -17,6 +17,10 @@ from sonar_pipeline.features import SPLITS
 # Fixed class order: label k is CLASSES[k] in every model, metric and figure.
 CLASSES = ("Cargo", "Passengership", "Tanker", "Tug")
 
+# Recording era of every class (``date`` in vessels.csv). Class and era coincide (DT-005), so
+# only the comparisons inside one era are free of recording conditions (D-018 adjustment).
+ERAS = {"2016": ("Passengership", "Tanker"), "2017": ("Cargo", "Tug")}
+
 
 @dataclass
 class SplitData:

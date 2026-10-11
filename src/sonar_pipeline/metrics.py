@@ -15,8 +15,8 @@ Layout of ``outputs/results/metrics.json`` (filled by F3-T05 to F3-T10):
           "cost": {parameters, flops_per_segment},
           "training": {seconds, device, seeds, ...},
           "inference": {seconds, segments},
-          "val": {"segment": SCORES, "recording": SCORES},
-          "test": {"segment": SCORES, "recording": SCORES}
+          "val": {"segment": SCORES, "recording": SCORES, "within_era": ERA_SCORES},
+          "test": {"segment": SCORES, "recording": SCORES, "within_era": ERA_SCORES}
         }
       },
       "dt005": {...}, "permutation_test": {...}, "interpretability": {...}
@@ -24,6 +24,11 @@ Layout of ``outputs/results/metrics.json`` (filled by F3-T05 to F3-T10):
 
     SCORES = {n, f1_macro, f1_per_class, ci95 {f1_macro, f1_per_class}, confusion,
               confusion_normalized, roc {class: {pfa, pd, auc, pd_at_pfa_1pct}}}
+    ERA_SCORES = {era: {classes, segment: PAIR, recording: PAIR}}  (ERAS in dataset.py)
+    PAIR = {n, f1_macro, f1_per_class, accuracy, auc, ci95 {f1_macro, f1_per_class}}
+
+The within-era scores (DT-005) only keep the two classes recorded in the same era and decide
+between them with their two probabilities: Cargo vs Tug (2017), Passengership vs Tanker (2016).
 """
 
 import hashlib
@@ -39,7 +44,7 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics import confusion_matrix, f1_score, roc_auc_score, roc_curve
 
-from sonar_pipeline.dataset import CLASSES, aggregate_by_recording
+from sonar_pipeline.dataset import CLASSES, ERAS, aggregate_by_recording
 
 SCHEMA_VERSION = 1
 BOOTSTRAP_SAMPLES = 2000
@@ -51,9 +56,11 @@ PACKAGES = ("numpy", "scipy", "scikit-learn", "torch", "matplotlib")
 # --------------------------------------------------------------------------- scores
 
 
-def f1_scores(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, list[float]]:
-    """Macro F1 and F1 of every class, over all classes (absent predictions give 0)."""
-    labels = list(range(len(CLASSES)))
+def f1_scores(
+    y_true: np.ndarray, y_pred: np.ndarray, labels: list[int] | None = None
+) -> tuple[float, list[float]]:
+    """Macro F1 and F1 of every class in labels (default: all; absent predictions give 0)."""
+    labels = list(range(len(CLASSES))) if labels is None else labels
     per_class = f1_score(y_true, y_pred, labels=labels, average=None, zero_division=0)
     return float(np.mean(per_class)), [float(v) for v in per_class]
 
@@ -96,12 +103,15 @@ def bootstrap_f1(
     n_samples: int = BOOTSTRAP_SAMPLES,
     seed: int = 0,
     level: float = CI_LEVEL,
+    labels: list[int] | None = None,
 ) -> dict:
     """Percentile interval of macro and per-class F1, resampling groups within each class.
 
     groups: the recording of every row. Each resample draws, for every class, as many of its
-    recordings as it has (with replacement) and keeps all their rows.
+    recordings as it has (with replacement) and keeps all their rows. labels: the classes
+    scored (default: all).
     """
+    labels = list(range(len(CLASSES))) if labels is None else labels
     rng = np.random.default_rng(seed)
     rows_of = {g: np.flatnonzero(groups == g) for g in dict.fromkeys(groups.tolist())}
     by_class = {}
@@ -115,7 +125,7 @@ def bootstrap_f1(
             picks = rng.integers(0, len(members), len(members))
             chosen.extend(rows_of[members[i]] for i in picks)
         rows = np.concatenate(chosen)
-        m, pc = f1_scores(y_true[rows], y_pred[rows])
+        m, pc = f1_scores(y_true[rows], y_pred[rows], labels)
         macro.append(m)
         per_class.append(pc)
     lo, hi = 100 * (1 - level) / 2, 100 * (1 + level) / 2
@@ -123,11 +133,11 @@ def bootstrap_f1(
     return {
         "f1_macro": [float(np.percentile(macro, lo)), float(np.percentile(macro, hi))],
         "f1_per_class": {
-            name: [
-                float(np.percentile(per_class[:, k], lo)),
-                float(np.percentile(per_class[:, k], hi)),
+            CLASSES[label]: [
+                float(np.percentile(per_class[:, j], lo)),
+                float(np.percentile(per_class[:, j], hi)),
             ]
-            for k, name in enumerate(CLASSES)
+            for j, label in enumerate(labels)
         },
     }
 
@@ -154,6 +164,38 @@ def scores(
     }
 
 
+def pair_scores(
+    probabilities: np.ndarray,
+    y_true: np.ndarray,
+    groups: np.ndarray,
+    pair: tuple[str, str],
+    n_bootstrap: int = BOOTSTRAP_SAMPLES,
+    seed: int = 0,
+) -> dict | None:
+    """Scores between two classes only: rows of those classes, decided by their two
+    probabilities (the other classes are ignored). None if one class is absent."""
+    a, b = (CLASSES.index(name) for name in pair)
+    keep = np.isin(y_true, [a, b])
+    if not (np.any(y_true == a) and np.any(y_true == b)):
+        return None
+    p_a, p_b = probabilities[keep, a], probabilities[keep, b]
+    total = p_a + p_b
+    share_a = np.divide(p_a, total, out=np.full(len(p_a), 0.5), where=total > 0)
+    truth = y_true[keep]
+    y_pred = np.where(share_a >= 0.5, a, b)
+    macro, per_class = f1_scores(truth, y_pred, [a, b])
+    return {
+        "n": int(keep.sum()),
+        "f1_macro": macro,
+        "f1_per_class": dict(zip(pair, per_class, strict=True)),
+        "accuracy": float(np.mean(y_pred == truth)),
+        "auc": float(roc_auc_score(truth == a, share_a)),
+        "ci95": bootstrap_f1(
+            truth, y_pred, groups[keep], n_bootstrap, seed, labels=[a, b]
+        ),
+    }
+
+
 def evaluate_split(
     probabilities: np.ndarray,
     labels: np.ndarray,
@@ -163,11 +205,24 @@ def evaluate_split(
 ) -> dict:
     """Segment-level and recording-level scores of one split."""
     rec = aggregate_by_recording(probabilities, wav_path, labels)
+    within_era = {
+        era: {
+            "classes": list(pair),
+            "segment": pair_scores(
+                probabilities, labels, wav_path, pair, n_bootstrap, seed
+            ),
+            "recording": pair_scores(
+                rec.probabilities, rec.labels, rec.wav_path, pair, n_bootstrap, seed
+            ),
+        }
+        for era, pair in ERAS.items()
+    }
     return {
         "segment": scores(probabilities, labels, wav_path, n_bootstrap, seed),
         "recording": scores(
             rec.probabilities, rec.labels, rec.wav_path, n_bootstrap, seed
         ),
+        "within_era": within_era,
     }
 
 

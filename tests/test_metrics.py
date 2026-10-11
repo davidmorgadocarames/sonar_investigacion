@@ -175,3 +175,50 @@ def test_traceability_of_the_real_features():
     assert trace["deepship_commit"] == "77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6"
     assert trace["split_sha256"].startswith("51564cf1")
     assert set(trace["features_sha256"]) == {"train", "val", "test"}
+
+
+def test_within_era_ignores_confusion_across_eras():
+    from sonar_pipeline.metrics import pair_scores
+
+    # Every Cargo segment is called Passengership (wrong era), but Cargo > Tug in each of them,
+    # and every Tug segment has Tug > Cargo: inside 2017 the model is perfect.
+    labels = np.array([0, 0, 3, 3, 1, 2])
+    probs = np.array(
+        [
+            [0.3, 0.6, 0.0, 0.1],
+            [0.2, 0.7, 0.0, 0.1],
+            [0.1, 0.0, 0.3, 0.6],
+            [0.2, 0.0, 0.2, 0.6],
+            [0.0, 0.9, 0.1, 0.0],
+            [0.0, 0.2, 0.8, 0.0],
+        ]
+    )
+    groups = np.array(["c1", "c2", "u1", "u2", "p1", "t1"])
+    era_2017 = pair_scores(probs, labels, groups, ("Cargo", "Tug"), n_bootstrap=50)
+    assert era_2017["n"] == 4
+    assert era_2017["f1_macro"] == 1.0 and era_2017["accuracy"] == 1.0
+    assert era_2017["auc"] == 1.0
+    assert set(era_2017["f1_per_class"]) == {"Cargo", "Tug"}
+    assert era_2017["ci95"]["f1_macro"] == [1.0, 1.0]
+    four_class, _ = f1_scores(labels, probs.argmax(axis=1))
+    assert four_class < 1.0  # while the 4-class score sees the cross-era error
+
+
+def test_within_era_is_none_without_both_classes():
+    from sonar_pipeline.metrics import pair_scores
+
+    probs = one_hot_probs(np.array([0, 0]))
+    result = pair_scores(
+        probs, np.array([0, 0]), np.array(["a", "b"]), ("Cargo", "Tug")
+    )
+    assert result is None
+
+
+def test_evaluate_split_reports_both_eras():
+    labels = np.repeat([0, 1, 2, 3], 4)
+    wav = np.array([f"{k}-{i % 2}.wav" for i, k in enumerate(labels)])
+    result = evaluate_split(one_hot_probs(labels), labels, wav, n_bootstrap=20)
+    eras = result["within_era"]
+    assert eras["2016"]["classes"] == ["Passengership", "Tanker"]
+    assert eras["2017"]["classes"] == ["Cargo", "Tug"]
+    assert eras["2017"]["segment"]["n"] == 8 and eras["2017"]["recording"]["n"] == 4

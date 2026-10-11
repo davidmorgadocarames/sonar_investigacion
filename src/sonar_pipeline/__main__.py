@@ -6,6 +6,9 @@ from pathlib import Path
 
 from sonar_pipeline import __version__
 
+# Models of `train` (D-018); duration is the DT-005 check.
+TRAIN_MODELS = ("duration", "baseline", "cnn", "cnn-aug")
+
 # Subcommand -> (help text, phase that implements it).
 COMMANDS = {
     "qc": ("Run quality control on raw WAV files.", "F1"),
@@ -82,6 +85,33 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("outputs/figures"),
         help="Folder for the figures (default: %(default)s).",
     )
+
+    train = subcommands["train"]
+    train.add_argument(
+        "--model",
+        choices=TRAIN_MODELS,
+        required=True,
+        help="duration: DT-005 check (recording duration only, scored on val); "
+        "baseline, cnn, cnn-aug: the models of D-018.",
+    )
+    train.add_argument(
+        "--processed-dir",
+        type=Path,
+        default=Path("datasets/processed"),
+        help="Features written by `features` (default: %(default)s).",
+    )
+    train.add_argument(
+        "--vessels",
+        type=Path,
+        default=Path("datasets/manifests/vessels.csv"),
+        help="Vessel table with the duration of every WAV (default: %(default)s).",
+    )
+    train.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("outputs/results"),
+        help="Folder for the JSON results (default: %(default)s).",
+    )
     return parser
 
 
@@ -122,7 +152,48 @@ def cmd_features(args: argparse.Namespace) -> int:
     return 0
 
 
-HANDLERS = {"qc": cmd_qc, "features": cmd_features}
+def cmd_train(args: argparse.Namespace) -> int:
+    if args.model != "duration":
+        print(
+            f"'train --model {args.model}' is not implemented yet (F3).",
+            file=sys.stderr,
+        )
+        return 1
+    from sonar_pipeline.dataset import CLASSES
+    from sonar_pipeline.duration_check import run_duration_check
+
+    output = args.results_dir / "dt005_duration.json"
+    result = run_duration_check(args.processed_dir, args.vessels, output)
+    val = result["val"]
+    print(
+        f"DT-005 check: logistic regression on recording duration, fitted in "
+        f"{result['training']['seconds']:.2f} s; scored on val (test not used)."
+    )
+    for level in ("segment", "recording"):
+        s = val[level]
+        lo, hi = s["ci95"]["f1_macro"]
+        print(
+            f"  {level:<9} n={s['n']:<4} F1 macro {s['f1_macro']:.3f} (95 % CI {lo:.3f}-{hi:.3f})"
+        )
+        print(
+            "            "
+            + "  ".join(f"{c} {s['f1_per_class'][c]:.2f}" for c in CLASSES)
+        )
+    for era, scores in val["within_era"].items():
+        a, b = scores["classes"]
+        for level in ("segment", "recording"):
+            s = scores[level]
+            print(
+                f"  {era} {a} vs {b} ({level}): F1 macro {s['f1_macro']:.3f}, n={s['n']}"
+            )
+    print(
+        f"  chance F1 macro ~ {result['chance_f1_macro']:.2f} (4 classes), 0.5 within an era"
+    )
+    print(f"Written to {output}")
+    return 0
+
+
+HANDLERS = {"qc": cmd_qc, "features": cmd_features, "train": cmd_train}
 
 
 def main(argv: list[str] | None = None) -> int:

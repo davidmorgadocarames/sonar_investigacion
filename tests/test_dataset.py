@@ -138,3 +138,23 @@ def test_real_features_load_without_mixing_splits():
     for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
         assert not set(splits[a].wav_path) & set(splits[b].wav_path)
         assert not set(splits[a].vessel_group) & set(splits[b].vessel_group)
+
+
+def test_eras_match_the_recording_dates():
+    import csv as _csv
+
+    from sonar_pipeline.dataset import ERAS
+
+    vessels = ROOT / "datasets" / "manifests" / "vessels.csv"
+    if not vessels.is_file():
+        pytest.skip(
+            f"{vessels} not found: datasets/ is not mounted (use docker compose)"
+        )
+    years = {}
+    with vessels.open(newline="", encoding="utf-8") as f:
+        for r in _csv.DictReader(f):
+            years.setdefault(r["vessel_class"], set()).add(r["date"][:4])
+    assert {cls: era for era, pair in ERAS.items() for cls in pair} == {
+        cls: next(iter(ys)) for cls, ys in years.items() if len(ys) == 1
+    }
+    assert sorted(c for pair in ERAS.values() for c in pair) == sorted(CLASSES)
