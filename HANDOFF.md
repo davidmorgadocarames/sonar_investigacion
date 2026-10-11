@@ -17,6 +17,22 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F1-T06a cerrada: tabla WAV → buque
+- **Qué se hizo:** `data-engineer` creó `tools/build_vessel_table.py`, que genera
+  `datasets/manifests/vessels.csv` (63 filas, SHA-256 `ec6ad1a1…79ec`, idéntico al regenerarlo).
+  Alineamiento que conserva el orden por clase y bloque: 35 WAV por id, 26 por duración y 2 sin
+  verificar (Passengership 30 y 37, grupo COLUMBIA). 44 grupos de buque, ninguno en dos clases.
+  `tools/` ahora va dentro de la imagen (Dockerfile y .dockerignore). 17 tests nuevos (33 en
+  total).
+- **Qué quedó a medias:** tres propuestas pendientes de David (algoritmo de asignación, rutas
+  relativas a `raw/DeepShip/`, posibles nombres de buque cortados).
+- **Ficheros tocados:** `tools/build_vessel_table.py`, `tests/test_vessel_table.py`,
+  `datasets/manifests/vessels.csv`, `datasets/README.md`, `Dockerfile`, `.dockerignore`,
+  `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline
+  tools/build_vessel_table.py` y `sha256sum datasets/manifests/vessels.csv`.
+- **Siguiente paso exacto:** F1-T06b: comprobación de fugas y test de DT-002.
+
 ## 2026-10-11 · F1-T05 cerrada: subcomando `qc`
 - **Qué se hizo:** numpy 2.4.6 y scipy 1.17.1 fijados (D-008). `src/sonar_pipeline/qc.py` mide
   formato, duración, offset DC, saturación, NaN o infinitos y silencio, y escribe
@@ -78,21 +94,3 @@ Plantilla:
 - **Siguiente paso exacto:** lanzar F1-T03 (inventario: ¿los números de fichero identifican
   buques o grabaciones?) con `data-engineer`, sobre un clon de la fuente en
   `datasets/raw/DeepShip`.
-
-## 2026-10-10 · F0 Setup cerrada
-- **Qué se hizo:** estructura del repositorio, pre-commit (gitleaks, ruff, check-added-large-files
-  con límite de 10 MB, forbid-audio), Docker CPU con usuario no root (UID 1000), override GPU,
-  CLI vacía con 5 subcomandos y smoke test, documentos de gobierno y 3 subagentes. Se comprobó
-  que un `.wav` y un fichero de 11 MB forzados son rechazados por pre-commit.
-- **Qué quedó a medias:** nada de F0. Las propuestas D-002, D-003, D-004 y DT-001 fueron
-  aprobadas por David y están apuntadas en DECISIONS.md.
-- **Ficheros tocados:** `.gitignore`, `.pre-commit-config.yaml`, `Dockerfile`, `compose.yaml`,
-  `compose.gpu.yaml`, `.dockerignore`, `requirements.txt`, `src/sonar_pipeline/*`,
-  `tests/test_cli.py`, `CLAUDE.md`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md`, `README.md`,
-  `datasets/README.md`, `.claude/agents/*`, y los `.gitkeep` de `tools/`, `models/`,
-  `outputs/` y `datasets/*`.
-- **Cómo verificarlo:** los comandos de la sección "Comandos de verificación" de
-  [CLAUDE.md](CLAUDE.md).
-- **Siguiente paso exacto:** resolver con David las propuestas pendientes de DECISIONS.md y
-  esperar a que confirme la licencia de DeepShip (F1-T01). Mientras tanto, se puede lanzar
-  F1-T03 con `data-engineer` si David indica dónde está DeepShip en su máquina o servidor.

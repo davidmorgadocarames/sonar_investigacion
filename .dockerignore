@@ -12,7 +12,6 @@
 datasets/
 models/
 outputs/
-tools/
 *.md
 *.wav
 *.flac

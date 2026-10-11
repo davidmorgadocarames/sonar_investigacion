@@ -41,6 +41,37 @@
 Ningún audio entra en git sin aprobación expresa: lo impiden `.gitignore` y el hook
 `forbid-audio` de pre-commit.
 
+## Tabla WAV → buque (`manifests/vessels.csv`)
+
+Una fila por WAV (63), ordenadas por clase y número de WAV; UTF-8 con finales de línea LF. La
+genera `tools/build_vessel_table.py` a partir de los WAV y los metafiles
+([D-007](../DECISIONS.md), [DT-002](../DECISIONS.md)):
+
+```bash
+docker compose run --rm --entrypoint python pipeline tools/build_vessel_table.py
+```
+
+Regenerarla con los mismos datos da un fichero idéntico byte a byte.
+
+- **Columnas:** `wav_path` (relativa a `raw/DeepShip/`), `vessel_class`, `wav_number`, `sha256`,
+  `sample_rate`, `n_samples`, `wav_duration_s`; la fila del metafile usada (`metafile`,
+  `metafile_line` (línea física, contando desde 1), `metafile_block`, `metafile_id`, `ais_code`,
+  `vessel_name_raw` (tal cual, con sus espacios), `date`, `time`, `metafile_duration_s`, `field7`
+  (sin interpretar)); `vessel_group`; y `match_source`, `duration_match`, `duration_diff_s`.
+- **Cómo se asigna cada WAV a una fila.** La numeración del metafile vuelve a empezar en cada
+  *bloque* (Tanker tiene 3). En cada clase, los WAV (por número) se alinean con las filas de un
+  bloque conservando el orden de ambos, que es cronológico. Solo se emparejan si la duración
+  coincide con ±1 s, y se maximiza, por este orden: el número de parejas, cuántas tienen
+  id = número de WAV y la cercanía entre id y número. La clase usa el bloque que mejor se alinea.
+  El script falla si el óptimo no es único o si una fila se usa dos veces.
+- **`match_source`:** `id` (id = número y la duración coincide: 35), `duration` (la duración
+  coincide con otra fila: 26) o `id_unverified` (ninguna duración coincide y se toma la fila por
+  id: 2, Passengership 30 y 37, ambas COLUMBIA).
+- **`vessel_group`:** clase + nombre normalizado (sin espacios a los lados, en mayúsculas y con
+  los espacios internos colapsados). Todos los nombres que empiezan por "QUEEN OF" forman un solo
+  grupo. Ningún grupo abarca dos clases. Resultado: 44 grupos (Cargo 11, Passengership 11,
+  Tanker 19, Tug 3).
+
 ## Partición
 
 La partición train/val/test se hace **por buque**, que los metafiles permiten

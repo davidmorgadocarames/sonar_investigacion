@@ -18,6 +18,7 @@ RUN pip install --extra-index-url "${TORCH_INDEX_URL}" -r requirements.txt
 
 COPY src/ src/
 COPY tests/ tests/
+COPY tools/ tools/
 RUN mkdir -p datasets models outputs && chown -R app:app /app
 
 USER app
