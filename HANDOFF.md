@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T12 en curso: arreglos de la revisión y modelos reentrenados
+- **Qué se hizo:** revisión de F3 sin hallazgos críticos ni altos; David aprobó arreglar todo lo
+  que no daba una salida correcta sin cambiar nada para mejorar la cifra (ajuste 2 de D-018,
+  DT-005 reformulada, DT-007 nueva; commit `ab383dd`). Primera evaluación guardada en
+  `outputs/results/eval1/` y `outputs/figures/eval1/`. Con el visto bueno de David: línea base
+  reentrenada en CPU (pesos idénticos, SHA-256 `1968677a…`); CNN y CNN con aumento reentrenadas
+  en GPU (23 s y 15 s). Val: CNN elegida lr=1e-3, wd=1e-2; semillas 0,391 / 0,364 / 0,233 (media
+  0,329 ± 0,069); CNN con aumento 0,358 / 0,256 / 0,277 (media 0,297 ± 0,044). El mejor val sigue
+  en la época 3 y el lr se reduce a la mitad hacia la época 7.
+- **Qué quedó a medias:** por petición de David, parada tras el commit de los modelos: falta el
+  test de permutación con C dentro (~8-10 min CPU), la segunda y última evaluación de test y la
+  interpretabilidad, con su visto bueno.
+- **Ficheros tocados:** `models/{baseline,cnn,cnn_aug}.{npz,pt,json}`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
+  train --model cnn` (determinista: mismas cifras).
+- **Siguiente paso exacto:** con el visto bueno de David, pasos 5-7 de F3-T12.
+
 ## 2026-10-11 · F3-T10 cerrada: interpretabilidad y comprobación de épocas
 - **Qué se hizo:** `src/sonar_pipeline/interpret.py` y `evaluate --interpretability` (val, modelos
   congelados, 34 s en CPU): importancia por permutación de bandas (línea base), saliencia y
@@ -96,19 +113,3 @@ Plantilla:
   train --model cnn` (mismas cifras: determinista).
 - **Siguiente paso exacto:** F3-T08: CNN con aumento; código y tests, estimación de tiempo y
   visto bueno de David antes de entrenar.
-
-## 2026-10-11 · F3-T06 cerrada: test de permutación de la línea base
-- **Qué se hizo:** con el visto bueno de David, `train --model baseline --permutation-test 200`
-  (3 min 42 s en CPU; scikit-learn no usa GPU). Validación cruzada por buque: F1 macro real 0,370
-  frente a 0,270 de media con las clases permutadas entre buques (percentil 95: 0,355; rango
-  0,155-0,428); 7 de 200 permutaciones igualan o superan el real: **p = 0,040**. La línea base
-  supera al azar, pero por poco; las etiquetas reales incluyen la época (DT-005), así que parte de
-  la ventaja puede venir de ahí. Resultado en `outputs/results/permutation_test.json` (no
-  versionado; se reproduce con la semilla 0 y entra en `metrics.json` en F3-T09).
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline train --model baseline
-  --permutation-test 200` (mismo p).
-- **Siguiente paso exacto:** F3-T07: CNN base sin aumento, en la GPU de David (override
-  `compose.gpu.yaml`). Escribir y probar el código con datos sintéticos; medir el tiempo de una
-  época sin datos reales; **avisar a David con la estimación antes de entrenar**.
