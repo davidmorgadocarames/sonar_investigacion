@@ -14,7 +14,7 @@ quedan a alto nivel.
 | F2 | Señal | [x] |
 | F3 | Modelo | [~] |
 | F4 | Entrega | [ ] |
-| F5 | Atención (opcional) | [ ] |
+| F5 | Mejoras opcionales | [ ] |
 
 ---
 
@@ -105,7 +105,7 @@ quedan a alto nivel.
 - [x] F3-T06 · Línea base: regresión logística (`train --model baseline`) · orquestador · estandarización y pesos por clase; hiperparámetros con val; validación cruzada agrupada por buque en train + val; pesos en `models/` con commit; después, test de permutación con etiquetas permutadas por buque; **aviso a David con estimación de tiempo antes de entrenar y antes de permutar**
 - [x] F3-T07 · CNN base sin aumento de datos (`train --model cnn`) · orquestador · rama 2D (LOFAR) y 1D (DEMON); BatchNorm, LeakyReLU, AdamW con weight decay, decaimiento del lr, minibatches de 32-64, pesos por clase, parada temprana con F1 macro de val, semillas fijadas; pesos en `models/`; **aviso a David con estimación de tiempo antes de entrenar**
 - [x] F3-T08 · CNN con aumento de datos (`train --model cnn-aug`) · orquestador · misma CNN y semillas, con enmascarado de frecuencia y tiempo y pequeños desplazamientos solo en train; comparación con F3-T07 en val; se conservan e informan los dos modelos; **aviso a David con estimación de tiempo antes de entrenar**
-- [ ] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` (con la métrica general de 4 clases y la de dentro de cada época, y el clasificador de duración de DT-005 como referencia) y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
+- [~] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` (con la métrica general de 4 clases y la de dentro de cada época, y el clasificador de duración de DT-005 como referencia) y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
 - [ ] F3-T10 · Interpretabilidad · orquestador · línea base: importancia por permutación de bandas de frecuencia; CNN: saliencia por gradientes y oclusión sobre el LOFARgram; mapas en `.npz` y PNG, resumen por banda y clase en `metrics.json`; comprobar si las bandas importantes son líneas fijas compartidas por todos los buques de una época (50/60 Hz, armónicos del equipo), señal de que se aprende la época (DT-005)
 - [ ] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
@@ -131,10 +131,17 @@ quedan a alto nivel.
 - **Criterio de salida:** la pasada del reviewer y la del friend-tester no dejan hallazgos
   bloqueantes.
 
-## F5 · Atención (opcional) — después de F4
+## F5 · Mejoras opcionales — después de F4
 
 - **Objetivo (David, 2026-10-11):** fase completamente opcional, al terminar el proyecto entero:
   comparar con la CNN base una capa pequeña que pondere las 11 tramas de tiempo y un transformer
   diminuto sobre trozos de frecuencia.
 - **Nota:** con 43 buques el riesgo de sobreajuste es alto; la comparación se hace con las mismas
   reglas que F3 (val para decidir, test una sola vez).
+- **Nota (David, 2026-10-11): reducir el sobreajuste de las CNN.** En F3 las dos CNN alcanzan su
+  mejor val en las épocas 3-10 mientras la pérdida de train baja a 0,06-0,10, y el F1 de val
+  varía mucho entre semillas (±0,03 sin aumento, ±0,11 con aumento). Opciones a valorar: red más
+  pequeña, más dropout o weight decay, lr más bajo, más aumento de datos, promediar semillas.
+  Cualquier cambio se aplica igual a las dos CNN (mismo weight decay y misma curva de lr) para
+  que la comparación siga siendo justa. **Test ya se habrá mirado en F3-T09**, así que el
+  informe debe declarar que estas mejoras se hicieron después.
