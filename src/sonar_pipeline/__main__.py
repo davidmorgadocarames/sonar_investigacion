@@ -144,6 +144,44 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("outputs/results"),
         help="Folder for the JSON results (default: %(default)s).",
     )
+
+    evaluate = subcommands["evaluate"]
+    evaluate.add_argument(
+        "--processed-dir",
+        type=Path,
+        default=Path("datasets/processed"),
+        help="Features written by `features` (default: %(default)s).",
+    )
+    evaluate.add_argument(
+        "--models-dir",
+        type=Path,
+        default=Path("models"),
+        help="Versioned weights and their JSON (default: %(default)s).",
+    )
+    evaluate.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("outputs/results"),
+        help="Folder for metrics.json (default: %(default)s).",
+    )
+    evaluate.add_argument(
+        "--figures-dir",
+        type=Path,
+        default=Path("outputs/figures"),
+        help="Folder for the result figures (default: %(default)s).",
+    )
+    evaluate.add_argument(
+        "--device",
+        default="cpu",
+        help="cpu (reference, default), cuda or auto.",
+    )
+    evaluate.add_argument(
+        "--bootstrap",
+        type=int,
+        default=2000,
+        metavar="N",
+        help="Bootstrap resamples of recordings for the intervals (default: %(default)s).",
+    )
     return parser
 
 
@@ -325,7 +363,48 @@ def cmd_train(args: argparse.Namespace) -> int:
     return 1
 
 
-HANDLERS = {"qc": cmd_qc, "features": cmd_features, "train": cmd_train}
+def cmd_evaluate(args: argparse.Namespace) -> int:
+    from sonar_pipeline.evaluate import evaluate_models
+
+    result = evaluate_models(
+        args.processed_dir,
+        args.models_dir,
+        args.results_dir,
+        args.figures_dir,
+        args.device,
+        args.bootstrap,
+    )
+    print("Test (scored once with the frozen, versioned models):")
+    for name, entry in result["models"].items():
+        test = entry["test"]
+        line = f"  {name:<9}"
+        for level in ("segment", "recording"):
+            s = test[level]
+            lo, hi = s["ci95"]["f1_macro"]
+            line += f"  {level} F1 {s['f1_macro']:.3f} ({lo:.2f}-{hi:.2f})"
+        print(line)
+        eras = test["within_era"]
+        print(
+            "            within era (segment): "
+            + "  ".join(
+                f"{era} {eras[era]['classes'][0]} vs {eras[era]['classes'][1]} "
+                f"{eras[era]['segment']['f1_macro']:.3f}"
+                for era in eras
+                if eras[era]["segment"] is not None
+            )
+        )
+    print(f"Written to {args.results_dir / 'metrics.json'}")
+    for path in result.get("figures", []):
+        print(f"Figure: {path}")
+    return 0
+
+
+HANDLERS = {
+    "qc": cmd_qc,
+    "features": cmd_features,
+    "train": cmd_train,
+    "evaluate": cmd_evaluate,
+}
 
 
 def main(argv: list[str] | None = None) -> int:

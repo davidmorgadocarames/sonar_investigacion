@@ -183,3 +183,194 @@ def plot_spectrum_with_marker(
     ax.set_axisbelow(True)
     _style(ax)
     return _save(fig, path)
+
+
+# --------------------------------------------------------------------------- results (F3-T09)
+
+# Fixed categorical order: a model keeps its colour in every figure.
+MODEL_COLOURS = {"baseline": "#2a78d6", "cnn": "#eb6834", "cnn_aug": "#1baf7a"}
+MODEL_LABELS = {
+    "baseline": "Línea base",
+    "cnn": "CNN sin aumento",
+    "cnn_aug": "CNN con aumento",
+}
+LEVEL_LABELS = {"segment": "por segmento", "recording": "por grabación"}
+CLASS_SHORT = {
+    "Cargo": "Cargo",
+    "Passengership": "Passeng.",
+    "Tanker": "Tanker",
+    "Tug": "Tug",
+}
+
+
+def plot_confusions(models: dict, path: Path) -> Path:
+    """Test confusion matrices normalised by true class: one row per level, one column per
+    model."""
+    names = list(models)
+    classes = list(CLASS_SHORT)
+    fig, axes = plt.subplots(
+        2,
+        len(names),
+        figsize=(3.4 * len(names), 6.6),
+        layout="constrained",
+        squeeze=False,
+    )
+    fig.suptitle(
+        "Test: matrices de confusión normalizadas por clase real",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    for row, level in enumerate(("segment", "recording")):
+        for col, name in enumerate(names):
+            ax = axes[row][col]
+            matrix = np.array(models[name]["test"][level]["confusion_normalized"])
+            counts = np.array(models[name]["test"][level]["confusion"])
+            image = ax.imshow(matrix, cmap=SEQUENTIAL, vmin=0, vmax=1)
+            for i in range(len(classes)):
+                for j in range(len(classes)):
+                    colour = "white" if matrix[i, j] > 0.6 else INK
+                    ax.text(
+                        j,
+                        i,
+                        f"{matrix[i, j]:.2f}\n({counts[i, j]})",
+                        ha="center",
+                        va="center",
+                        color=colour,
+                        fontsize=7,
+                    )
+            short = [CLASS_SHORT[c] for c in classes]
+            ax.set_xticks(range(len(classes)), short, fontsize=7)
+            ax.set_yticks(range(len(classes)), short, fontsize=7)
+            ax.set_title(
+                f"{MODEL_LABELS[name]}, {LEVEL_LABELS[level]}",
+                color=INK,
+                fontsize=8,
+                loc="left",
+            )
+            if row == 1:
+                ax.set_xlabel("Predicha", color=INK, fontsize=8)
+            if col == 0:
+                ax.set_ylabel("Real", color=INK, fontsize=8)
+            ax.tick_params(colors=MUTED, labelcolor=INK)
+    bar = fig.colorbar(image, ax=axes, shrink=0.6, pad=0.01)
+    bar.set_label("Fracción de la clase real", color=INK, fontsize=8)
+    bar.outline.set_visible(False)
+    return _save(fig, path)
+
+
+def _f1_point(scores: dict | None) -> tuple[float, float, float] | None:
+    if scores is None:
+        return None
+    lo, hi = scores["ci95"]["f1_macro"]
+    return scores["f1_macro"], lo, hi
+
+
+def plot_f1_intervals(models: dict, path: Path) -> Path:
+    """Test macro F1 with its 95 % bootstrap interval: 4 classes and within each era."""
+    groups = [
+        ("4 clases", None, 0.25),
+        ("2016: Passeng. vs Tanker", "2016", 0.5),
+        ("2017: Cargo vs Tug", "2017", 0.5),
+    ]
+    names = list(models)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 3.8), layout="constrained", sharey=True)
+    fig.suptitle(
+        "Test: F1 macro con intervalo del 95 % (bootstrap por grabaciones)",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    offsets = np.linspace(-0.22, 0.22, len(names))
+    for ax, level in zip(axes, ("segment", "recording"), strict=True):
+        for g, (_, era, chance) in enumerate(groups):
+            ax.plot(
+                [g - 0.35, g + 0.35],
+                [chance, chance],
+                color=MUTED,
+                lw=1,
+                ls="--",
+                label="azar" if g == 0 else None,
+            )
+            for offset, name in zip(offsets, names, strict=True):
+                test = models[name]["test"]
+                scores = test[level] if era is None else test["within_era"][era][level]
+                point = _f1_point(scores)
+                if point is None:
+                    continue
+                value, lo, hi = point
+                ax.errorbar(
+                    g + offset,
+                    value,
+                    yerr=[[value - lo], [hi - value]],
+                    fmt="o",
+                    color=MODEL_COLOURS[name],
+                    markersize=7,
+                    elinewidth=2,
+                    capsize=0,
+                    label=MODEL_LABELS[name] if g == 0 else None,
+                )
+        ax.set_xticks(range(len(groups)), [g[0] for g in groups], fontsize=8)
+        ax.set_ylim(0, 1.05)
+        ax.set_title(
+            f"F1 macro {LEVEL_LABELS[level]}", color=INK, fontsize=9, loc="left"
+        )
+        ax.grid(axis="y", color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+        _style(ax)
+    axes[0].set_ylabel("F1 macro")
+    axes[0].legend(frameon=False, fontsize=8, loc="upper left")
+    return _save(fig, path)
+
+
+def plot_roc(models: dict, path: Path, level: str = "segment") -> Path:
+    """Test ROC per class (one against the rest): Pd against Pfa on a logarithmic axis."""
+    classes = list(CLASS_SHORT)
+    fig, axes = plt.subplots(
+        1, len(classes), figsize=(13, 3.6), layout="constrained", sharey=True
+    )
+    fig.suptitle(
+        f"Test: curvas ROC {LEVEL_LABELS[level]}, una clase frente al resto",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    floor = 1e-3
+    for ax, cls in zip(axes, classes, strict=True):
+        for name, entry in models.items():
+            roc = entry["test"][level]["roc"][cls]
+            if roc is None:
+                continue
+            pfa = np.maximum(np.array(roc["pfa"]), floor)
+            ax.step(
+                pfa,
+                roc["pd"],
+                where="post",
+                color=MODEL_COLOURS[name],
+                linewidth=1.5,
+                label=f"{MODEL_LABELS[name]} (AUC {roc['auc']:.2f})",
+            )
+        ax.axvline(0.01, color=MUTED, linewidth=1, linestyle=":")
+        ax.set_xscale("log")
+        ax.set_xlim(floor, 1)
+        ax.set_ylim(0, 1.02)
+        ax.set_title(cls, color=INK, fontsize=9, loc="left")
+        ax.set_xlabel("Pfa (escala log.)")
+        ax.grid(color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+        ax.legend(frameon=False, fontsize=6.5, loc="upper left")
+        _style(ax)
+    axes[0].set_ylabel("Pd")
+    return _save(fig, path)
+
+
+def plot_results(models: dict, figures_dir: Path) -> list[Path]:
+    return [
+        plot_confusions(models, figures_dir / "results_confusion.png"),
+        plot_f1_intervals(models, figures_dir / "results_f1.png"),
+        plot_roc(models, figures_dir / "results_roc_segment.png", "segment"),
+        plot_roc(models, figures_dir / "results_roc_recording.png", "recording"),
+    ]

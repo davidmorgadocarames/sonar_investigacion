@@ -17,6 +17,27 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T09 cerrada: test evaluado una vez
+- **Qué se hizo:** `src/sonar_pipeline/evaluate.py` y `evaluate` (CPU por defecto): carga los
+  pesos versionados, puntúa test y escribe `outputs/results/metrics.json` (val, coste, tiempos,
+  test por segmento, por grabación y dentro de cada época, DT-005, test de permutación y el
+  SHA-256 de cada fichero de pesos: baseline `1968677a…`, cnn `44b4113b…`, cnn_aug
+  `20c1bc5a…`) y las figuras `outputs/figures/results_{confusion,f1,roc_segment,roc_recording}.png`.
+  Con la aprobación de David, test se evaluó una vez (30 s). F1 macro en test por segmento:
+  **línea base 0,374** (IC 0,27-0,47), **CNN 0,167** (0,09-0,23), **CNN con aumento 0,185**
+  (0,10-0,28); azar 0,25. La línea base mantiene lo de val (0,381) y la validación cruzada
+  (0,370); las CNN caen por debajo del azar: la CNN lo predice casi todo como Passengership y la
+  CNN con aumento nunca predice Tug. Dentro de época la línea base queda en el azar
+  (Passengership frente a Tanker 0,53; Cargo frente a Tug 0,47): su ventaja viene de separar
+  épocas (DT-005). La leyenda de las ROC se movió y las figuras se regeneraron (cifras idénticas,
+  evaluación determinista). 209 tests.
+- **Qué quedó a medias:** proponer a David cómo anotar en DT-005 la evidencia de test.
+- **Ficheros tocados:** `src/sonar_pipeline/{evaluate,figures,__main__}.py`,
+  `tests/test_evaluate.py`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline evaluate` (mismas cifras).
+- **Siguiente paso exacto:** F3-T10: interpretabilidad (sobre val) y comprobación de bandas de
+  época.
+
 ## 2026-10-11 · F3-T08 cerrada: CNN con aumento de datos
 - **Qué se hizo:** `make_augment` y `train_cnn_aug` en `cnn.py`, `train --model cnn-aug`: misma
   lr y weight decay que `models/cnn.json` y mismas semillas; solo en train y con p = 0,5 cada
@@ -89,22 +110,3 @@ Plantilla:
   mismas cifras).
 - **Siguiente paso exacto:** con el visto bueno de David, `train --model baseline
   --permutation-test 200`; después cerrar F3-T06.
-
-## 2026-10-11 · F3-T05 cerrada: comprobación de DT-005 y métrica por época
-- **Qué se hizo:** `train --model duration` (`src/sonar_pipeline/duration_check.py`): regresión
-  logística solo con la duración de la grabación, ajustada en train y puntuada en val (test no se
-  carga); escribe `outputs/results/dt005_duration.json`. Resultado en val: F1 macro 0,93 por
-  segmento y 0,80 por grabación (azar ~0,25); la duración separa las épocas ({Cargo, Tug} 2017,
-  ~180-200 s; {Passengership, Tanker} 2016, casi todas cortas). David aprobó: DT-005 sigue
-  abierta; ajuste de D-018 con métricas dentro de cada época (`ERAS` en `dataset.py`,
-  `pair_scores` en `metrics.py`, en `evaluate_split`); comprobación de bandas en F3-T10;
-  limitación declarada en F4. Dentro de cada época la duración también acierta en val (Cargo
-  frente a Tug 1,00 con solo 3 grabaciones; Passengership frente a Tanker 0,86 por segmento y
-  0,60 por grabación): es casualidad de pocos datos y los modelos no ven la duración. `train`
-  acepta `baseline`, `cnn` y `cnn-aug`, aún sin implementar. 190 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/{duration_check,dataset,metrics,__main__}.py`,
-  `tests/test_{duration_check,metrics,dataset}.py`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline train --model duration`.
-- **Siguiente paso exacto:** F3-T06: línea base (regresión logística). **Avisar a David con una
-  estimación de tiempo antes de entrenar**; commit del modelo antes del test de permutación.
