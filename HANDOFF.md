@@ -83,3 +83,20 @@ Plantilla:
 - **Siguiente paso exacto:** F3-T02: proponer D-019 (scikit-learn y PyTorch CPU). **Antes de
   cualquier entrenamiento o test de permutación, avisar a David con una estimación de tiempo; y
   hacer commit de un modelo entrenado antes de permutar.** Test no se mira hasta F3-T09.
+
+## 2026-10-11 · F2 Señal cerrada (F2-T09)
+- **Qué se hizo:** pasada del reviewer sobre F2: sin hallazgos críticos ni altos; los 2 medios y
+  los 9 bajos se arreglaron en F2-T10 (ajuste 2 de D-015 y D-017, aprobados por David). Criterio
+  de salida cumplido: un tono conocido aparece en el LOFAR en su bin y una modulación conocida en
+  el DEMON en su bin, con controles negativos que hacen fallar los tests si se rompe el
+  antialiasing o el paso banda. Entregable: subcomando `features` (1889 segmentos, unos 85 MB en
+  `datasets/processed/`) y figuras en `outputs/figures/`.
+- **Qué quedó a medias:** nada de F2. F3 no tiene tareas detalladas. Deudas abiertas: DT-001
+  (UID, F4) y DT-005 (clase frente a época, a vigilar en F3).
+- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (152 passed).
+- **Siguiente paso exacto:** empezar F3 con el procedimiento de inicio de fase: proponer a David
+  las tareas (incluidas las notas de F3 en PLAN.md: pesos por clase, validación cruzada por buque,
+  `metrics.json`, DT-005, scikit-learn, PyTorch CPU, dónde se guardan y versionan los pesos) y
+  **avisar a David antes de lanzar cualquier entrenamiento**.
