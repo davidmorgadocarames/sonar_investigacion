@@ -154,6 +154,7 @@ def test_field7_and_raw_name_are_kept_verbatim(tmp_path):
         ("QUEEN OF NEW WESTMINSTER", "Passengership/QUEEN OF"),
         ("  queen  of   cowichan ", "Passengership/QUEEN OF"),
         ("MAYNE QUEEN", "Passengership/MAYNE QUEEN"),
+        (" bowen  queen ", "Passengership/QUEEN OF"),
         (" columbia\t", "Passengership/COLUMBIA"),
         ("Spirit  of  X", "Passengership/SPIRIT OF X"),
     ],

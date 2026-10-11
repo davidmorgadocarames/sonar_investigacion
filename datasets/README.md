@@ -7,7 +7,8 @@
 - **Fuente:** https://github.com/irfankamboh/DeepShip, último commit
   `77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6` (2023-03-23), revisado el 2026-10-10.
   - Es un **subconjunto** del dataset: 63 WAV, unos 733 MB y 1,59 h en total (Cargo 12,
-    Passengership 20, Tanker 28, Tug 3), de 44 buques distintos.
+    Passengership 20, Tanker 28, Tug 3), de 44 buques distintos según
+    los metafiles (43 grupos de partición tras D-011).
   - Formato de todos los WAV: 32 kHz, mono, float32. El módulo `wave` de Python no puede
     leerlos ([D-008](../DECISIONS.md)).
   - Cada carpeta de clase tiene además un `*-metafile`: un CSV sin cabecera con una fila por
@@ -69,11 +70,49 @@ Regenerarla con los mismos datos da un fichero idéntico byte a byte.
   id: 2, Passengership 30 y 37, ambas COLUMBIA).
 - **`vessel_group`:** clase + nombre normalizado (sin espacios a los lados, en mayúsculas y con
   los espacios internos colapsados). Todos los nombres que empiezan por "QUEEN OF" forman un solo
-  grupo. Ningún grupo abarca dos clases. Resultado: 44 grupos (Cargo 11, Passengership 11,
-  Tanker 19, Tug 3).
+  grupo, al que también se une BOWEN QUEEN por precaución ([D-011](../DECISIONS.md)). Ningún
+  grupo abarca dos clases. Resultado: 43 grupos (Cargo 11, Passengership 10, Tanker 19, Tug 3).
 
 ## Partición
 
 La partición train/val/test se hace **por buque**, que los metafiles permiten
 ([D-007](../DECISIONS.md)). Nunca por segmento ni por grabación, para evitar fugas de datos. El
 manifiesto con la partición se versiona en `manifests/`.
+
+### Formato de `manifests/split.csv`
+
+Lo genera F1-T06c. Una fila por WAV (los 63 de `vessels.csv`), ordenadas como `vessels.csv`
+(clase y número de WAV); UTF-8 con finales de línea LF. Columnas obligatorias (puede haber más):
+
+| Columna | Contenido |
+|---|---|
+| `wav_path` | Ruta relativa a `raw/DeepShip/`, igual que en `vessels.csv` y `qc.csv`. |
+| `vessel_class` | Cargo, Passengership, Tanker o Tug. |
+| `vessel_group` | Grupo de partición (buque), copiado de `vessels.csv`. |
+| `split` | `train`, `val` o `test`. |
+
+`vessels.csv` es la referencia: el SHA-256, la duración, la clase y el grupo se toman de ahí.
+
+### Comprobación de fugas (`tools/check_leaks.py`)
+
+```bash
+docker compose run --rm --entrypoint python pipeline tools/check_leaks.py [manifests/split.csv]
+```
+
+Sale con código 1 y la lista de problemas si un grupo (`vessel_group`, el declarado o el de
+`vessels.csv`) está en dos particiones; si un WAV aparece más de una vez o dos rutas tienen el
+mismo SHA-256 (la misma grabación); si la clase o el grupo no coinciden con `vessels.csv`; si
+falta o sobra algún WAV respecto a `vessels.csv`; o si un valor de `split` no es válido. Sale
+con 2 si falta el fichero o una columna. Si todo está bien, sale con 0 y resume los WAV, grupos
+y horas por partición y clase.
+
+`--similar-names` lista los pares de grupos con WAV cuyos nombres se parecen, dentro de una
+clase y entre clases ([DT-003](../DECISIONS.md)): uno es prefijo del otro, comparten alguna
+palabra o están a distancia de edición ≤ 3. Es un listado para revisar a mano; no fusiona nada.
+
+Los tests de `tests/test_vessel_table_data.py` comprueban [DT-002](../DECISIONS.md): en las 61
+filas verificadas (`match_source` `id` o `duration`) la duración del WAV coincide con la de su
+fila del metafile (±1 s), y solo Passengership 30 y 37 quedan sin verificar, ambas en COLUMBIA.
+Si existe `raw/DeepShip`, además leen cada WAV y su línea del metafile y comprueban que la
+duración, el número de muestras y el SHA-256 coinciden con la tabla; si no existe, esos tests
+se saltan (`skip`).

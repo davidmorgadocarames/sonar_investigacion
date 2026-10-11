@@ -146,10 +146,34 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** se basa en una propiedad comprobable de los datos (el orden cronológico), no tiene
   excepciones a mano y, ante la duda, falla en vez de adivinar.
 
+### D-011 · BOWEN QUEEN se une al grupo "QUEEN OF"
+- **Fecha:** 2026-10-11
+- **Contexto:** el listado de nombres parecidos de DT-003 (`tools/check_leaks.py
+  --similar-names`) dio 11 pares; en casi todos la palabra común es la naviera o la serie de la
+  flota. El único dudoso es BOWEN QUEEN frente a "QUEEN OF", un nombre cortado que puede ser
+  cualquier "Queen of …" de BC Ferries.
+- **Alternativas:** (a) mantenerlos separados; (b) juntarlos por precaución.
+- **Decisión:** (b). `build_vessel_table.py` une BOWEN QUEEN al grupo `Passengership/QUEEN OF`
+  (lista `MERGED_NAMES`). Quedan 43 grupos (Passengership pasa de 11 a 10). David revisó los demás
+  pares y no son el mismo buque.
+- **Motivo:** juntar grupos nunca provoca fugas; solo resta flexibilidad al repartir.
+
+### D-012 · Formato del manifiesto de partición `split.csv`
+- **Fecha:** 2026-10-11
+- **Contexto:** `tools/check_leaks.py` (F1-T06b) comprueba la partición que generará F1-T06c.
+- **Alternativas:** (a) columnas mínimas, tomando SHA-256 y duración de `vessels.csv`; (b) copiar
+  también SHA-256 y duración en el split.
+- **Decisión:** (a). `datasets/manifests/split.csv` con `wav_path` (relativa a `raw/DeepShip/`),
+  `vessel_class`, `vessel_group` y `split` (`train`, `val` o `test`); una fila por WAV, en el orden
+  de `vessels.csv`, UTF-8 y LF. La herramienta comprueba que clase y grupo coinciden con
+  `vessels.csv`.
+- **Motivo:** cada dato vive en un solo sitio, y el cruce con `vessels.csv` detecta cualquier
+  desajuste.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
 |---|---|---|---|---|---|
 | DT-001 | El UID 1000 del usuario `app` está fijo en la imagen. | Es el UID habitual del primer usuario en Linux, y en Docker Desktop (Windows y macOS) no afecta. | En Linux, con otro UID, el contenedor no puede escribir en los volúmenes montados (`outputs/`). | En F4, si el friend-tester lo detecta. | Abierta |
-| DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06/T07: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Abierta |
-| DT-003 | Algunos nombres de buque de los metafiles parecen cortados ("QUEEN OF", "CABO DE", "OTTO H", "SPIRIT OF"...). Un mismo buque podría aparecer con dos nombres distintos y formar dos grupos. | No se ha visto en los 44 grupos con WAV; los nombres cortados conocidos sin WAV no afectan a la partición, y "QUEEN OF" ya es un solo grupo (D-007). | Si ocurriera, el mismo buque podría acabar en dos particiones (fuga). | En F1-T06b: listar los grupos con WAV cuyos nombres se parezcan (p. ej., mismo prefijo) y revisarlos con David. | Abierta |
+| DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06/T07: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Pagada (2026-10-11): `tests/test_vessel_table_data.py` |
+| DT-003 | Algunos nombres de buque de los metafiles parecen cortados ("QUEEN OF", "CABO DE", "OTTO H", "SPIRIT OF"...). Un mismo buque podría aparecer con dos nombres distintos y formar dos grupos. | No se ha visto en los 44 grupos con WAV; los nombres cortados conocidos sin WAV no afectan a la partición, y "QUEEN OF" ya es un solo grupo (D-007). | Si ocurriera, el mismo buque podría acabar en dos particiones (fuga). | En F1-T06b: listar los grupos con WAV cuyos nombres se parezcan (p. ej., mismo prefijo) y revisarlos con David. | Pagada (2026-10-11): listado revisado con David; D-011 |

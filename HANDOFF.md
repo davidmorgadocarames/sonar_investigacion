@@ -17,6 +17,22 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F1-T06b cerrada: comprobación de fugas
+- **Qué se hizo:** `data-engineer` creó `tools/check_leaks.py` (falla si un buque o una
+  grabación, también por SHA-256, aparece en dos particiones, o si el split no cuadra con
+  `vessels.csv`) y `--similar-names` para DT-003. Tests de fugas y de DT-002 sobre los datos
+  reales (recalcula SHA-256 y duración de los 63 WAV). David aprobó D-011 (BOWEN QUEEN se une a
+  "QUEEN OF": 43 grupos) y D-012 (formato de `split.csv`); DT-002 y DT-003 pagadas. 56 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `tools/check_leaks.py`, `tools/build_vessel_table.py`,
+  `tests/test_check_leaks.py`, `tests/test_vessel_table_data.py`, `tests/test_vessel_table.py`,
+  `datasets/manifests/vessels.csv`, `datasets/README.md`, `DECISIONS.md`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** los tests en Docker y `docker compose run --rm --entrypoint python
+  pipeline tools/check_leaks.py --similar-names`.
+- **Siguiente paso exacto:** F1-T06c: proponer a David las proporciones de la partición por buque
+  (con un buque de Tug en cada partición) antes de generarla.
+
 ## 2026-10-11 · F1-T06a cerrada: tabla WAV → buque
 - **Qué se hizo:** `data-engineer` creó `tools/build_vessel_table.py`, que genera
   `datasets/manifests/vessels.csv` (63 filas, SHA-256 `ec6ad1a1…79ec`, idéntico al regenerarlo).
@@ -80,17 +96,3 @@ Plantilla:
   y 3 WAV en las carpetas de `datasets/raw/DeepShip/`.
 - **Siguiente paso exacto:** F1-T04: escribir en el README los comandos de descarga y probarlos
   en una carpeta temporal limpia.
-
-## 2026-10-10 · F1-T01 cerrada: fuente y licencia de DeepShip
-- **Qué se hizo:** se fijó la fuente (subconjunto público de GitHub, commit `77725726a33d`) y
-  se documentó que no tiene licencia explícita (uso académico con cita, sin redistribuir). David
-  no tiene el dataset completo: se usa solo el subconjunto.
-- **Qué quedó a medias:** nada. Después, el 2026-10-11, David aprobó D-005 (solo el
-  subconjunto) y D-006 (descarga con comandos git en el README). F1-T02 está cerrada y F1-T04
-  se ha reformulado según D-006.
-- **Ficheros tocados:** `datasets/README.md`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md`.
-- **Cómo verificarlo:** leer [datasets/README.md](datasets/README.md) (ya no queda ningún
-  "PENDIENTE DE VERIFICAR") y D-005 y D-006 en [DECISIONS.md](DECISIONS.md).
-- **Siguiente paso exacto:** lanzar F1-T03 (inventario: ¿los números de fichero identifican
-  buques o grabaciones?) con `data-engineer`, sobre un clon de la fuente en
-  `datasets/raw/DeepShip`.

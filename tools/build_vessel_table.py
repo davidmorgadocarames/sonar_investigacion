@@ -25,7 +25,8 @@ The script fails instead of guessing if the optimal alignment is not unique, if 
 used by two WAVs, or if a metafile line does not have the expected shape.
 
 Vessel groups (D-007): class + normalised name (strip, upper case, spaces collapsed). Every name
-starting with "QUEEN OF" (a truncated name) is one group. A group never spans two classes.
+starting with "QUEEN OF" (a truncated name) is one group, and BOWEN QUEEN joins it as a precaution
+(D-011, DT-003). A group never spans two classes.
 
 Usage (inside Docker, from /app):
     docker compose run --rm --entrypoint python pipeline tools/build_vessel_table.py
@@ -53,6 +54,8 @@ DURATION_TOLERANCE_S = 1.0
 
 # D-007: truncated names merged into one group per class. A merge can never cause a leak.
 MERGED_NAME_PREFIXES = ("QUEEN OF",)
+# D-011 (DT-003): names merged into another group as a precaution, same class only.
+MERGED_NAMES = {"BOWEN QUEEN": "QUEEN OF"}
 
 SOURCE_ID = "id"
 SOURCE_DURATION = "duration"
@@ -189,6 +192,7 @@ def vessel_group(vessel_class: str, name_raw: str) -> str:
     for prefix in MERGED_NAME_PREFIXES:
         if name.startswith(prefix):
             name = prefix
+    name = MERGED_NAMES.get(name, name)
     return f"{vessel_class}/{name}"
 
 
