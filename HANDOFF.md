@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T05 cerrada: LOFAR
+- **Qué se hizo:** `src/sonar_pipeline/lofar.py` (D-015): diezmado a 4 kHz con `resample_poly`,
+  STFT Hann de 0,5 s / 0,25 s (11 tramas × 1001 bins de 2 Hz), TPSW por trama a lo largo de la
+  frecuencia y dB sobre el fondo (suelo numérico de -100 dB). 9 tests: un tono débil (0,1 en ruido
+  de 1) a 440, 333 y 1234,5 Hz da el máximo en su bin (±1) en todas las tramas y a más de 10 dB;
+  un tono de 3 kHz no se cuela en 1 kHz; el ruido blanco y el rojo quedan planos (±10 % entre
+  bandas). Comprobado que los tests fallan con un diezmado sin filtro (alias de 15,6 dB) y sin
+  TPSW (ruido rojo 69 veces más fuerte en unas bandas que en otras). 104 tests.
+- **Qué quedó a medias:** nada. Nota: el ruido normalizado queda en un nivel constante de unos
+  +1,4 dB en potencia media (-0,9 dB de media en dB), no en 0 exacto, por el recorte de la segunda
+  pasada del TPSW; no afecta a la forma.
+- **Ficheros tocados:** `src/sonar_pipeline/lofar.py`, `tests/test_lofar.py`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
+  tests/test_lofar.py`.
+- **Siguiente paso exacto:** F2-T06: DEMON con el test de la modulación conocida.
+
 ## 2026-10-11 · F2-T04 cerrada: preprocesado
 - **Qué se hizo:** `src/sonar_pipeline/params.py` reúne todas las constantes de D-015.
   `src/sonar_pipeline/preprocess.py`: `load_wav` (32 kHz, mono, finito), `remove_dc` (media de
@@ -77,20 +94,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -q -rs`
   (72 passed, 0 skipped con DeepShip descargado).
 - **Siguiente paso exacto:** F2-T02: pagar DT-006 (mejoras menores) e incluir `-rs`.
-
-## 2026-10-11 · F1 Datos cerrada (F1-T08)
-- **Qué se hizo:** pasada del reviewer sobre F1: sin hallazgos críticos ni altos; 3 medios y 13
-  bajos. David aprobó D-014 (`vessels.csv` conserva el extracto de los metafiles bajo el supuesto
-  de licencia), DT-004 (test que regenere `vessels.csv`, al empezar F2), DT-005 (clase frente a
-  época de grabación, a vigilar en F3) y DT-006 (mejoras menores, en F2). Documentación corregida
-  (README: `qc` implementado e imagen de unos 500 MB; PLAN; CLAUDE.md; agente data-engineer;
-  "44 nombres de buque"; argumento de que Passengership 37 es COLUMBIA).
-- **Qué quedó a medias:** nada de F1. F2 no tiene tareas detalladas.
-- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`, `README.md`, `CLAUDE.md`,
-  `datasets/README.md`, `.claude/agents/data-engineer.md`.
-- **Cómo verificarlo:** los tests en Docker (71) y `docker compose run --rm --entrypoint python
-  pipeline tools/check_leaks.py` (OK).
-- **Siguiente paso exacto:** empezar F2 con el procedimiento de inicio de fase: proponer a David
-  las tareas de F2 (incluidas DT-004 y DT-006, y decidir la longitud de segmento), compararlas con
-  PLAN.md y esperar su aprobación. Abrir Claude Code dentro de `sonar_investigacion` para que se
-  carguen los subagentes de `.claude/agents/`.
