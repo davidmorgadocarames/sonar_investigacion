@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4-T02 cerrada: figura de minutos por clase y partición
+- **Qué se hizo:** `data_minutes` y `plot_data_minutes` en `figures.py`: minutos de audio,
+  grabaciones y buques por clase y partición a partir de `vessels.csv` y `split.csv`, sin audio;
+  barras agrupadas con los colores 4-6 de la paleta (los 1-3 son los modelos). Dos tests (uno
+  sobre los manifiestos reales: 95,4 min, 43 buques, Tug 1/1/1). `report` la guardará en
+  `docs/figures/` (F4-T03). 237 tests.
+- **Excepción a la regla 9 (aprobada expresamente por David, solo esta vez):** F4-T01 había
+  quedado en dos commits publicados (`034ae48` y `28e24a1`, por un fallo del script que escribía
+  HANDOFF). Se unieron en uno (`4a44343`, contenido idéntico, mismo árbol) y se publicó con
+  `git push --force-with-lease`. La regla 9 sigue vigente.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/figures.py`, `tests/test_figures.py`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
+  tests/test_figures.py`.
+- **Siguiente paso exacto:** F4-T03: subcomando `report`.
+
 ## 2026-10-11 · F4 empezada; F4-T01 cerrada: decisiones de la entrega (D-021)
 - **Qué se hizo:** David aprobó las 7 tareas de F4 y D-021: figuras en `docs/figures/` (las de la
   ronda 1 se copian tal cual), informe `docs/report.md` generado por `report` solo desde lo
@@ -73,39 +90,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --plot-only` redibuja las
   figuras desde `metrics.json` sin volver a puntuar test.
 - **Siguiente paso exacto:** F3-T11: pasar otra vez el reviewer sobre F3-T12 y cerrar F3.
-
-## 2026-10-11 · F3-T12 en curso: arreglos de la revisión y modelos reentrenados
-- **Qué se hizo:** revisión de F3 sin hallazgos críticos ni altos; David aprobó arreglar todo lo
-  que no daba una salida correcta sin cambiar nada para mejorar la cifra (ajuste 2 de D-018,
-  DT-005 reformulada, DT-007 nueva; commit `ab383dd`). Primera evaluación guardada en
-  `outputs/results/eval1/` y `outputs/figures/eval1/`. Con el visto bueno de David: línea base
-  reentrenada en CPU (pesos idénticos, SHA-256 `1968677a…`); CNN y CNN con aumento reentrenadas
-  en GPU (23 s y 15 s). Val: CNN elegida lr=1e-3, wd=1e-2; semillas 0,391 / 0,364 / 0,233 (media
-  0,329 ± 0,069); CNN con aumento 0,358 / 0,256 / 0,277 (media 0,297 ± 0,044). El mejor val sigue
-  en la época 3 y el lr se reduce a la mitad hacia la época 7.
-- **Qué quedó a medias:** por petición de David, parada tras el commit de los modelos: falta el
-  test de permutación con C dentro (~8-10 min CPU), la segunda y última evaluación de test y la
-  interpretabilidad, con su visto bueno.
-- **Ficheros tocados:** `models/{baseline,cnn,cnn_aug}.{npz,pt,json}`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
-  train --model cnn` (determinista: mismas cifras).
-- **Siguiente paso exacto:** con el visto bueno de David, pasos 5-7 de F3-T12.
-
-## 2026-10-11 · F3-T10 cerrada: interpretabilidad y comprobación de épocas
-- **Qué se hizo:** `src/sonar_pipeline/interpret.py` y `evaluate --interpretability` (val, modelos
-  congelados, 34 s en CPU): importancia por permutación de bandas (línea base), saliencia y
-  oclusión (CNN), comprobación de épocas; resultados en `outputs/results/interpretability.json`,
-  mapas en `interpretability_maps.npz`, resumen añadido a `metrics.json` y figura
-  `outputs/figures/interpretability_bands.png`. David aprobó anotar en DT-005 la evidencia de
-  test. Resultados: **no hay líneas fijas de época** (ninguna en ≥75 % de una época y ≤25 % de la
-  otra) ni zumbido de red compartido; las épocas difieren en el nivel medio de algunas bandas
-  (1240-1280 Hz 0,99 dB; 80-120 Hz 0,70; 1440-1480 Hz 0,54). La línea base se apoya en 40-80,
-  1240-1280 y 1440-1480 Hz: dos de sus tres bandas principales son de las que más separan épocas
-  (Spearman +0,29, p 0,039). Las CNN dependen casi solo de 0-40 Hz (y algo de 80-120 Hz), sin
-  correlación global con la diferencia entre épocas. Las importancias son pequeñas (≤0,03 de F1;
-  ≤0,11 de probabilidad). 214 tests.
-- **Qué quedó a medias:** proponer a David anotar esta evidencia en DT-005.
-- **Ficheros tocados:** `src/sonar_pipeline/{interpret,figures,__main__}.py`,
-  `tests/test_interpret.py`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md` (nota de test en DT-005).
-- **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --interpretability`.
-- **Siguiente paso exacto:** F3-T11: pasada del reviewer y cierre de F3.

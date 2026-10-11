@@ -444,3 +444,95 @@ def plot_interpretability(report: dict, figures_dir: Path) -> Path:
     axes[-1].set_xlabel("Frecuencia (Hz)")
     axes[-1].set_xlim(0, lows[-1] + report["lofar_band_hz"])
     return _save(fig, figures_dir / "interpretability_bands.png")
+
+
+# --------------------------------------------------------------------------- data (F4-T02)
+
+SPLIT_ORDER = ("train", "val", "test")
+SPLIT_LABELS = {"train": "Entrenamiento", "val": "Validación", "test": "Test"}
+# Splits are categories of their own: slots 4-6 of the palette, so they are not mistaken for the
+# model colours (slots 1-3) in the result figures.
+SPLIT_COLOURS = {"train": "#eda100", "val": "#e87ba4", "test": "#4a3aa7"}
+
+
+def data_minutes(vessels_csv: Path, split_csv: Path) -> dict:
+    """Minutes of audio, recordings and vessels per class and split (no audio needed)."""
+    import csv
+
+    with vessels_csv.open(newline="", encoding="utf-8") as f:
+        seconds = {r["wav_path"]: float(r["wav_duration_s"]) for r in csv.DictReader(f)}
+    table = {}
+    with split_csv.open(newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            cell = table.setdefault(r["vessel_class"], {}).setdefault(
+                r["split"], {"minutes": 0.0, "recordings": 0, "vessels": set()}
+            )
+            cell["minutes"] += seconds[r["wav_path"]] / 60
+            cell["recordings"] += 1
+            cell["vessels"].add(r["vessel_group"])
+    return {
+        cls: {
+            split: {
+                "minutes": cell["minutes"],
+                "recordings": cell["recordings"],
+                "vessels": len(cell["vessels"]),
+            }
+            for split, cell in splits.items()
+        }
+        for cls, splits in table.items()
+    }
+
+
+def plot_data_minutes(vessels_csv: Path, split_csv: Path, path: Path) -> Path:
+    """Grouped bars: minutes of audio per class and split, labelled with vessels / recordings."""
+    table = data_minutes(vessels_csv, split_csv)
+    classes = [c for c in CLASS_SHORT if c in table]
+    fig, ax = plt.subplots(figsize=(9, 4.2), layout="constrained")
+    fig.suptitle(
+        "Datos: minutos de audio por clase y partición (partición por buque)",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    width = 0.26
+    for s, split in enumerate(SPLIT_ORDER):
+        xs = np.arange(len(classes)) + (s - 1) * width
+        values = [table[c].get(split, {}).get("minutes", 0.0) for c in classes]
+        ax.bar(
+            xs,
+            values,
+            width=width * 0.92,
+            color=SPLIT_COLOURS[split],
+            label=SPLIT_LABELS[split],
+        )
+        for x, c, v in zip(xs, classes, values, strict=True):
+            cell = table[c].get(split)
+            if cell:
+                ax.text(
+                    x,
+                    v + 0.3,
+                    f"{v:.1f}\n{cell['vessels']} b · {cell['recordings']} g",
+                    ha="center",
+                    va="bottom",
+                    color=INK,
+                    fontsize=6.5,
+                )
+    ax.set_xticks(range(len(classes)), classes)
+    ax.set_ylabel("Minutos de audio")
+    ax.set_ylim(
+        0, max(max(v["minutes"] for v in t.values()) for t in table.values()) * 1.3
+    )
+    ax.grid(axis="y", color=GRID, linewidth=0.6)
+    ax.set_axisbelow(True)
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    ax.text(
+        0.0,
+        -0.16,
+        "b = buques, g = grabaciones. Ningún buque está en dos particiones.",
+        transform=ax.transAxes,
+        color=MUTED,
+        fontsize=7,
+    )
+    _style(ax)
+    return _save(fig, path)
