@@ -5,7 +5,7 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F4 Entrega** (tareas pendientes de proponer y aprobar)
+- **Fase actual:** **F4 Entrega**
 
 | Fase | Nombre | Estado |
 |---|---|---|
@@ -13,7 +13,7 @@ quedan a alto nivel.
 | F1 | Datos | [x] |
 | F2 | Señal | [x] |
 | F3 | Modelo | [x] |
-| F4 | Entrega | [ ] |
+| F4 | Entrega | [~] |
 | F5 | Mejoras opcionales | [ ] |
 
 ---
@@ -110,7 +110,7 @@ quedan a alto nivel.
 - [x] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 - [x] F3-T12 · Arreglar los hallazgos de la revisión de F3 y reentrenar (aprobado por David; ajuste 2 de D-018) · orquestador · pooling sin ceros con test de formas reales; hilos fijados; generadores separados; ReduceLROnPlateau; Pd a Pfa = 1 % no medible si hay pocos negativos y ROC de clasificación; hash de código y hardware de entrenamiento; permutación con C dentro; azar medido; tests de folds por buque, interpretabilidad sin test y determinismo en CUDA; figuras desde `metrics.json`; reentrenar las dos CNN (y la línea base solo para trazabilidad) y repetir la permutación, **con aviso y estimación de tiempo a David antes de cada paso**; segunda y última evaluación de test, conservando la primera en `outputs/results/eval1/`
 
-## F4 · Entrega
+## F4 · Entrega — [~] en curso (tareas aprobadas por David el 2026-10-11)
 
 - **Objetivo:** que el amigo pueda evaluar, y reentrenar si quiere, siguiendo solo el README.
 - **Entregable:** README completo, informe de resultados (subcomando `report`) y etiqueta `v0.1`.
@@ -141,6 +141,14 @@ quedan a alto nivel.
   ejemplo por clase, y validación con señales sintéticas).
 - **Criterio de salida:** la pasada del reviewer y la del friend-tester no dejan hallazgos
   bloqueantes.
+
+- [x] F4-T01 · Decisiones de F4 · orquestador → David · D-021 aprobada: figuras en `docs/figures/` (las de la ronda 1, copiadas), informe `docs/report.md` generado por `report` desde lo versionado, DT-001 pagada ya con el UID del host, etiqueta `v0.1` tras el reviewer, sin virtualenv
+- [ ] F4-T02 · Figura de los datos: minutos por clase y partición · orquestador · sale de `vessels.csv` y `split.csv` sin audio; test
+- [ ] F4-T03 · Subcomando `report` · orquestador · genera `docs/report.md` (español) y copia las figuras a `docs/figures/` solo desde lo versionado (`docs/results/`); datos, señal, método, las dos rondas, limitaciones (DT-005, DT-007, Tug, pocos buques, azar medido, CV de 3 y 4 clases, dos evaluaciones) y procedencia; no entrena ni puntúa test; test que comprueba que las cifras del informe coinciden con los JSON y que al repetirlo sale igual
+- [ ] F4-T04 · README completo · orquestador · opciones A (CPU) y B (GPU con `.env`), "Comprobar la instalación" (`-rs`), datos, QC y rasgos, evaluar con los pesos entrenados, reentrenar (tiempos CPU y GPU), resultados en breve con enlace al informe, limitaciones, carpetas, licencia y cita; por qué no hace falta virtualenv; tiempos y espacio medidos
+- [ ] F4-T05 · Pagar DT-001: UID y GID del host en el compose (1000 por defecto) · orquestador · el contenedor escribe en los volúmenes con el usuario del host; matplotlib y pytest funcionan con un UID sin home; test o comprobación con un UID distinto de 1000
+- [ ] F4-T06 · Pasada del friend-tester (clon en `C:\Users\Gatrix\AppData\Local\Temp\tmp.XXXXXXXXXX\sonar_investigacion`, aprobado por David) · friend-tester · siguiendo solo el README por la opción A: build, descarga, `qc`, `features`, tests con `-rs` y `evaluate`; reproduce exactamente las cifras de `docs/results/eval2.json` (la reproducción se declara en la tabla de procedencia); tiempos, espacio y atascos
+- [ ] F4-T07 · Reviewer, cierre de F4 y etiqueta `v0.1` · reviewer + orquestador · sin hallazgos bloqueantes; etiqueta creada y publicada
 
 ## F5 · Mejoras opcionales — después de F4
 

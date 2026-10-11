@@ -408,6 +408,30 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** los resúmenes ocupan unos 13 kB cada uno, conservan las dos rondas aunque se
   pierda `outputs/` y dejan trazado qué código produjo cada cifra. Aprobado por David.
 
+### D-021 · Entrega: informe y figuras versionados, UID del host y una sola vía de instalación
+- **Fecha:** 2026-10-11
+- **Contexto:** F4 debe dejar el proyecto listo para el amigo de David (solo git y Docker): README
+  completo, informe de resultados y etiqueta `v0.1`. Las figuras y resultados viven en `outputs/`,
+  que no se versiona; DT-001 (UID fijo) solo se manifiesta en Linux y el friend-tester corre en el
+  Windows de David; David preguntó si convenía además un virtualenv.
+- **Decisión:**
+  1. **Figuras versionadas en `docs/figures/`:** datos (minutos por clase y partición), señal
+     (LOFARgram y DEMON por clase y validación sintética) y resultados de las dos rondas. Las de
+     la ronda 1 se copian tal cual desde `outputs/figures/eval1/`: no se pueden regenerar sin
+     volver a puntuar test (su `metrics.json` es de un formato anterior).
+  2. **Informe en `docs/report.md`**, en español, generado por el subcomando `report` solo a
+     partir de lo versionado (`docs/results/`, `docs/figures/`); no entrena ni puntúa test.
+  3. **DT-001 se paga ya:** el contenedor usa el UID y el GID del usuario del host, indicados en
+     el compose (1000 por defecto), en vez de esperar a que lo detecte el friend-tester, que
+     corre en Windows y no lo vería.
+  4. **Etiqueta `v0.1`** sobre el commit final de F4, publicada tras la pasada del reviewer.
+  5. **Sin virtualenv:** Docker es la única vía soportada. Dentro del contenedor no se usa nada
+     de lo instalado en la máquina del usuario (Python 3.11.17 y librerías fijadas, D-017 y
+     D-019); un virtualenv volvería a introducir variaciones de Python, sistema operativo y
+     librerías numéricas y rompería la reproducción exacta. El README lo explica en una frase.
+- **Motivo:** el amigo puede leer el informe y las figuras sin ejecutar nada y reproducirlos con
+  Docker; nada que no se pueda regenerar sin mirar test se recalcula. Aprobado por David.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

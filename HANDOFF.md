@@ -17,6 +17,19 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4 empezada; F4-T01 cerrada: decisiones de la entrega (D-021)
+- **Qué se hizo:** David aprobó las 7 tareas de F4 y D-021: figuras en `docs/figures/` (las de la
+  ronda 1 se copian tal cual), informe `docs/report.md` generado por `report` solo desde lo
+  versionado, DT-001 pagada ya (UID y GID del host en el compose), etiqueta `v0.1` tras el
+  reviewer y **sin virtualenv** (Docker aísla Python y librerías; un virtualenv rompería la
+  reproducción exacta). El friend-tester clonará en
+  `C:\Users\Gatrix\AppData\Local\Temp\tmp.XXXXXXXXXX\sonar_investigacion` (aprobado; el disco C:
+  tiene 79 GB libres).
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer D-021 y la sección F4 de PLAN.md.
+- **Siguiente paso exacto:** F4-T02: figura de minutos por clase y partición.
+
 ## 2026-10-11 · F3 Modelo cerrada (F3-T11)
 - **Qué se hizo:** segunda pasada del reviewer sobre F3-T12: sin hallazgos críticos ni altos; los
   11 de la primera revisión, resueltos. Con la aprobación de David se arreglaron los 3 medios y 6
@@ -96,24 +109,3 @@ Plantilla:
   `tests/test_interpret.py`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md` (nota de test en DT-005).
 - **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --interpretability`.
 - **Siguiente paso exacto:** F3-T11: pasada del reviewer y cierre de F3.
-
-## 2026-10-11 · F3-T09 cerrada: test evaluado una vez
-- **Qué se hizo:** `src/sonar_pipeline/evaluate.py` y `evaluate` (CPU por defecto): carga los
-  pesos versionados, puntúa test y escribe `outputs/results/metrics.json` (val, coste, tiempos,
-  test por segmento, por grabación y dentro de cada época, DT-005, test de permutación y el
-  SHA-256 de cada fichero de pesos: baseline `1968677a…`, cnn `44b4113b…`, cnn_aug
-  `20c1bc5a…`) y las figuras `outputs/figures/results_{confusion,f1,roc_segment,roc_recording}.png`.
-  Con la aprobación de David, test se evaluó una vez (30 s). F1 macro en test por segmento:
-  **línea base 0,374** (IC 0,27-0,47), **CNN 0,167** (0,09-0,23), **CNN con aumento 0,185**
-  (0,10-0,28); azar 0,25. La línea base mantiene lo de val (0,381) y la validación cruzada
-  (0,370); las CNN caen por debajo del azar: la CNN lo predice casi todo como Passengership y la
-  CNN con aumento nunca predice Tug. Dentro de época la línea base queda en el azar
-  (Passengership frente a Tanker 0,53; Cargo frente a Tug 0,47): su ventaja viene de separar
-  épocas (DT-005). La leyenda de las ROC se movió y las figuras se regeneraron (cifras idénticas,
-  evaluación determinista). 209 tests.
-- **Qué quedó a medias:** proponer a David cómo anotar en DT-005 la evidencia de test.
-- **Ficheros tocados:** `src/sonar_pipeline/{evaluate,figures,__main__}.py`,
-  `tests/test_evaluate.py`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline evaluate` (mismas cifras).
-- **Siguiente paso exacto:** F3-T10: interpretabilidad (sobre val) y comprobación de bandas de
-  época.
