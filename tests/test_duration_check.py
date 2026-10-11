@@ -74,6 +74,8 @@ def test_duration_that_tells_the_class_scores_high(tmp_path, capsys):
     assert result["val"]["segment"]["f1_macro"] == 1.0
     assert result["val"]["recording"]["n"] == 8
     assert "test" not in result  # test is never loaded (there is no test file here)
+    assert "chance_f1_macro" not in result  # the measured one is in val (D-018 adj. 2)
+    assert 0 < result["val"]["segment"]["chance_f1_macro"] < 0.5
     assert "scored on val (test not used)" in capsys.readouterr().out
 
 

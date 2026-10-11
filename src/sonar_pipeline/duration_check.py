@@ -51,7 +51,6 @@ def run_duration_check(
         "feature": "wav_duration_s from vessels.csv",
         "training": {"seconds": fit_time["seconds"], "segments": len(train)},
         "val": evaluate_split(probabilities, val.labels, val.wav_path, n_bootstrap),
-        "chance_f1_macro": 1 / len(CLASSES),
     }
     write_metrics(output, result)
     return result

@@ -288,16 +288,18 @@ def plot_f1_intervals(models: dict, path: Path) -> Path:
         for g, (_, era) in enumerate(groups):
             first = models[names[0]]["test"]
             reference = first[level] if era is None else first["within_era"][era][level]
-            # Measured chance (random classifier on the true labels), same for every model.
-            chance = reference["chance_f1_macro"] if reference else 0.0
-            ax.plot(
-                [g - 0.35, g + 0.35],
-                [chance, chance],
-                color=MUTED,
-                lw=1,
-                ls="--",
-                label="azar (medido)" if g == 0 else None,
-            )
+            # Measured chance (random classifier on the true labels), same for every model;
+            # no line when the scores are missing (an era without both classes).
+            if reference is not None:
+                chance = reference["chance_f1_macro"]
+                ax.plot(
+                    [g - 0.35, g + 0.35],
+                    [chance, chance],
+                    color=MUTED,
+                    lw=1,
+                    ls="--",
+                    label="azar (medido)" if g == 0 else None,
+                )
             for offset, name in zip(offsets, names, strict=True):
                 test = models[name]["test"]
                 scores = test[level] if era is None else test["within_era"][era][level]

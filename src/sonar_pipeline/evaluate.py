@@ -21,6 +21,15 @@ from sonar_pipeline.metrics import (
 )
 
 MODELS = ("baseline", "cnn", "cnn_aug")
+# Test evaluation these versioned weights belong to (F3-T12: the second and last one). Change it
+# only with David's approval: every new evaluation is one more look at test.
+EVALUATION = 2
+# Sections copied into metrics.json from their own JSON files in the results folder.
+SECTIONS = {
+    "dt005": "dt005_duration.json",
+    "permutation_test": "permutation_test.json",
+    "interpretability": "interpretability.json",
+}
 WEIGHT_FILES = {"baseline": "baseline.npz", "cnn": "cnn.pt", "cnn_aug": "cnn_aug.pt"}
 
 
@@ -45,8 +54,9 @@ def test_probabilities(name: str, weights_path: Path, test, device_name: str) ->
 
     import torch
 
-    from sonar_pipeline.cnn import load_cnn, predict_proba, select_device
+    from sonar_pipeline.cnn import TORCH_THREADS, load_cnn, predict_proba, select_device
 
+    torch.set_num_threads(TORCH_THREADS)  # same as training (D-018 adjustment 2)
     device = select_device(device_name)
     model = load_cnn(weights_path, device)
     lofar = torch.as_tensor(test.lofar, device=device)
@@ -104,14 +114,14 @@ def evaluate_models(
         models[name] = entry
 
     payload = {
-        "description": "F3 results: test scored once with the frozen models (D-018)",
+        "description": "F3 results: test scored with the frozen, versioned models (D-018)",
+        "evaluation": EVALUATION,
         "classes": list(CLASSES),
         "traceability": traceability(processed_dir),
         "hardware": hardware(device_name),
         "code_sha256": code_sha256(),
         "models": models,
-        "dt005": read_json(results_dir / "dt005_duration.json"),
-        "permutation_test": read_json(results_dir / "permutation_test.json"),
+        **{key: read_json(results_dir / name) for key, name in SECTIONS.items()},
     }
     write_metrics(results_dir / "metrics.json", payload)
 
@@ -120,6 +130,22 @@ def evaluate_models(
 
         payload["figures"] = [str(p) for p in plot_results(models, figures_dir)]
     return payload
+
+
+def refresh_metrics(results_dir: Path) -> dict:
+    """Reload the DT-005, permutation and interpretability sections into metrics.json and set
+    the evaluation number, without loading or scoring test."""
+    metrics = read_json(results_dir / "metrics.json")
+    if metrics is None:
+        raise FileNotFoundError(
+            f"{results_dir / 'metrics.json'} not found: run evaluate first"
+        )
+    metrics.pop("schema", None)
+    for key, name in SECTIONS.items():
+        metrics[key] = read_json(results_dir / name)
+    metrics["evaluation"] = EVALUATION
+    write_metrics(results_dir / "metrics.json", metrics)
+    return metrics
 
 
 def plot_from_metrics(results_dir: Path, figures_dir: Path) -> list[Path]:

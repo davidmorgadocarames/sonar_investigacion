@@ -176,6 +176,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="cpu (reference, default), cuda or auto.",
     )
     evaluate.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Reload the DT-005, permutation and interpretability results into metrics.json "
+        "without scoring test again.",
+    )
+    evaluate.add_argument(
         "--plot-only",
         action="store_true",
         help="Redraw the result figures from metrics.json without scoring test again.",
@@ -268,9 +274,10 @@ def train_duration(args: argparse.Namespace) -> int:
         f"{result['training']['seconds']:.2f} s; scored on val (test not used)."
     )
     print_val_scores(result["val"])
+    val = result["val"]
     print(
-        f"  chance F1 macro ~ {result['chance_f1_macro']:.2f} (4 classes), "
-        "0.5 within an era"
+        f"  measured chance F1 macro: {val['segment']['chance_f1_macro']:.3f} (segment), "
+        f"{val['recording']['chance_f1_macro']:.3f} (recording)"
     )
     print(f"Written to {output}")
     return 0
@@ -408,6 +415,17 @@ def cmd_interpretability(args: argparse.Namespace) -> int:
 def cmd_evaluate(args: argparse.Namespace) -> int:
     if args.interpretability:
         return cmd_interpretability(args)
+    if args.refresh:
+        from sonar_pipeline.evaluate import refresh_metrics
+
+        metrics = refresh_metrics(args.results_dir)
+        sections = [
+            k for k in ("dt005", "permutation_test", "interpretability") if metrics[k]
+        ]
+        print(
+            f"metrics.json refreshed without scoring test: {', '.join(sections) or 'none'}"
+        )
+        return 0
     if args.plot_only:
         from sonar_pipeline.evaluate import plot_from_metrics
 

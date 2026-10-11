@@ -76,7 +76,10 @@ def test_pool_to_averages_equal_groups():
     assert pool_to(x, 4).flatten().tolist() == [1.0, 4.0, 7.0, 10.0]
 
 
-@pytest.mark.parametrize("size", [18, 31])  # DEMON and LOFAR lengths before the head
+@pytest.mark.parametrize(
+    "size", [3, 8, 18, 31]
+)  # also fewer values than groups; 18 and
+# 31 are the DEMON and LOFAR lengths before the head
 def test_pool_to_has_no_dead_positions_on_real_shapes(size):
     # Review of F3 (M2): zero padding left DEMON positions 6 and 7 always at 0.
     pooled = pool_to(torch.ones(1, 1, size), 8)

@@ -149,3 +149,32 @@ def test_metrics_record_training_hardware_and_code(trained, tmp_path):
     for entry in metrics["models"].values():
         assert entry["training_hardware"]["device"] == "cpu"
         assert len(entry["training_code_sha256"]) == 64
+
+
+def test_evaluate_fixes_threads_and_numbers_the_evaluation(trained, tmp_path):
+    from sonar_pipeline.cnn import TORCH_THREADS
+    from sonar_pipeline.evaluate import EVALUATION
+
+    folder, models = trained
+    assert run(folder, models, tmp_path) == 0
+    metrics = json.loads((tmp_path / "r" / "metrics.json").read_text("utf-8"))
+    assert metrics["hardware"]["torch_threads"] == TORCH_THREADS
+    assert metrics["evaluation"] == EVALUATION == 2
+
+
+def test_refresh_reloads_sections_without_scoring_test(trained, tmp_path, monkeypatch):
+    folder, models = trained
+    assert run(folder, models, tmp_path) == 0
+    results = tmp_path / "r"
+    (results / "dt005_duration.json").write_text('{"new": true}', encoding="utf-8")
+
+    def no_scoring(*args, **kwargs):
+        raise AssertionError("refresh must not score test")
+
+    monkeypatch.setattr("sonar_pipeline.evaluate.evaluate_split", no_scoring)
+    monkeypatch.setattr("sonar_pipeline.evaluate.load_split", no_scoring)
+    before = json.loads((results / "metrics.json").read_text("utf-8"))
+    assert main(["evaluate", "--refresh", "--results-dir", str(results)]) == 0
+    after = json.loads((results / "metrics.json").read_text("utf-8"))
+    assert after["dt005"] == {"new": True}
+    assert after["models"] == before["models"]  # test scores untouched
