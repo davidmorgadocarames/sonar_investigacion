@@ -10,7 +10,11 @@ import numpy as np
 import pytest
 
 from sonar_pipeline.demon import demon, demon_frequencies
-from sonar_pipeline.figures import plot_recording, plot_spectrum_with_marker
+from sonar_pipeline.figures import (
+    lofar_time_grid,
+    plot_recording,
+    plot_spectrum_with_marker,
+)
 from sonar_pipeline.lofar import lofar, lofar_frequencies
 from sonar_pipeline.params import SAMPLE_RATE
 from sonar_pipeline.preprocess import preprocess
@@ -84,3 +88,18 @@ def test_plot_recording_writes_a_png(tmp_path):
         tmp_path / "sub" / "example.png",
     )
     assert_png(path)
+
+
+def test_lofar_time_grid_places_frames_at_their_true_time():
+    # 2 segments x 11 frames: frame centres 0.25..2.75 s and 3.25..5.75 s, one empty row
+    # at 3.0 s between them, every row 0.25 s high.
+    segments = np.arange(2 * 11 * 3, dtype=float).reshape(2, 11, 3)
+    rows, (top, bottom) = lofar_time_grid(segments)
+    assert rows.shape == (23, 3)
+    np.testing.assert_array_equal(rows[:11], segments[0])
+    assert np.all(np.isnan(rows[11]))
+    np.testing.assert_array_equal(rows[12:], segments[1])
+    assert top == pytest.approx(0.125)
+    assert bottom == pytest.approx(5.875)
+    centres = top + 0.25 * (np.arange(23) + 0.5)
+    assert centres[0] == pytest.approx(0.25) and centres[12] == pytest.approx(3.25)

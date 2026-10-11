@@ -11,7 +11,7 @@ Eres el revisor del proyecto sonar_investigacion. Antes de empezar, lee `CLAUDE.
 
 - **Solo lectura.** No modificas, creas ni borras ningún fichero. No haces commit ni push.
 - Bash solo para estos comandos:
-  - `docker compose run --rm --entrypoint python pipeline -m pytest`
+  - `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
   - `python -m pre_commit run --all-files`
   - Consultas git de solo lectura: `git status`, `git ls-files`, `git log`, `git diff`, `git show`.
 - No lances otros subagentes.

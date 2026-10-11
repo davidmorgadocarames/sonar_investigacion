@@ -47,20 +47,25 @@ def test_shape_and_frequency_axis():
     assert np.all(np.isfinite(gram))
 
 
-@pytest.mark.parametrize("f0", [440.0, 333.0, 1234.5])
-def test_known_tone_peaks_at_its_frequency_in_every_frame(f0):
-    # A weak tone (amplitude 0.1) buried in unit white noise, also between two bins.
+@pytest.mark.parametrize(
+    ("f0", "tolerance_hz"),
+    # On a bin centre the peak must be exactly there; between two bins, either neighbour.
+    [(440.0, 0.0), (1950.0, 0.0), (333.0, BIN_HZ), (1234.5, BIN_HZ)],
+)
+def test_known_tone_peaks_at_its_frequency_in_every_frame(f0, tolerance_hz):
+    # A weak tone (amplitude 0.1) buried in unit white noise, also near the 2 kHz band edge.
     gram = lofar(segment_of(0.1 * np.sin(2 * np.pi * f0 * T) + noise()))
     for frame in gram:
-        assert abs(FREQS[np.argmax(frame)] - f0) <= BIN_HZ
+        assert abs(FREQS[np.argmax(frame)] - f0) <= tolerance_hz
     assert gram.mean(axis=0).max() > 10.0  # clearly above the background (dB)
 
 
-def test_tone_above_band_does_not_alias():
-    # Without anti-aliasing, 3 kHz decimated to 4 kHz would fold onto 1 kHz.
-    gram = lofar(segment_of(0.3 * np.sin(2 * np.pi * 3000.0 * T) + noise()))
-    near_1khz = (FREQS > 990) & (FREQS < 1010)
-    assert gram.mean(axis=0)[near_1khz].max() < 3.0
+@pytest.mark.parametrize("f0", [2050.0, 2100.0, 2200.0, 2600.0, 3000.0])
+def test_tone_above_band_does_not_alias(f0):
+    # Above the 2 kHz kept, a strong tone must leave no line at all: not folded near the band
+    # edge (2050 and 2100 Hz did with decimation to 4 kHz, F2 review M1) nor further down.
+    gram = lofar(segment_of(0.3 * np.sin(2 * np.pi * f0 * T) + noise()))
+    assert gram.mean(axis=0).max() < 6.0  # an in-band tone of this level gives > 20 dB
 
 
 @pytest.mark.parametrize("colour", ["white", "red"])

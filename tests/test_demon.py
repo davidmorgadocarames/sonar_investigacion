@@ -80,6 +80,19 @@ def test_modulation_outside_the_band_is_ignored(seed):
     assert abs(FREQS[np.argmax(spectrum)] - 12.0) > BIN_HZ
 
 
+@pytest.mark.parametrize("fm", [400.0, 450.0])
+def test_modulation_above_100_hz_does_not_alias(fm):
+    # Decimating the envelope to 500 Hz would fold 400 and 450 Hz onto 100 and 50 Hz without
+    # anti-aliasing: no peak may appear in 0-100 Hz.
+    assert prominence(spectrum_of(modulated(fm, depth=0.9, seed=0))) < 5
+
+
+@pytest.mark.parametrize("fm", [12.0, 30.0])
+def test_modulation_on_a_bin_centre_peaks_exactly_there(fm):
+    spectrum = spectrum_of(modulated(fm, depth=0.5, seed=0))
+    assert FREQS[np.argmax(spectrum)] == pytest.approx(fm)
+
+
 def test_constant_envelope_fails():
     with pytest.raises(ValueError, match="no modulation"):
         demon(np.zeros(N))

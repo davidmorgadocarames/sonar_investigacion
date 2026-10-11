@@ -237,6 +237,14 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   paquete), junto al SHA-256 de `split.csv` y las versiones de numpy y scipy. Se descartó pasar el
   commit por variable de entorno o montar `.git` en el contenedor. El mismo criterio vale para
   `metrics.json` en F3. El espectro DEMON es de magnitud. Aprobado por David.
+- **Ajuste 2 (2026-10-11, revisión de F2, hallazgo M1):** el LOFAR diezma a **5 kHz** en vez de
+  4 kHz y conserva de 0 a 2 kHz. Con 4 kHz, la banda de transición del filtro antialiasing de
+  `resample_poly` (unos ±300 Hz alrededor de 2 kHz) plegaba tonos de 2,0 a 2,15 kHz sobre 1,85 a
+  2 kHz (un tono de 2100 Hz aparecía en 1900 Hz con 14 dB). Con 5 kHz la transición queda por
+  encima de 2,2 kHz y no hay líneas falsas. La salida no cambia de forma (11 × 1001 bins de 2 Hz).
+  Además, `features` comprueba el SHA-256 de cada WAV contra `vessels.csv` y guarda en
+  `features_meta.json` el SHA-256 de `vessels.csv`, el commit de DeepShip (leído de su `.git`) y
+  la versión de matplotlib; las figuras de ejemplo salen solo de train. Aprobado por David.
 
 ### D-016 · matplotlib para las figuras
 - **Fecha:** 2026-10-11
@@ -249,6 +257,18 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   `outputs/figures/`; las de validación con señales sintéticas, desde un test con la opción
   `--figures-dir`, para que las señales sintéticas sigan existiendo solo en `tests/`.
 - **Motivo:** es la librería estándar, se usará en F3 y F4, y añade unos 30-40 MB a la imagen.
+
+### D-017 · Todas las dependencias fijadas, también las transitivas
+- **Fecha:** 2026-10-11
+- **Contexto:** la revisión de F2 (hallazgo M2) señaló que solo se fijaban las dependencias
+  directas; las de matplotlib y pytest (pillow, fonttools, contourpy...) se resolvían en cada
+  build, y la imagen del amigo podía no ser la de David.
+- **Alternativas:** (a) fijar la lista completa en `requirements.txt`; (b) un fichero de
+  constraints aparte; (c) una herramienta de lock (pip-tools, uv...).
+- **Decisión:** (a). `requirements.txt` lista las directas y, aparte, las transitivas, sacadas de
+  `pip freeze` dentro de la imagen. Al añadir una dependencia se regenera la lista y se revisa.
+- **Motivo:** no añade ninguna herramienta (regla 3) y una reconstrucción desde cero instala
+  exactamente los mismos paquetes (comprobado con `pip freeze`).
 
 ## Deuda técnica
 

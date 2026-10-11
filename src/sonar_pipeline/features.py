@@ -1,10 +1,13 @@
-"""Features (D-015): every recording of split.csv -> preprocessed 3 s segments -> LOFAR and DEMON.
+"""Features (D-015): every recording of split.csv -> preprocessed segments -> LOFAR and DEMON.
 
-Writes to the output folder:
+Every WAV must match its SHA-256 in vessels.csv. Writes to the output folder:
 - ``features_<split>.npz``: ``segment_id``, ``lofar`` (N, 11, 1001), ``demon`` (N, 301) as float32,
   and the frequency axes ``lofar_hz`` and ``demon_hz``.
 - ``index.csv``: one row per segment, in split.csv order (LF, UTF-8).
-- ``features_meta.json``: parameters, SHA-256 of split.csv, code hash and library versions.
+- ``features_meta.json``: parameters, SHA-256 of split.csv and vessels.csv, DeepShip commit,
+  code hash and library versions.
+
+A split without segments gets no .npz, and an old one from a previous run is removed.
 
 Nothing is random: the same inputs give the same arrays, index and metadata.
 """
@@ -15,10 +18,10 @@ import json
 import subprocess
 from collections import Counter
 from dataclasses import dataclass
+from importlib.metadata import version
 from pathlib import Path
 
 import numpy as np
-import scipy
 
 from sonar_pipeline import params
 from sonar_pipeline.demon import demon, demon_frequencies
@@ -73,6 +76,43 @@ def project_commit() -> str | None:
     return result.stdout.strip() or None
 
 
+def deepship_commit(data_dir: Path) -> str | None:
+    """Commit checked out in the DeepShip clone, read from .git without the git program."""
+    git_dir = data_dir / ".git"
+    head_file = git_dir / "HEAD"
+    if not head_file.is_file():
+        return None
+    head = head_file.read_text(encoding="utf-8").strip()
+    if not head.startswith("ref: "):
+        return head or None  # detached HEAD, as in the README (D-006)
+    ref = head[len("ref: ") :]
+    ref_file = git_dir / ref
+    if ref_file.is_file():
+        return ref_file.read_text(encoding="utf-8").strip() or None
+    packed = git_dir / "packed-refs"
+    if packed.is_file():
+        for line in packed.read_text(encoding="utf-8").splitlines():
+            parts = line.split()
+            if len(parts) == 2 and parts[1] == ref:
+                return parts[0]
+    return None
+
+
+def check_wav_hashes(rows: list[dict], vessels_csv: Path, data_dir: Path) -> None:
+    """Fail unless every WAV of the split has the SHA-256 recorded in vessels.csv."""
+    with vessels_csv.open(newline="", encoding="utf-8") as f:
+        expected = {r["wav_path"]: r["sha256"] for r in csv.DictReader(f)}
+    for row in rows:
+        path = row["wav_path"]
+        if path not in expected:
+            raise ValueError(f"{path} is in the split but not in {vessels_csv}")
+        if sha256_of(data_dir / path) != expected[path]:
+            raise ValueError(
+                f"{path}: SHA-256 differs from {vessels_csv}; the audio is not the "
+                "pinned DeepShip version (README, Datos)"
+            )
+
+
 def read_split(split_csv: Path) -> list[dict]:
     with split_csv.open(newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
@@ -84,7 +124,7 @@ def read_split(split_csv: Path) -> list[dict]:
     return rows
 
 
-def metadata(split_csv: Path) -> dict:
+def metadata(split_csv: Path, vessels_csv: Path, data_dir: Path) -> dict:
     signal_params = {
         name: getattr(params, name) for name in dir(params) if name.isupper()
     }
@@ -93,17 +133,24 @@ def metadata(split_csv: Path) -> dict:
         "params": signal_params,
         "split_csv": split_csv.name,
         "split_sha256": sha256_of(split_csv),
+        "vessels_csv": vessels_csv.name,
+        "vessels_sha256": sha256_of(vessels_csv),
+        "deepship_commit": deepship_commit(data_dir),
         "project_commit": project_commit(),
         "code_sha256": code_sha256(),
-        "versions": {"numpy": np.__version__, "scipy": scipy.__version__},
+        "versions": {name: version(name) for name in ("numpy", "scipy", "matplotlib")},
     }
 
 
 def example_recordings(index: list[dict]) -> dict[str, str]:
-    """The longest recording of every class (first in split.csv order on ties)."""
-    n_segments = Counter(r["wav_path"] for r in index)
+    """The longest train recording of every class (first in split.csv order on ties).
+
+    Only train: tuning anything by looking at these figures must not look at val or test.
+    """
+    train = [r for r in index if r["split"] == "train"]
+    n_segments = Counter(r["wav_path"] for r in train)
     chosen = {}
-    for r in index:
+    for r in train:
         best = chosen.get(r["vessel_class"])
         if best is None or n_segments[r["wav_path"]] > n_segments[best]:
             chosen[r["vessel_class"]] = r["wav_path"]
@@ -122,7 +169,7 @@ def write_figures(
         demon_mean = np.mean([demon_by_id[i] for i in ids], axis=0)
         title = (
             f"{vessel_class} · {wav_path} · {rows[0]['vessel_group'].split('/', 1)[1]} "
-            f"· {rows[0]['split']} · {len(ids)} segmentos de 3 s"
+            f"· {rows[0]['split']} · {len(ids)} segmentos de {params.SEGMENT_S:g} s"
         )
         written.append(
             plot_recording(
@@ -138,7 +185,11 @@ def write_figures(
 
 
 def run_features(
-    data_dir: Path, split_csv: Path, output_dir: Path, figures_dir: Path | None = None
+    data_dir: Path,
+    split_csv: Path,
+    vessels_csv: Path,
+    output_dir: Path,
+    figures_dir: Path | None = None,
 ) -> FeatureSummary:
     rows = read_split(split_csv)
     missing = [r["wav_path"] for r in rows if not (data_dir / r["wav_path"]).is_file()]
@@ -147,6 +198,7 @@ def run_features(
             f"{len(missing)} WAV files of {split_csv} not found under {data_dir}, "
             f"e.g. {missing[0]}"
         )
+    check_wav_hashes(rows, vessels_csv, data_dir)
 
     seg_seconds = segment_length() / params.SAMPLE_RATE
     index = []
@@ -179,6 +231,7 @@ def run_features(
     n_samples = segment_length()
     for split in SPLITS:
         if not ids[split]:
+            (output_dir / f"features_{split}.npz").unlink(missing_ok=True)
             continue
         np.savez(
             output_dir / f"features_{split}.npz",
@@ -192,7 +245,7 @@ def run_features(
         writer = csv.DictWriter(f, fieldnames=INDEX_FIELDS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(index)
-    meta = metadata(split_csv)
+    meta = metadata(split_csv, vessels_csv, data_dir)
     (output_dir / "features_meta.json").write_text(
         json.dumps(meta, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",

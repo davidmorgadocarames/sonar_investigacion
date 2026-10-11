@@ -54,6 +54,9 @@ def demon(segment: np.ndarray, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
     env = envelope(segment, sample_rate)
     spectrum = np.abs(np.fft.rfft(env * get_window("hann", len(env))))
     freqs = demon_frequencies(len(segment), sample_rate)
+    expected = np.fft.rfftfreq(len(env), d=1 / envelope_rate(sample_rate))
+    if not np.array_equal(freqs, expected[: len(freqs)]):
+        raise ValueError("DEMON frequency axis does not match the envelope length")
     spectrum = spectrum[: len(freqs)]
     spectrum[freqs < DEMON_MIN_HZ] = 0.0
     peak = spectrum.max()

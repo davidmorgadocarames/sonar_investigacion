@@ -7,9 +7,10 @@ SAMPLE_RATE = 32000
 # overlap (the tail that does not fill a segment is dropped), each scaled to unit RMS.
 SEGMENT_S = 3.0
 
-# LOFAR: decimate to 4 kHz, Hann window of 0.5 s with a 0.25 s hop (2 Hz bins, 0-2 kHz),
-# TPSW background normalisation, output in dB above the background.
-LOFAR_SAMPLE_RATE = 4000
+# LOFAR: decimate to 5 kHz (D-015 adjustment: the anti-aliasing transition band stays above
+# 2 kHz), Hann window of 0.5 s with a 0.25 s hop (2 Hz bins), keep 0-2 kHz, TPSW background
+# normalisation, output in dB above the background.
+LOFAR_SAMPLE_RATE = 5000
 LOFAR_WINDOW_S = 0.5
 LOFAR_HOP_S = 0.25
 LOFAR_MAX_HZ = 2000.0

@@ -27,7 +27,7 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    cd sonar_investigacion
    ```
 
-2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 500 MB:
+2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 630 MB:
 
    ```bash
    docker compose build
@@ -84,7 +84,8 @@ docker compose run --rm pipeline features
 
 - `qc` revisa los 63 WAV (formato, duración, offset DC, saturación...) en unos segundos y escribe
   `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero.
-- `features` tarda menos de un minuto. Quita el offset DC de cada grabación, la corta en
+- `features` tarda menos de un minuto. Comprueba que cada WAV es idéntico al de la versión
+  fijada (SHA-256 de `datasets/manifests/vessels.csv`), quita el offset DC de cada grabación, la corta en
   segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación de la
   cavitación, 0 a 100 Hz) de cada segmento. Debe decir `63 recordings, 1889 segments` y escribir
   en `datasets/processed/` unos 85 MB: un `features_<partición>.npz` por partición (train, val y
@@ -98,7 +99,8 @@ docker compose run --rm pipeline features --figures
 docker compose run --rm --entrypoint python pipeline -m pytest tests/test_figures.py --figures-dir outputs/figures
 ```
 
-- El primero calcula los rasgos y dibuja, para la grabación más larga de cada clase, su
+- El primero calcula los rasgos y dibuja, para la grabación más larga de cada clase dentro de
+  la partición de entrenamiento (para no mirar val ni test), su
   LOFARgram (tiempo hacia abajo, líneas tonales en azul oscuro) y su DEMON medio:
   `example_<clase>.png`.
 - El segundo dibuja la validación con señales sintéticas: un tono de 440 Hz debe salir en

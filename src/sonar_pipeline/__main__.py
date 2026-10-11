@@ -58,6 +58,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Split manifest, one row per WAV (default: %(default)s).",
     )
     features.add_argument(
+        "--vessels",
+        type=Path,
+        default=Path("datasets/manifests/vessels.csv"),
+        help="Vessel table with the SHA-256 of every WAV (default: %(default)s).",
+    )
+    features.add_argument(
         "--output-dir",
         type=Path,
         default=Path("datasets/processed"),
@@ -67,7 +73,8 @@ def build_parser() -> argparse.ArgumentParser:
     features.add_argument(
         "--figures",
         action="store_true",
-        help="Also plot the LOFARgram and DEMON of the longest recording of each class.",
+        help="Also plot the LOFARgram and DEMON of the longest train recording of each "
+        "class.",
     )
     features.add_argument(
         "--figures-dir",
@@ -93,11 +100,17 @@ def cmd_qc(args: argparse.Namespace) -> int:
 
 def cmd_features(args: argparse.Namespace) -> int:
     from sonar_pipeline.features import SPLITS, run_features
+    from sonar_pipeline.params import SEGMENT_S
 
     figures_dir = args.figures_dir if args.figures else None
-    summary = run_features(args.data_dir, args.split, args.output_dir, figures_dir)
+    summary = run_features(
+        args.data_dir, args.split, args.vessels, args.output_dir, figures_dir
+    )
     total = sum(summary.counts.values())
-    print(f"Features: {summary.n_recordings} recordings, {total} segments of 3 s.")
+    print(
+        f"Features: {summary.n_recordings} recordings, {total} segments "
+        f"of {SEGMENT_S:g} s."
+    )
     classes = sorted({c for c, _ in summary.counts})
     print(f"  {'class':<14}" + "".join(f"{s:>7}" for s in SPLITS) + f"{'total':>7}")
     for c in classes:

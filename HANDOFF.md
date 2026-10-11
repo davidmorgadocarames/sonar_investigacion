@@ -17,6 +17,26 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T10 cerrada: hallazgos de la revisión de F2 arreglados
+- **Qué se hizo:** el reviewer no dejó hallazgos críticos ni altos; 2 medios y 9 bajos, todos
+  arreglados con aprobación de David. M1: LOFAR diezmado a 5 kHz (ajuste 2 de D-015); un tono de
+  2100 Hz ya no aparece en 1900 Hz; tests de 2050 a 3000 Hz que fallan con el diezmado antiguo.
+  M2: D-017, `requirements.txt` con todas las dependencias (directas y transitivas); un build sin
+  caché instala exactamente lo mismo. `features` comprueba el SHA-256 de cada WAV contra
+  `vessels.csv`, guarda el SHA de `vessels.csv`, el commit de DeepShip (77725726…) y la versión
+  de matplotlib, y borra `.npz` de particiones vacías; figuras solo de train y con el tiempo y la
+  frecuencia en su sitio. Tests nuevos: bin exacto, aliasing en DEMON (falla con diezmado sin
+  filtro), independencia entre grabaciones, partición del índice. Agentes con `-rs`; README con
+  la imagen en unos 630 MB (los 116/147 MB de antes eran tamaños comprimidos). 152 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/{params,lofar,demon,features,figures,__main__}.py`,
+  `tests/test_{lofar,demon,features,figures}.py`, `requirements.txt`, `README.md`,
+  `.claude/agents/{data-engineer,reviewer}.md`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (152 passed) y `docker compose run --rm pipeline features --figures`.
+- **Siguiente paso exacto:** cerrar F2 (F2-T09) y empezar F3 con el procedimiento de inicio de
+  fase; avisar a David antes de cualquier entrenamiento.
+
 ## 2026-10-11 · F2-T08 cerrada: figuras de ejemplo
 - **Qué se hizo:** David aprobó D-016 (matplotlib 3.11.2, backend Agg; la imagen pasa de 116 a
   147 MB). `src/sonar_pipeline/figures.py`: LOFARgram con escala secuencial azul (0 a 15 dB sobre
@@ -87,18 +107,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
   tests/test_lofar.py`.
 - **Siguiente paso exacto:** F2-T06: DEMON con el test de la modulación conocida.
-
-## 2026-10-11 · F2-T04 cerrada: preprocesado
-- **Qué se hizo:** `src/sonar_pipeline/params.py` reúne todas las constantes de D-015.
-  `src/sonar_pipeline/preprocess.py`: `load_wav` (32 kHz, mono, finito), `remove_dc` (media de
-  la grabación entera), `segment` (3 s sin solapamiento, cola descartada, falla si no cabe un
-  segmento), `normalize_rms` (RMS = 1, falla con un segmento mudo) y `preprocess`. 15 tests
-  nuevos con señales sintéticas y uno sobre los 63 WAV reales: todos dan al menos un segmento y
-  salen 1889 (Cargo 771, Passengership 377, Tanker 545, Tug 196), como en D-015. 95 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/params.py`, `src/sonar_pipeline/preprocess.py`,
-  `tests/test_preprocess.py`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
-  tests/test_preprocess.py`.
-- **Siguiente paso exacto:** F2-T05: LOFAR (diezmado a 4 kHz, STFT Hann 0,5 s / 0,25 s, TPSW,
-  dB sobre el fondo) con los tests del tono y del ruido blanco.

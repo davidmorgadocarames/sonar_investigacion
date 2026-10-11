@@ -1,7 +1,25 @@
-# Versiones fijadas (regla 6). Las dependencias se añaden en la tarea que las necesita (D-002).
+# Versiones fijadas (regla 6), también las dependencias transitivas (D-017). Las dependencias
+# directas se añaden en la tarea que las necesita (D-002); después se regenera la lista completa
+# con `docker compose run --rm --entrypoint pip pipeline freeze` y se revisa el cambio.
 # Todo se instala desde PyPI. PyTorch (F3) se instalará aparte, solo desde el índice
 # TORCH_INDEX_URL del Dockerfile (CPU por defecto: https://download.pytorch.org/whl/cpu).
+
+# Directas
 matplotlib==3.11.2
 numpy==2.4.6
 pytest==9.1.1
 scipy==1.17.1
+
+# Transitivas (de matplotlib y pytest)
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.66.1
+iniconfig==2.3.1
+kiwisolver==1.5.1
+packaging==26.3
+pillow==12.3.0
+pluggy==1.6.0
+Pygments==2.21.0
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+six==1.17.0

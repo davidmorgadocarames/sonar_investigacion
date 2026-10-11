@@ -50,12 +50,25 @@ def dataset(tmp_path):
         writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["wav_path", "vessel_class", "vessel_group", "split"])
         writer.writerows(r[:4] for r in RECORDINGS)
+    # vessels.csv next to split.csv, with the SHA-256 of every WAV (only the columns used).
+    with vessels_of(split).open("w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(["wav_path", "sha256"])
+        for path, *_ in RECORDINGS:
+            writer.writerow(
+                [path, hashlib.sha256((data / path).read_bytes()).hexdigest()]
+            )
     return data, split
 
 
-def run(data, split, out):
+def vessels_of(split):
+    return split.with_name("vessels.csv")
+
+
+def run(data, split, out, *extra):
     argv = ["features", "--data-dir", str(data), "--split", str(split)]
-    return main([*argv, "--output-dir", str(out)])
+    argv += ["--vessels", str(vessels_of(split)), "--output-dir", str(out)]
+    return main([*argv, *extra])
 
 
 def read_index(out):
@@ -80,6 +93,14 @@ def test_features_end_to_end(dataset, tmp_path, capsys):
         assert [int(r["segment_index"]) for r in rows] == list(range(n))
         assert [r["start_s"] for r in rows] == [f"{3.0 * i:.3f}" for i in range(n)]
 
+    # Every index row carries the class, group and split of its recording in split.csv.
+    with split.open(newline="", encoding="utf-8") as f:
+        split_rows = {r["wav_path"]: r for r in csv.DictReader(f)}
+    for r in index:
+        expected = split_rows[r["wav_path"]]
+        for key in ("vessel_class", "vessel_group", "split"):
+            assert r[key] == expected[key]
+
     by_id = {int(r["segment_id"]): r for r in index}
     for split_name in ("train", "val", "test"):
         npz = np.load(out / f"features_{split_name}.npz")
@@ -103,6 +124,26 @@ def test_features_end_to_end(dataset, tmp_path, capsys):
     assert meta["split_sha256"] == hashlib.sha256(split.read_bytes()).hexdigest()
     assert meta["params"]["SEGMENT_S"] == 3.0
     assert len(meta["code_sha256"]) == 64
+    vessels = vessels_of(split)
+    assert meta["vessels_sha256"] == hashlib.sha256(vessels.read_bytes()).hexdigest()
+    assert meta["deepship_commit"] is None  # the synthetic folder is not a git clone
+    assert set(meta["versions"]) == {"numpy", "scipy", "matplotlib"}
+
+
+def test_each_recording_is_processed_on_its_own(dataset, tmp_path):
+    # No global statistics: a recording gives the same features alone or with the others.
+    data, split = dataset
+    assert run(data, split, tmp_path / "all") == 0
+    alone = tmp_path / "alone" / "split.csv"
+    alone.parent.mkdir()
+    lines = split.read_text(encoding="utf-8").splitlines(keepends=True)
+    alone.write_text(lines[0] + lines[3], encoding="utf-8")  # header + Tanker/2.wav
+    vessels_of(alone).write_text(vessels_of(split).read_text(encoding="utf-8"), "utf-8")
+    assert run(data, alone, tmp_path / "one") == 0
+    full = np.load(tmp_path / "all" / "features_test.npz")
+    single = np.load(tmp_path / "one" / "features_test.npz")
+    for key in ("lofar", "demon"):
+        np.testing.assert_array_equal(full[key], single[key])
 
 
 def test_features_are_deterministic(dataset, tmp_path):
@@ -120,20 +161,14 @@ def test_features_are_deterministic(dataset, tmp_path):
             np.testing.assert_array_equal(a[key], b[key])
 
 
-def test_features_figures_one_per_class(dataset, tmp_path, capsys):
+def test_features_figures_only_from_train(dataset, tmp_path, capsys):
     data, split = dataset
     figures = tmp_path / "figures"
-    argv = ["features", "--data-dir", str(data), "--split", str(split)]
-    argv += [
-        "--output-dir",
-        str(tmp_path / "out"),
-        "--figures",
-        "--figures-dir",
-        str(figures),
-    ]
-    assert main(argv) == 0
+    extra = ["--figures", "--figures-dir", str(figures)]
+    assert run(data, split, tmp_path / "out", *extra) == 0
+    # Only train recordings are drawn: here only Cargo has one (Tug is val, Tanker is test).
     names = sorted(p.name for p in figures.iterdir())
-    assert names == ["example_cargo.png", "example_tanker.png", "example_tug.png"]
+    assert names == ["example_cargo.png"]
     assert "Figure:" in capsys.readouterr().out
 
 
@@ -143,17 +178,69 @@ def test_no_figures_without_flag(dataset, tmp_path):
     assert not (tmp_path / "out" / "figures").exists()
 
 
-def test_example_is_the_longest_recording_of_each_class():
+def test_example_is_the_longest_train_recording_of_each_class():
     from sonar_pipeline.features import example_recordings
 
+    def row(path, split="train"):
+        return {"wav_path": path, "vessel_class": path.split("/")[0], "split": split}
+
     index = [
-        {"wav_path": "Cargo/1.wav", "vessel_class": "Cargo"},
-        {"wav_path": "Cargo/3.wav", "vessel_class": "Cargo"},
-        {"wav_path": "Cargo/3.wav", "vessel_class": "Cargo"},
-        {"wav_path": "Tug/5.wav", "vessel_class": "Tug"},
-        {"wav_path": "Tug/6.wav", "vessel_class": "Tug"},
+        row("Cargo/1.wav"),
+        row("Cargo/3.wav"),
+        row("Cargo/3.wav"),
+        row("Cargo/9.wav", "test"),  # longest, but test
+        row("Cargo/9.wav", "test"),
+        row("Cargo/9.wav", "test"),
+        row("Tug/5.wav"),
+        row("Tug/6.wav"),
+        row("Tanker/7.wav", "val"),
     ]
     assert example_recordings(index) == {"Cargo": "Cargo/3.wav", "Tug": "Tug/5.wav"}
+
+
+def test_changed_audio_fails(dataset, tmp_path):
+    data, split = dataset
+    wav = data / "Tug" / "5.wav"
+    wav.write_bytes(wav.read_bytes()[:-4] + bytes(4))
+    with pytest.raises(ValueError, match="Tug/5.wav: SHA-256 differs"):
+        run(data, split, tmp_path / "out")
+
+
+def test_old_npz_of_an_empty_split_is_removed(dataset, tmp_path):
+    data, split = dataset
+    out = tmp_path / "out"
+    assert run(data, split, out) == 0
+    assert (out / "features_val.npz").exists()
+    split.write_text(
+        split.read_text(encoding="utf-8").replace(",val\n", ",train\n"),
+        encoding="utf-8",
+    )
+    assert run(data, split, out) == 0
+    assert not (out / "features_val.npz").exists()
+
+
+@pytest.mark.parametrize("layout", ["detached", "branch", "packed"])
+def test_deepship_commit_is_read_from_git_files(tmp_path, layout):
+    from sonar_pipeline.features import deepship_commit
+
+    commit = "77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6"
+    git = tmp_path / ".git"
+    git.mkdir()
+    if layout == "detached":
+        (git / "HEAD").write_text(commit + "\n", encoding="utf-8")
+    else:
+        (git / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        if layout == "branch":
+            (git / "refs" / "heads").mkdir(parents=True)
+            (git / "refs" / "heads" / "main").write_text(
+                commit + "\n", encoding="utf-8"
+            )
+        else:
+            (git / "packed-refs").write_text(
+                f"# pack-refs\n{commit} refs/heads/main\n", encoding="utf-8"
+            )
+    assert deepship_commit(tmp_path) == commit
+    assert deepship_commit(tmp_path / "missing") is None
 
 
 def test_missing_wav_fails(dataset, tmp_path):

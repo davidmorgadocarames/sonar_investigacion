@@ -28,7 +28,7 @@ Eres el ingeniero de datos del proyecto sonar_investigacion. Antes de empezar, l
   mínima). Si añades una, fija su versión en `requirements.txt`.
 - Código, nombres de ficheros y mensajes en inglés. Documentación en español.
 - Ejecuta los tests y la pipeline dentro de Docker:
-  `docker compose run --rm --entrypoint python pipeline -m pytest`.
+  `docker compose run --rm --entrypoint python pipeline -m pytest -rs`.
 - Si no sabes algo de los datos (licencia, metadatos, estructura), dilo. No lo inventes.
 
 ## Formato de respuesta al orquestador

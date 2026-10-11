@@ -1,9 +1,11 @@
 """LOFAR (D-015): narrowband spectrogram of one segment, normalised by its noise background.
 
-Steps: decimate to 4 kHz (polyphase FIR anti-aliasing), Hann STFT of 0.5 s with a 0.25 s hop
-(2 Hz bins from 0 to 2 kHz), power, TPSW background estimate along frequency in every frame,
+Steps: decimate to 5 kHz (polyphase FIR anti-aliasing; its transition band, ~2.2-2.8 kHz, stays
+above the 2 kHz kept), Hann STFT of 0.5 s with a 0.25 s hop (2 Hz bins, 0 to 2 kHz kept), power, TPSW background estimate along frequency in every frame,
 and 10*log10(power / background): dB above the background, about 0 dB for flat noise.
 """
+
+from math import gcd
 
 import numpy as np
 from scipy.signal import get_window, resample_poly
@@ -38,15 +40,13 @@ def lofar_frequencies() -> np.ndarray:
 
 
 def decimate(x: np.ndarray, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
-    if sample_rate % LOFAR_SAMPLE_RATE:
-        raise ValueError(
-            f"{sample_rate} Hz is not a multiple of {LOFAR_SAMPLE_RATE} Hz"
-        )
-    return resample_poly(x, up=1, down=sample_rate // LOFAR_SAMPLE_RATE)
+    """Resample to LOFAR_SAMPLE_RATE (32 kHz -> 5 kHz: up 5, down 32)."""
+    common = gcd(sample_rate, LOFAR_SAMPLE_RATE)
+    return resample_poly(x, up=LOFAR_SAMPLE_RATE // common, down=sample_rate // common)
 
 
 def power_spectrogram(x: np.ndarray) -> np.ndarray:
-    """Hann STFT power of a 4 kHz signal: shape (n_frames, n_bins), frames without padding."""
+    """Hann STFT power of a LOFAR_SAMPLE_RATE signal: shape (n_frames, n_bins), frames without padding."""
     n, hop = window_length(), hop_length()
     if len(x) < n:
         raise ValueError(

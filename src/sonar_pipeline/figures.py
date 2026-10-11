@@ -14,13 +14,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
-from sonar_pipeline.params import DEMON_MIN_HZ, SEGMENT_S
+from sonar_pipeline.params import (
+    DEMON_MIN_HZ,
+    LOFAR_HOP_S,
+    LOFAR_WINDOW_S,
+    SEGMENT_S,
+)
 
 INK = "#222222"
 MUTED = "#6b6b6b"
 GRID = "#e4e4e4"
 LINE = "#256abf"
-# Light -> dark blue, from near the surface (0 dB, background) to the strongest lines.
+# Light -> dark blue, from near the surface (0 dB, background) to the strongest lines. Gaps
+# between segments (NaN rows) show the surface.
 SEQUENTIAL = LinearSegmentedColormap.from_list(
     "sequential_blue",
     [
@@ -33,7 +39,7 @@ SEQUENTIAL = LinearSegmentedColormap.from_list(
         "#184f95",
         "#0d366b",
     ],
-)
+).with_extremes(bad="white")
 LOFAR_DB_RANGE = (0.0, 15.0)
 DPI = 150
 
@@ -55,6 +61,32 @@ def _save(fig, path: Path) -> Path:
     return path
 
 
+def lofar_time_grid(
+    lofar_segments: np.ndarray,
+) -> tuple[np.ndarray, tuple[float, float]]:
+    """Place the frames of consecutive segments on a uniform grid of LOFAR_HOP_S.
+
+    Frame k of segment i is centred at i * SEGMENT_S + LOFAR_WINDOW_S / 2 + k * LOFAR_HOP_S.
+    Grid rows without a frame (between segments) are NaN. Returns the rows and the time of the
+    top and bottom edges (s).
+    """
+    n_segments, n_frames, n_bins = lofar_segments.shape
+    steps_per_segment = SEGMENT_S / LOFAR_HOP_S
+    if steps_per_segment != round(steps_per_segment):
+        raise ValueError(
+            "SEGMENT_S must be a multiple of LOFAR_HOP_S to draw the LOFARgram"
+        )
+    steps_per_segment = round(steps_per_segment)
+    n_rows = (n_segments - 1) * steps_per_segment + n_frames
+    rows = np.full((n_rows, n_bins), np.nan)
+    for i in range(n_segments):
+        start = i * steps_per_segment
+        rows[start : start + n_frames] = lofar_segments[i]
+    first_centre = LOFAR_WINDOW_S / 2
+    top = first_centre - LOFAR_HOP_S / 2
+    return rows, (top, top + n_rows * LOFAR_HOP_S)
+
+
 def plot_recording(
     lofar_segments: np.ndarray,
     lofar_hz: np.ndarray,
@@ -65,12 +97,11 @@ def plot_recording(
 ) -> Path:
     """LOFARgram of consecutive segments (time downwards) above the recording's DEMON.
 
-    lofar_segments has shape (n_segments, n_frames, n_bins); the frames of consecutive segments
-    are stacked, so the time axis spans n_segments * SEGMENT_S seconds.
+    lofar_segments has shape (n_segments, n_frames, n_bins). Every frame is drawn as one row of
+    LOFAR_HOP_S at its true time (frame centre), and the gap between segments stays empty.
     """
-    n_segments, n_frames, n_bins = lofar_segments.shape
-    lofar_frames = lofar_segments.reshape(n_segments * n_frames, n_bins)
-    duration_s = n_segments * SEGMENT_S
+    rows, (time_top, time_bottom) = lofar_time_grid(lofar_segments)
+    bin_hz = lofar_hz[1] - lofar_hz[0]
 
     fig, (top, bottom) = plt.subplots(
         2,
@@ -82,13 +113,18 @@ def plot_recording(
     fig.suptitle(title, color=INK, fontsize=11, x=0.02, ha="left")
 
     image = top.imshow(
-        lofar_frames,
+        rows,
         aspect="auto",
         origin="upper",
         cmap=SEQUENTIAL,
         vmin=LOFAR_DB_RANGE[0],
         vmax=LOFAR_DB_RANGE[1],
-        extent=(lofar_hz[0], lofar_hz[-1], duration_s, 0.0),
+        extent=(
+            lofar_hz[0] - bin_hz / 2,
+            lofar_hz[-1] + bin_hz / 2,
+            time_bottom,
+            time_top,
+        ),
         interpolation="nearest",
     )
     top.set_title("LOFARgram", color=INK, fontsize=9, loc="left")
