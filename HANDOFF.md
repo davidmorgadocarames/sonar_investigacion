@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T06 cerrada: DEMON
+- **Qué se hizo:** `src/sonar_pipeline/demon.py` (D-015): paso banda Butterworth de orden 4 de 2
+  a 8 kHz con `sosfiltfilt`, envolvente |Hilbert| menos su media, diezmado ×8 ×8 con
+  `resample_poly` (500 Hz), espectro de magnitud con ventana Hann (301 bins de 1/3 Hz, 0 a
+  100 Hz), bins por debajo de 1 Hz a 0 y máximo 1. 23 tests con 3 semillas: un ruido modulado a
+  3,4, 7,5, 12 y 50 Hz da el pico en su bin (±1) y más de 20 veces la mediana; con una modulación
+  del 10 % se sigue encontrando; sin modulación el pico no pasa de 5 veces la mediana; una
+  modulación por debajo de 1 kHz no aparece. Comprobado que, sin el paso banda, el último test
+  falla. 127 tests.
+- **Qué quedó a medias:** nada. Se usa espectro de magnitud (D-015 no fijaba magnitud o potencia).
+- **Ficheros tocados:** `src/sonar_pipeline/demon.py`, `tests/test_demon.py`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
+  tests/test_demon.py`.
+- **Siguiente paso exacto:** F2-T07: subcomando `features` (lee `split.csv`, escribe los `.npz`,
+  `index.csv` y `features_meta.json` en `datasets/processed/`) y README.
+
 ## 2026-10-11 · F2-T05 cerrada: LOFAR
 - **Qué se hizo:** `src/sonar_pipeline/lofar.py` (D-015): diezmado a 4 kHz con `resample_poly`,
   STFT Hann de 0,5 s / 0,25 s (11 tramas × 1001 bins de 2 Hz), TPSW por trama a lo largo de la
@@ -80,17 +97,3 @@ Plantilla:
   (70 passed, 10 skipped).
 - **Siguiente paso exacto:** F2-T03: proponer a David los parámetros de preprocesado, LOFAR,
   DEMON y formato de salida (D-015).
-
-## 2026-10-11 · F2 empezada; F2-T01 cerrada: DT-004 pagada
-- **Qué se hizo:** David aprobó las 9 tareas de F2 (en PLAN.md). `data-engineer` creó
-  `tests/test_vessel_table_regen.py`: regenera `vessels.csv` desde los 63 WAV en `tmp_path` y lo
-  compara byte a byte con el versionado; si falla, muestra el diff y avisa de que regenerar cambia
-  grupos y partición; se salta si no hay audios. Comprobado a mano que falla con un grupo
-  alterado. DT-004 pagada (aprobado por David). 72 tests.
-- **Qué quedó a medias:** nada. David aprobó añadir `-rs` al comando de tests de CLAUDE.md y del
-  README dentro de F2-T02 (un verde sin audios no prueba nada sobre los datos).
-- **Ficheros tocados:** `tests/test_vessel_table_regen.py`, `DECISIONS.md`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -q -rs`
-  (72 passed, 0 skipped con DeepShip descargado).
-- **Siguiente paso exacto:** F2-T02: pagar DT-006 (mejoras menores) e incluir `-rs`.
