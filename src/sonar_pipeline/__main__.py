@@ -107,6 +107,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="Vessel table with the duration of every WAV (default: %(default)s).",
     )
     train.add_argument(
+        "--bootstrap",
+        type=int,
+        default=2000,
+        metavar="N",
+        help="Bootstrap resamples of recordings for the intervals (default: %(default)s).",
+    )
+    train.add_argument(
+        "--models-dir",
+        type=Path,
+        default=Path("models"),
+        help="Folder for the weights and their JSON (default: %(default)s).",
+    )
+    train.add_argument(
+        "--permutation-test",
+        type=int,
+        default=0,
+        metavar="N",
+        help="baseline only: instead of training, run N permutations of the classes between "
+        "vessel groups with the saved C (after the model is committed).",
+    )
+    train.add_argument(
         "--results-dir",
         type=Path,
         default=Path("outputs/results"),
@@ -152,28 +173,15 @@ def cmd_features(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_train(args: argparse.Namespace) -> int:
-    if args.model != "duration":
-        print(
-            f"'train --model {args.model}' is not implemented yet (F3).",
-            file=sys.stderr,
-        )
-        return 1
+def print_val_scores(val: dict) -> None:
     from sonar_pipeline.dataset import CLASSES
-    from sonar_pipeline.duration_check import run_duration_check
 
-    output = args.results_dir / "dt005_duration.json"
-    result = run_duration_check(args.processed_dir, args.vessels, output)
-    val = result["val"]
-    print(
-        f"DT-005 check: logistic regression on recording duration, fitted in "
-        f"{result['training']['seconds']:.2f} s; scored on val (test not used)."
-    )
     for level in ("segment", "recording"):
         s = val[level]
         lo, hi = s["ci95"]["f1_macro"]
         print(
-            f"  {level:<9} n={s['n']:<4} F1 macro {s['f1_macro']:.3f} (95 % CI {lo:.3f}-{hi:.3f})"
+            f"  {level:<9} n={s['n']:<4} F1 macro {s['f1_macro']:.3f} "
+            f"(95 % CI {lo:.3f}-{hi:.3f})"
         )
         print(
             "            "
@@ -186,11 +194,77 @@ def cmd_train(args: argparse.Namespace) -> int:
             print(
                 f"  {era} {a} vs {b} ({level}): F1 macro {s['f1_macro']:.3f}, n={s['n']}"
             )
+
+
+def train_duration(args: argparse.Namespace) -> int:
+    from sonar_pipeline.duration_check import run_duration_check
+
+    output = args.results_dir / "dt005_duration.json"
+    result = run_duration_check(
+        args.processed_dir, args.vessels, output, args.bootstrap
+    )
     print(
-        f"  chance F1 macro ~ {result['chance_f1_macro']:.2f} (4 classes), 0.5 within an era"
+        f"DT-005 check: logistic regression on recording duration, fitted in "
+        f"{result['training']['seconds']:.2f} s; scored on val (test not used)."
+    )
+    print_val_scores(result["val"])
+    print(
+        f"  chance F1 macro ~ {result['chance_f1_macro']:.2f} (4 classes), "
+        "0.5 within an era"
     )
     print(f"Written to {output}")
     return 0
+
+
+def train_baseline(args: argparse.Namespace) -> int:
+    from sonar_pipeline.baseline import permutation_test, train_baseline
+
+    if args.permutation_test:
+        output = args.results_dir / "permutation_test.json"
+        result = permutation_test(
+            args.processed_dir, args.models_dir, output, args.permutation_test
+        )
+        print(
+            f"Permutation test (baseline, C={result['c']:g}): {result['n_permutations']} "
+            f"permutations of the classes between vessel groups in {result['seconds']:.0f} s."
+        )
+        print(
+            f"  grouped CV F1 macro: real labels {result['observed_f1_macro']:.3f}, "
+            f"permuted mean {result['null_mean']:.3f} (95th percentile "
+            f"{result['null_p95']:.3f}); p = {result['p_value']:.4f}"
+        )
+        print(f"Written to {output}")
+        return 0
+
+    report = train_baseline(args.processed_dir, args.models_dir, args.bootstrap)
+    print(
+        f"Baseline: logistic regression, C={report['config']['c']:g} chosen on val "
+        f"(search {report['training']['search_seconds']:.1f} s, final fit "
+        f"{report['training']['seconds']:.1f} s; test not used)."
+    )
+    for row in report["training"]["search"]:
+        print(f"  C={row['c']:<6g} val F1 macro {row['val_f1_macro']:.3f}")
+    print("Val scores of the chosen model:")
+    print_val_scores(report["val"])
+    cv = report["grouped_cv"]
+    print(
+        f"  grouped CV on train + val ({cv['folds']} folds by vessel): F1 macro "
+        f"{cv['mean']:.3f} +- {cv['std']:.3f}"
+    )
+    print(f"Written to {args.models_dir / 'baseline.npz'} and baseline.json")
+    return 0
+
+
+def cmd_train(args: argparse.Namespace) -> int:
+    if args.permutation_test and args.model != "baseline":
+        print("--permutation-test is only for --model baseline.", file=sys.stderr)
+        return 1
+    if args.model == "duration":
+        return train_duration(args)
+    if args.model == "baseline":
+        return train_baseline(args)
+    print(f"'train --model {args.model}' is not implemented yet (F3).", file=sys.stderr)
+    return 1
 
 
 HANDLERS = {"qc": cmd_qc, "features": cmd_features, "train": cmd_train}

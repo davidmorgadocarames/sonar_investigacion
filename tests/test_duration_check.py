@@ -60,6 +60,8 @@ def run(folder, vessels_csv, results):
             str(vessels_csv),
             "--results-dir",
             str(results),
+            "--bootstrap",
+            "50",
         ]
     )
 
@@ -91,7 +93,7 @@ def test_missing_duration_fails(tmp_path):
         run(folder, vessels, tmp_path / "r")
 
 
-@pytest.mark.parametrize("model", ["baseline", "cnn", "cnn-aug"])
+@pytest.mark.parametrize("model", ["cnn", "cnn-aug"])
 def test_models_not_yet_implemented_fail(model, tmp_path, capsys):
     assert main(["train", "--model", model, "--results-dir", str(tmp_path)]) == 1
     assert "not implemented yet" in capsys.readouterr().err

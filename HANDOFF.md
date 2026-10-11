@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T06 en curso: línea base entrenada y versionada
+- **Qué se hizo:** `src/sonar_pipeline/baseline.py` y `train --model baseline` (opciones
+  `--models-dir`, `--bootstrap`, `--permutation-test N`). Con el visto bueno de David se entrenó
+  (29 s en CPU): C=10 elegido en val (curva casi plana, 0,34-0,38). Val: F1 macro 0,381 por
+  segmento (IC 0,27-0,46) y 0,486 por grabación; dentro de época, Cargo frente a Tug 0,75 por
+  segmento y Passengership frente a Tanker 0,58. Validación cruzada por buque en train + val:
+  0,370 ± 0,113. 5212 parámetros. Pesos en `models/baseline.npz` (64 kB, sin pickle) y
+  `models/baseline.json`, versionados antes del test de permutación, como pidió David.
+- **Qué quedó a medias:** el test de permutación (200), pendiente del visto bueno de David con la
+  estimación de tiempo (cada validación cruzada tarda ~1 s).
+- **Ficheros tocados:** `src/sonar_pipeline/{baseline,__main__}.py`, `tests/test_baseline.py`,
+  `tests/test_duration_check.py`, `models/baseline.{npz,json}`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline train --model baseline` (mismo C y
+  mismas cifras).
+- **Siguiente paso exacto:** con el visto bueno de David, `train --model baseline
+  --permutation-test 200`; después cerrar F3-T06.
+
 ## 2026-10-11 · F3-T05 cerrada: comprobación de DT-005 y métrica por época
 - **Qué se hizo:** `train --model duration` (`src/sonar_pipeline/duration_check.py`): regresión
   logística solo con la duración de la grabación, ajustada en train y puntuada en val (test no se
@@ -87,18 +104,3 @@ Plantilla:
   python pipeline -c "import torch; print(torch.cuda.is_available())"` (True).
 - **Siguiente paso exacto:** F3-T03: módulo de datos (carga de `.npz` e índice, etiquetas, pesos
   por clase, agregación por grabación). Sin entrenamiento.
-
-## 2026-10-11 · F3 empezada; F3-T01 cerrada: diseño del modelo (D-018)
-- **Qué se hizo:** David aprobó las 11 tareas de F3 y una F5 opcional (atención, después de F4).
-  D-018 recoge el diseño: regresión logística sobre media temporal de LOFAR + DEMON; CNN de dos
-  ramas (~80 000 parámetros) con BatchNorm, LeakyReLU, AdamW, lr en coseno, minibatches de 32,
-  pesos por clase y parada temprana; CNN con aumento de datos comparada en val; decisión por
-  grabación con media de probabilidades; bootstrap por grabaciones; ROC Pd/Pfa; importancia por
-  permutación, saliencia y oclusión; pesos en `models/` versionados; `metrics.json` con
-  parámetros, FLOPs y tiempos. Descartados SHAP, SwiGLU, RoPE, RMSNorm y GQA.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** leer D-018 y la sección F3 de PLAN.md.
-- **Siguiente paso exacto:** F3-T02: proponer D-019 (scikit-learn y PyTorch CPU). **Antes de
-  cualquier entrenamiento o test de permutación, avisar a David con una estimación de tiempo; y
-  hacer commit de un modelo entrenado antes de permutar.** Test no se mira hasta F3-T09.
