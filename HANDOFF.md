@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4-T05 cerrada: DT-001 pagada (UID y GID del host)
+- **Qué se hizo:** `compose.yaml` ejecuta el contenedor con `user: "${HOST_UID:-1000}:${HOST_GID:-1000}"`
+  (en Linux, en `.env` con `id -u` e `id -g`; en Windows y macOS no hace falta). La imagen usa
+  `HOME=/tmp`, `MPLCONFIGDIR=/tmp/matplotlib` y pytest sin caché, porque un UID del host no tiene
+  carpeta personal ni puede escribir en `/app`. Comprobado con el UID 4321: 244 tests en verde y
+  `report` escribe en una carpeta nueva ficheros a su nombre (informe idéntico). La prueba también
+  reprodujo el problema de DT-001: con un UID distinto no se pueden sobrescribir ficheros creados
+  por otro UID. La imagen GPU sigue viendo la RTX 4060. `tests/test_container.py` (2 tests).
+  README: paso "Solo en Linux". D-019 con el ajuste del separador (aprobado por David).
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `Dockerfile`, `compose.yaml`, `tests/test_container.py`, `README.md`,
+  `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `HOST_UID=4321 HOST_GID=4321 docker compose run --rm --entrypoint python
+  pipeline -m pytest -q`.
+- **Siguiente paso exacto:** F4-T06: pasada del friend-tester (clon en la carpeta temporal
+  aprobada; opción A; debe reproducir `docs/results/eval2.json`).
+
 ## 2026-10-11 · F4-T04 cerrada: README completo
 - **Qué se hizo:** README reescrito: resultado en una frase con enlace al informe; requisitos y
   por qué no hace falta virtualenv (D-021); opción A (CPU) y B (GPU NVIDIA con `.env`);
@@ -82,28 +99,3 @@ Plantilla:
 - **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
 - **Cómo verificarlo:** leer D-021 y la sección F4 de PLAN.md.
 - **Siguiente paso exacto:** F4-T02: figura de minutos por clase y partición.
-
-## 2026-10-11 · F3 Modelo cerrada (F3-T11)
-- **Qué se hizo:** segunda pasada del reviewer sobre F3-T12: sin hallazgos críticos ni altos; los
-  11 de la primera revisión, resueltos. Con la aprobación de David se arreglaron los 3 medios y 6
-  bajos nuevos (commit `5d8d820`): hilos fijados también en `evaluate`, `metrics.json` con
-  `"evaluation": 2` y `evaluate --refresh` (actualiza DT-005, permutación e interpretabilidad sin
-  puntuar test), comprobación de duración sin azar fijo y regenerada (solo val), línea de azar
-  omitida si falta una época, test de `pool_to` con menos valores que grupos. **El test de
-  determinismo en CUDA pasó en la imagen GPU** (233 tests en GPU y en CPU). D-020: resúmenes de
-  las dos rondas en `docs/results/eval{1,2}.json` (con `tools/summarize_results.py`) y
-  `docs/results/README.md` con la comparación y la **tabla de procedencia** (commit y
-  `code_sha256` de cada resultado; los de la ronda 2 coinciden con `ab383dd`; la evaluación 2
-  corrió con 14 hilos y sin el arreglo B5, sin efecto práctico, no comprobado para no mirar test
-  otra vez). DT-005 actualizada con la ronda 2 y las ρ de los tres modelos tratadas igual; nota de
-  F5 corregida. Resultado de F3: solo la línea base supera al azar (0,374 frente a 0,238; p =
-  0,040), y dentro de cada época ningún modelo se distingue del azar.
-- **Qué quedó a medias:** nada de F3. F4 no tiene tareas detalladas.
-- **Ficheros tocados:** `tools/summarize_results.py`, `tests/test_summarize_results.py`,
-  `docs/results/{eval1.json,eval2.json,README.md}`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
-  (235 passed) y leer `docs/results/README.md`.
-- **Siguiente paso exacto:** empezar F4 con el procedimiento de inicio de fase: proponer a David
-  las tareas (README con opciones A y B, "Comprobar la instalación", subcomando `report`,
-  figuras versionadas, limitaciones declaradas, friend-tester, etiqueta `v0.1`, DT-001) y
-  esperar su aprobación.

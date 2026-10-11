@@ -48,14 +48,22 @@ se usa, así que no necesitas un entorno virtual ni preocuparte por las versione
      de la opción B ocupa unos 9,4 GB. Si tu driver es demasiado antiguo, el contenedor fallará al
      arrancar: actualiza el driver o borra `.env` para volver a la opción A.
 
-3. Construye la imagen. La primera vez tarda unos minutos; la imagen de la opción A ocupa unos
+3. **Solo en Linux:** para que los ficheros que escribe el contenedor sean tuyos, añade tu
+   usuario al fichero `.env` (se crea si no existe). En Windows y macOS no hace falta.
+
+   ```bash
+   echo "HOST_UID=$(id -u)" >> .env
+   echo "HOST_GID=$(id -g)" >> .env
+   ```
+
+4. Construye la imagen. La primera vez tarda unos minutos; la imagen de la opción A ocupa unos
    1,9 GB:
 
    ```bash
    docker compose build
    ```
 
-4. Comprueba que funciona:
+5. Comprueba que funciona:
 
    ```bash
    docker compose run --rm pipeline --help

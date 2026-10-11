@@ -384,6 +384,10 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
     forzarlo, y ajustes deterministas también en CUDA. La evaluación de referencia es en CPU.
   - README (F4): opción A, CPU sin configurar nada; opción B, GPU NVIDIA activada una vez con un
     `.env` (`COMPOSE_FILE=compose.yaml:compose.gpu.yaml`) y los mismos comandos.
+  - **Ajuste (2026-10-11, F4-T04, aprobado por David):** en Windows el separador por defecto
+    de `COMPOSE_FILE` es `;`, así que el `.env` lleva antes `COMPOSE_PATH_SEPARATOR=:`. Con las
+    dos líneas funciona en Windows, Linux y macOS (comprobado con `docker compose config
+    --images`).
 - **Motivo:** la GPU acelera el entrenamiento de David; el amigo solo necesita CPU para evaluar.
   Docker no puede detectar la GPU por sí solo, así que se elige una vez. La imagen CPU pasa de
   unos 630 MB a 1,88 GB; la imagen GPU ocupa 9,44 GB (solo la construye quien la usa). Comprobado
@@ -436,7 +440,7 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
 |---|---|---|---|---|---|
-| DT-001 | El UID 1000 del usuario `app` está fijo en la imagen. | Es el UID habitual del primer usuario en Linux, y en Docker Desktop (Windows y macOS) no afecta. | En Linux, con otro UID, el contenedor no puede escribir en los volúmenes montados (`outputs/`). | En F4, si el friend-tester lo detecta. | Abierta |
+| DT-001 | El UID 1000 del usuario `app` está fijo en la imagen. | Es el UID habitual del primer usuario en Linux, y en Docker Desktop (Windows y macOS) no afecta. | En Linux, con otro UID, el contenedor no puede escribir en los volúmenes montados (`outputs/`). | En F4, si el friend-tester lo detecta. | Pagada (2026-10-11, F4-T05, D-021): `compose.yaml` ejecuta el contenedor con `HOST_UID:HOST_GID` (1000 por defecto; en Linux, en `.env`); la imagen usa `HOME=/tmp`, `MPLCONFIGDIR=/tmp/matplotlib` y pytest sin caché. Comprobado con el UID 4321: tests en verde y ficheros escritos a su nombre. |
 | DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06b: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Pagada (2026-10-11): `tests/test_vessel_table_data.py` |
 | DT-003 | Algunos nombres de buque de los metafiles parecen cortados ("QUEEN OF", "CABO DE", "OTTO H", "SPIRIT OF"...). Un mismo buque podría aparecer con dos nombres distintos y formar dos grupos. | No se ha visto en los 44 grupos con WAV; los nombres cortados conocidos sin WAV no afectan a la partición, y "QUEEN OF" ya es un solo grupo (D-007). | Si ocurriera, el mismo buque podría acabar en dos particiones (fuga). | En F1-T06b: listar los grupos con WAV cuyos nombres se parezcan (p. ej., mismo prefijo) y revisarlos con David. | Pagada (2026-10-11): listado revisado con David; D-011 |
 | DT-004 | Ningún test regenera `vessels.csv` desde los audios: si cambian las reglas de `build_vessel_table.py` (agrupación, alineamiento) y no se regenera la tabla, los tests siguen en verde con la tabla antigua. | La tabla actual está comprobada a mano y por los tests de DT-002. | El script y la tabla podrían divergir sin aviso; al regenerarla cambiarían grupos y partición sin que nadie lo haya decidido. | Al empezar F2: un test que ejecute el script sobre `datasets/raw/DeepShip`, escriba en una carpeta temporal y compare byte a byte con la versionada; se salta si no hay audios. | Pagada (2026-10-11): `tests/test_vessel_table_regen.py` |

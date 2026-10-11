@@ -2,6 +2,9 @@ services:
   pipeline:
     build: .
     image: sonar-pipeline:latest
+    # Run as the host user so files written to the volumes belong to them (DT-001). On Linux,
+    # put HOST_UID and HOST_GID (from `id -u` and `id -g`) in .env; elsewhere 1000 is fine.
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     volumes:
       - ./datasets:/app/datasets
       - ./models:/app/models

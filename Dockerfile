@@ -8,7 +8,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/src \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOME=/tmp \
+    MPLCONFIGDIR=/tmp/matplotlib \
+    PYTEST_ADDOPTS="-p no:cacheprovider"
+# HOME, MPLCONFIGDIR and no pytest cache: compose.yaml may run the container with the host UID
+# (DT-001), which has no home directory and cannot write to /app.
 
 RUN useradd --create-home --uid 1000 app
 
