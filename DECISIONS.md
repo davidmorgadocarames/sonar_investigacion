@@ -127,9 +127,29 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** ningún fichero es defectuoso; el offset se corrige restando la media, y con tan
   pocos datos excluir recortaría las clases más pequeñas.
 
+### D-010 · Asignación de cada WAV a su fila del metafile
+- **Fecha:** 2026-10-11
+- **Contexto:** la numeración de los metafiles tiene saltos, repeticiones y bloques que vuelven a
+  empezar (Tanker tiene 3). Probar primero el id y después la duración no reproduce el inventario
+  de F1-T03: en Tanker 33 y 35 cruza las filas y da 36/25/2 asignaciones en vez de 35/26/2 (el
+  buque, KIRKEHOLMEN, es el mismo; cambian la fecha, la hora y la línea).
+- **Alternativas:** (a) probar primero el id y después la duración; (b) reglas por rangos
+  escritas a mano; (c) alineamiento que conserva el orden.
+- **Decisión:** (c), implementada en `tools/build_vessel_table.py`. En cada clase, los WAV (por
+  número) se alinean con las filas de un bloque del metafile conservando el orden de ambos, que
+  es cronológico. Solo se emparejan si la duración coincide con ±1 s, y se maximiza, por este
+  orden: el número de parejas, cuántas tienen id = número de WAV y la cercanía entre id y número.
+  Un WAV sin pareja toma la fila de su id y se marca `id_unverified`. El script falla si el
+  óptimo no es único, si una fila se usa dos veces o si una línea está mal formada. Las rutas de
+  `vessels.csv` son relativas a `raw/DeepShip/`, igual que en `qc.csv`, para cruzar las dos
+  tablas directamente.
+- **Motivo:** se basa en una propiedad comprobable de los datos (el orden cronológico), no tiene
+  excepciones a mano y, ante la duda, falla en vez de adivinar.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
 |---|---|---|---|---|---|
 | DT-001 | El UID 1000 del usuario `app` está fijo en la imagen. | Es el UID habitual del primer usuario en Linux, y en Docker Desktop (Windows y macOS) no afecta. | En Linux, con otro UID, el contenedor no puede escribir en los volúmenes montados (`outputs/`). | En F4, si el friend-tester lo detecta. | Abierta |
 | DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06/T07: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Abierta |
+| DT-003 | Algunos nombres de buque de los metafiles parecen cortados ("QUEEN OF", "CABO DE", "OTTO H", "SPIRIT OF"...). Un mismo buque podría aparecer con dos nombres distintos y formar dos grupos. | No se ha visto en los 44 grupos con WAV; los nombres cortados conocidos sin WAV no afectan a la partición, y "QUEEN OF" ya es un solo grupo (D-007). | Si ocurriera, el mismo buque podría acabar en dos particiones (fuga). | En F1-T06b: listar los grupos con WAV cuyos nombres se parezcan (p. ej., mismo prefijo) y revisarlos con David. | Abierta |
