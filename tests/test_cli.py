@@ -42,8 +42,5 @@ def test_each_command_has_its_own_help(command):
     assert result.stdout.startswith(f"usage: sonar_pipeline {command}")
 
 
-@pytest.mark.parametrize("command", [c for c in COMMANDS if c not in HANDLERS])
-def test_unimplemented_command_fails(command):
-    result = run_cli(command)
-    assert result.returncode != 0
-    assert "not implemented" in result.stderr
+def test_every_command_is_implemented():
+    assert set(HANDLERS) == set(COMMANDS)

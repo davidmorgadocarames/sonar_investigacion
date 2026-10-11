@@ -63,6 +63,8 @@ registran y coinciden con `ab383dd`.
 | Ronda 2 · permutación e interpretabilidad | `ab383dd` | `3393ae4f…` | Ninguna que les afecte | No |
 | Ronda 2 · comprobación de DT-005 (duración, solo val) | `5d8d820` | `aade7670…` | Es el código final; regenerada para quitar el azar fijo y la Pd interpolada | — |
 | Figuras de la ronda 2 | `5d8d820` (`--plot-only`) | `aade7670…` | Redibujadas desde `metrics.json` con el arreglo B5, sin puntuar test | — |
+| Figuras de señal (`docs/figures/signal/`) | `9f1f99b` (`features --figures` y tests de figuras, F2-T10) | `c867b025…` | Mismo LOFAR y DEMON que el código final (después solo cambiaron los modelos y la evaluación) | No |
+| Figura de datos e informe (`docs/figures/data_minutes.png`, `docs/report.md`) | commit de F4-T03 (`report`) | — | Se regeneran con `report` desde lo versionado; la regeneración da los mismos bytes | — |
 
 Los pesos de cada ronda están en git: ronda 1 en `6a08569` (línea base), `43cfb1e` (CNN) y
 `ed9db91` (CNN con aumento); ronda 2 en `b43315c`.

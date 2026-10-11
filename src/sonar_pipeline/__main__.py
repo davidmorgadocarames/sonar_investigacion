@@ -199,6 +199,39 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="Bootstrap resamples of recordings for the intervals (default: %(default)s).",
     )
+
+    report = subcommands["report"]
+    report.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("docs/results"),
+        help="Versioned summaries eval1.json and eval2.json (default: %(default)s).",
+    )
+    report.add_argument(
+        "--figures-dir",
+        type=Path,
+        default=Path("docs/figures"),
+        help="Versioned figures (default: %(default)s).",
+    )
+    report.add_argument(
+        "--manifests-dir",
+        type=Path,
+        default=Path("datasets/manifests"),
+        help="vessels.csv and split.csv, for the data section (default: %(default)s).",
+    )
+    report.add_argument(
+        "--output",
+        type=Path,
+        default=Path("docs/report.md"),
+        help="Report written in Markdown (default: %(default)s).",
+    )
+    report.add_argument(
+        "--collect-figures",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help="First copy the figures of DIR (e.g. outputs/figures) into the figures folder.",
+    )
     return parser
 
 
@@ -467,8 +500,23 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_report(args: argparse.Namespace) -> int:
+    from sonar_pipeline.report import run_report
+
+    path = run_report(
+        args.results_dir,
+        args.figures_dir,
+        args.manifests_dir,
+        args.output,
+        args.collect_figures,
+    )
+    print(f"Report written to {path} (from versioned files; test not scored)")
+    return 0
+
+
 HANDLERS = {
     "qc": cmd_qc,
+    "report": cmd_report,
     "features": cmd_features,
     "train": cmd_train,
     "evaluate": cmd_evaluate,

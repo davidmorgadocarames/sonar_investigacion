@@ -17,6 +17,25 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4-T03 cerrada: subcomando `report` e informe
+- **Qué se hizo:** `src/sonar_pipeline/report.py` y `report` (`--results-dir`, `--figures-dir`,
+  `--manifests-dir`, `--output`, `--collect-figures DIR`). `report --collect-figures
+  outputs/figures` copió una vez 16 figuras a `docs/figures/{signal,eval1,eval2}/` (5,3 MB; las
+  de la ronda 1 tal cual); `report` dibuja `docs/figures/data_minutes.png` y escribe
+  `docs/report.md` (resumen, datos, señal, modelos y protocolo, las dos rondas con tablas,
+  permutación e interpretabilidad, limitaciones y procedencia) solo desde `docs/results/` y los
+  manifiestos: no entrena ni puntúa test; regenerarlo da los mismos bytes. `compose.yaml` monta
+  `./docs` para que `report` escriba desde Docker. Tabla de procedencia ampliada con las figuras
+  de señal (`9f1f99b`, `c867b025…`; el código de la señal no ha cambiado desde entonces) y el
+  informe. El test de la CLI ahora exige que todos los subcomandos estén implementados. 243 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/{report,__main__}.py`, `tests/test_report.py`,
+  `tests/test_cli.py`, `compose.yaml`, `docs/report.md`, `docs/figures/**`,
+  `docs/results/README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline report` y comprobar que `git status`
+  no cambia.
+- **Siguiente paso exacto:** F4-T04: README completo.
+
 ## 2026-10-11 · F4-T02 cerrada: figura de minutos por clase y partición
 - **Qué se hizo:** `data_minutes` y `plot_data_minutes` en `figures.py`: minutos de audio,
   grabaciones y buques por clase y partición a partir de `vessels.csv` y `split.csv`, sin audio;
@@ -90,20 +109,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --plot-only` redibuja las
   figuras desde `metrics.json` sin volver a puntuar test.
 - **Siguiente paso exacto:** F3-T11: pasar otra vez el reviewer sobre F3-T12 y cerrar F3.
-
-## 2026-10-11 · F3-T12 en curso: arreglos de la revisión y modelos reentrenados
-- **Qué se hizo:** revisión de F3 sin hallazgos críticos ni altos; David aprobó arreglar todo lo
-  que no daba una salida correcta sin cambiar nada para mejorar la cifra (ajuste 2 de D-018,
-  DT-005 reformulada, DT-007 nueva; commit `ab383dd`). Primera evaluación guardada en
-  `outputs/results/eval1/` y `outputs/figures/eval1/`. Con el visto bueno de David: línea base
-  reentrenada en CPU (pesos idénticos, SHA-256 `1968677a…`); CNN y CNN con aumento reentrenadas
-  en GPU (23 s y 15 s). Val: CNN elegida lr=1e-3, wd=1e-2; semillas 0,391 / 0,364 / 0,233 (media
-  0,329 ± 0,069); CNN con aumento 0,358 / 0,256 / 0,277 (media 0,297 ± 0,044). El mejor val sigue
-  en la época 3 y el lr se reduce a la mitad hacia la época 7.
-- **Qué quedó a medias:** por petición de David, parada tras el commit de los modelos: falta el
-  test de permutación con C dentro (~8-10 min CPU), la segunda y última evaluación de test y la
-  interpretabilidad, con su visto bueno.
-- **Ficheros tocados:** `models/{baseline,cnn,cnn_aug}.{npz,pt,json}`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
-  train --model cnn` (determinista: mismas cifras).
-- **Siguiente paso exacto:** con el visto bueno de David, pasos 5-7 de F3-T12.

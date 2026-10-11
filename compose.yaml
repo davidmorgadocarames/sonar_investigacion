@@ -6,3 +6,4 @@ services:
       - ./datasets:/app/datasets
       - ./models:/app/models
       - ./outputs:/app/outputs
+      - ./docs:/app/docs
