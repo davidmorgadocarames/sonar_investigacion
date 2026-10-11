@@ -36,8 +36,9 @@ subagentes existen para trabajar con un contexto limpio; no pueden lanzar otros 
    por grabación. **Nunca por segmento.** El manifiesto con la partición se versiona en
    `datasets/manifests/`.
 6. **Docker.** CPU por defecto; la GPU es un override opcional (`compose.gpu.yaml`). El
-   contenedor corre como usuario no root. Las versiones se fijan en `requirements.txt`. PyTorch
-   CPU se instala desde https://download.pytorch.org/whl/cpu.
+   contenedor corre como usuario no root. Las versiones se fijan en `requirements.txt` y
+   `requirements-torch.txt`; PyTorch se instala aparte desde https://download.pytorch.org/whl/cpu
+   (o `cu130` con el override de GPU, D-019).
 7. **Sin GitHub Actions** por ahora; se discutirá antes. Seguridad shift-left con pre-commit:
    gitleaks, ruff y check-added-large-files.
 8. **Idiomas.** Documentación en español. Nombres de ficheros, código y commits en inglés, con

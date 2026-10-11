@@ -1,7 +1,7 @@
 FROM python:3.11.17-slim
 
-# CPU by default; compose.gpu.yaml overrides it with a CUDA index. Only PyTorch (F3) may be
-# installed from this index; requirements.txt comes from PyPI alone.
+# CPU by default; compose.gpu.yaml overrides it with the CUDA 13.0 index (D-019). Only
+# requirements-torch.txt is installed from this index; requirements.txt comes from PyPI alone.
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -13,6 +13,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN useradd --create-home --uid 1000 app
 
 WORKDIR /app
+
+COPY requirements-torch.txt .
+RUN pip install --index-url "${TORCH_INDEX_URL}" -r requirements-torch.txt
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt

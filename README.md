@@ -27,7 +27,7 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    cd sonar_investigacion
    ```
 
-2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 630 MB:
+2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 1,9 GB:
 
    ```bash
    docker compose build

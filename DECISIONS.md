@@ -323,6 +323,28 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   variabilidad (semillas, validación cruzada por buque, bootstrap por grabaciones) importan más
   que la complejidad del modelo. Aprobado por David.
 
+### D-019 · scikit-learn y PyTorch (CPU por defecto, CUDA 13.0 con el override)
+- **Fecha:** 2026-10-11
+- **Contexto:** F3 necesita la regresión logística, la validación cruzada agrupada y las métricas
+  (scikit-learn) y la CNN (PyTorch). David entrena con su GPU (RTX 4060, driver 610.62, CUDA hasta
+  13.3); el amigo puede no tener GPU. El índice `cu128` del override solo llegaba a torch 2.11.
+- **Alternativas:** torch desde PyPI (en Linux trae CUDA y ocupa varios GB); índices `cu126` (no
+  admite RTX 50), `cu130` o `cu132` (driver más reciente); escribir a mano lo de scikit-learn.
+- **Decisión:**
+  - scikit-learn 1.9.1 en `requirements.txt`, con sus transitivas (D-017).
+  - PyTorch 2.14.1 en `requirements-torch.txt`, con sus transitivas fijadas, instalado en un paso
+    aparte del Dockerfile con `--index-url ${TORCH_INDEX_URL}`: `cpu` por defecto y `cu130` en
+    `compose.gpu.yaml` (GPU desde RTX 20 / GTX 16, driver 580 o posterior). En la variante CUDA
+    no se fijan `nvidia-*` ni triton, que solo existen en ese índice.
+  - El código elige el dispositivo solo (CUDA si está disponible, si no CPU), con `--device` para
+    forzarlo, y ajustes deterministas también en CUDA. La evaluación de referencia es en CPU.
+  - README (F4): opción A, CPU sin configurar nada; opción B, GPU NVIDIA activada una vez con un
+    `.env` (`COMPOSE_FILE=compose.yaml:compose.gpu.yaml`) y los mismos comandos.
+- **Motivo:** la GPU acelera el entrenamiento de David; el amigo solo necesita CPU para evaluar.
+  Docker no puede detectar la GPU por sí solo, así que se elige una vez. La imagen CPU pasa de
+  unos 630 MB a 1,88 GB; la imagen GPU ocupa 9,44 GB (solo la construye quien la usa). Comprobado
+  en la RTX 4060 de David: `torch.cuda.is_available()` es `True`. Aprobado por David.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

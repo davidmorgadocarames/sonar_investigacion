@@ -17,6 +17,24 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T02 cerrada: scikit-learn y PyTorch (D-019)
+- **Qué se hizo:** David aprobó D-019 tras ver su GPU (RTX 4060, 8 GB, driver 610.62).
+  scikit-learn 1.9.1 en `requirements.txt` (con cloudpickle, joblib, narwhals, threadpoolctl);
+  PyTorch 2.14.1 en `requirements-torch.txt` con sus transitivas, instalado en un paso aparte
+  desde `TORCH_INDEX_URL`; `compose.gpu.yaml` pasa de `cu128` (solo llegaba a torch 2.11) a
+  `cu130` y documenta la activación con `.env`. Imagen CPU 1,88 GB; imagen GPU 9,44 GB (build de
+  7 min), con CUDA disponible y la RTX 4060 visible. `tests/test_dependencies.py` comprueba que lo
+  instalado coincide con lo fijado. 156 tests en las dos imágenes.
+- **Qué quedó a medias:** nada. La selección automática de dispositivo (`--device`) se implementa
+  con el entrenamiento (F3-T07); el README con las opciones A (CPU) y B (GPU con `.env`), en F4.
+- **Ficheros tocados:** `requirements.txt`, `requirements-torch.txt`, `Dockerfile`,
+  `compose.gpu.yaml`, `tests/test_dependencies.py`, `README.md`, `CLAUDE.md`, `DECISIONS.md`,
+  `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm --entrypoint
+  python pipeline -c "import torch; print(torch.cuda.is_available())"` (True).
+- **Siguiente paso exacto:** F3-T03: módulo de datos (carga de `.npz` e índice, etiquetas, pesos
+  por clase, agregación por grabación). Sin entrenamiento.
+
 ## 2026-10-11 · F3 empezada; F3-T01 cerrada: diseño del modelo (D-018)
 - **Qué se hizo:** David aprobó las 11 tareas de F3 y una F5 opcional (atención, después de F4).
   D-018 recoge el diseño: regresión logística sobre media temporal de LOFAR + DEMON; CNN de dos
@@ -86,22 +104,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline features --figures` y abrir
   `outputs/figures/`.
 - **Siguiente paso exacto:** F2-T09: pasada del reviewer sobre F2 y cierre de fase.
-
-## 2026-10-11 · F2-T07 cerrada: subcomando `features`
-- **Qué se hizo:** `src/sonar_pipeline/features.py` y el subcomando `features` (`--data-dir`,
-  `--split`, `--output-dir`): lee `split.csv`, preprocesa, calcula LOFAR y DEMON y escribe en
-  `datasets/processed/` `features_{train,val,test}.npz` (`segment_id`, `lofar`, `demon`,
-  `lofar_hz`, `demon_hz`), `index.csv` y `features_meta.json`. Datos reales: 18 s, 1889 segmentos
-  (Cargo 457/129/185, Passengership 225/77/75, Tanker 328/108/109, Tug 67/66/63), 84 MB, sin NaN.
-  4 tests de principio a fin con un mini dataset sintético (tono en LOFAR y modulación en DEMON
-  por segmento, determinismo, errores). README: sección "Control de calidad y rasgos". David
-  aprobó el ajuste de D-015 (`project_commit` null en Docker; `code_sha256`). David pidió que se le
-  avise antes de entrenar (nota en F3 de PLAN.md). 130 tests.
-- **Qué quedó a medias:** nada. Los `.npz` no son idénticos byte a byte entre ejecuciones (el zip
-  guarda la hora); el test compara los arrays.
-- **Ficheros tocados:** `src/sonar_pipeline/features.py`, `src/sonar_pipeline/__main__.py`,
-  `tests/test_features.py`, `README.md`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline features` (dice "63 recordings, 1889
-  segments").
-- **Siguiente paso exacto:** F2-T08: figuras de ejemplo; antes, proponer a David matplotlib como
-  dependencia (regla 3, D-002).
