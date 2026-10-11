@@ -17,6 +17,21 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T04 cerrada: preprocesado
+- **Qué se hizo:** `src/sonar_pipeline/params.py` reúne todas las constantes de D-015.
+  `src/sonar_pipeline/preprocess.py`: `load_wav` (32 kHz, mono, finito), `remove_dc` (media de
+  la grabación entera), `segment` (3 s sin solapamiento, cola descartada, falla si no cabe un
+  segmento), `normalize_rms` (RMS = 1, falla con un segmento mudo) y `preprocess`. 15 tests
+  nuevos con señales sintéticas y uno sobre los 63 WAV reales: todos dan al menos un segmento y
+  salen 1889 (Cargo 771, Passengership 377, Tanker 545, Tug 196), como en D-015. 95 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/params.py`, `src/sonar_pipeline/preprocess.py`,
+  `tests/test_preprocess.py`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
+  tests/test_preprocess.py`.
+- **Siguiente paso exacto:** F2-T05: LOFAR (diezmado a 4 kHz, STFT Hann 0,5 s / 0,25 s, TPSW,
+  dB sobre el fondo) con los tests del tono y del ruido blanco.
+
 ## 2026-10-11 · F2-T03 cerrada: parámetros de la señal (D-015)
 - **Qué se hizo:** `.dockerignore` excluye el audio en cualquier carpeta y sin distinguir
   mayúsculas (commit aparte, pedido por David). David aprobó D-015: segmentos de 3 s sin
@@ -79,18 +94,3 @@ Plantilla:
   las tareas de F2 (incluidas DT-004 y DT-006, y decidir la longitud de segmento), compararlas con
   PLAN.md y esperar su aprobación. Abrir Claude Code dentro de `sonar_investigacion` para que se
   carguen los subagentes de `.claude/agents/`.
-
-## 2026-10-11 · F1-T06c cerrada: partición por buque
-- **Qué se hizo:** `data-engineer` creó `tools/make_split.py` (búsqueda exacta, coste L1 sobre las
-  fracciones de minutos por clase) y generó `datasets/manifests/split.csv` (SHA-256
-  `51564cf1…b5a7`), aprobado por David: 57/20/23 % de minutos en total, Tug 1/1/1, sin fugas.
-  4 tests permanentes sobre el split versionado; 71 tests en total. Notas añadidas en F3 y F4
-  (peso de test, empates en Tanker, propuesta de resultados con JSON, ROC Pd/Pfa y SHAP).
-- **Qué quedó a medias:** nada. D-013 conserva "con semilla fijada" y lleva una nota de ajuste
-  aprobada por David: la búsqueda es exacta y sin azar, así que la semilla no interviene.
-- **Ficheros tocados:** `tools/make_split.py`, `datasets/manifests/split.csv`,
-  `tests/test_make_split.py`, `tests/test_split_data.py`, `datasets/README.md`, `DECISIONS.md`,
-  `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline tools/check_leaks.py`
-  (OK) y los tests en Docker.
-- **Siguiente paso exacto:** F1-T08: pasada del reviewer y cierre de F1.
