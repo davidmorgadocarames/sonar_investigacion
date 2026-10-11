@@ -17,6 +17,22 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T06 cerrada: test de permutación de la línea base
+- **Qué se hizo:** con el visto bueno de David, `train --model baseline --permutation-test 200`
+  (3 min 42 s en CPU; scikit-learn no usa GPU). Validación cruzada por buque: F1 macro real 0,370
+  frente a 0,270 de media con las clases permutadas entre buques (percentil 95: 0,355; rango
+  0,155-0,428); 7 de 200 permutaciones igualan o superan el real: **p = 0,040**. La línea base
+  supera al azar, pero por poco; las etiquetas reales incluyen la época (DT-005), así que parte de
+  la ventaja puede venir de ahí. Resultado en `outputs/results/permutation_test.json` (no
+  versionado; se reproduce con la semilla 0 y entra en `metrics.json` en F3-T09).
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline train --model baseline
+  --permutation-test 200` (mismo p).
+- **Siguiente paso exacto:** F3-T07: CNN base sin aumento, en la GPU de David (override
+  `compose.gpu.yaml`). Escribir y probar el código con datos sintéticos; medir el tiempo de una
+  época sin datos reales; **avisar a David con la estimación antes de entrenar**.
+
 ## 2026-10-11 · F3-T06 en curso: línea base entrenada y versionada
 - **Qué se hizo:** `src/sonar_pipeline/baseline.py` y `train --model baseline` (opciones
   `--models-dir`, `--bootstrap`, `--permutation-test N`). Con el visto bueno de David se entrenó
@@ -86,21 +102,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
   tests/test_dataset.py`.
 - **Siguiente paso exacto:** F3-T04: módulo de métricas y estructura de `metrics.json`.
-
-## 2026-10-11 · F3-T02 cerrada: scikit-learn y PyTorch (D-019)
-- **Qué se hizo:** David aprobó D-019 tras ver su GPU (RTX 4060, 8 GB, driver 610.62).
-  scikit-learn 1.9.1 en `requirements.txt` (con cloudpickle, joblib, narwhals, threadpoolctl);
-  PyTorch 2.14.1 en `requirements-torch.txt` con sus transitivas, instalado en un paso aparte
-  desde `TORCH_INDEX_URL`; `compose.gpu.yaml` pasa de `cu128` (solo llegaba a torch 2.11) a
-  `cu130` y documenta la activación con `.env`. Imagen CPU 1,88 GB; imagen GPU 9,44 GB (build de
-  7 min), con CUDA disponible y la RTX 4060 visible. `tests/test_dependencies.py` comprueba que lo
-  instalado coincide con lo fijado. 156 tests en las dos imágenes.
-- **Qué quedó a medias:** nada. La selección automática de dispositivo (`--device`) se implementa
-  con el entrenamiento (F3-T07); el README con las opciones A (CPU) y B (GPU con `.env`), en F4.
-- **Ficheros tocados:** `requirements.txt`, `requirements-torch.txt`, `Dockerfile`,
-  `compose.gpu.yaml`, `tests/test_dependencies.py`, `README.md`, `CLAUDE.md`, `DECISIONS.md`,
-  `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm --entrypoint
-  python pipeline -c "import torch; print(torch.cuda.is_available())"` (True).
-- **Siguiente paso exacto:** F3-T03: módulo de datos (carga de `.npz` e índice, etiquetas, pesos
-  por clase, agregación por grabación). Sin entrenamiento.
