@@ -17,6 +17,20 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2 empezada; F2-T01 cerrada: DT-004 pagada
+- **Qué se hizo:** David aprobó las 9 tareas de F2 (en PLAN.md). `data-engineer` creó
+  `tests/test_vessel_table_regen.py`: regenera `vessels.csv` desde los 63 WAV en `tmp_path` y lo
+  compara byte a byte con el versionado; si falla, muestra el diff y avisa de que regenerar cambia
+  grupos y partición; se salta si no hay audios. Comprobado a mano que falla con un grupo
+  alterado. DT-004 pagada (aprobado por David). 72 tests.
+- **Qué quedó a medias:** nada. David aprobó añadir `-rs` al comando de tests de CLAUDE.md y del
+  README dentro de F2-T02 (un verde sin audios no prueba nada sobre los datos).
+- **Ficheros tocados:** `tests/test_vessel_table_regen.py`, `DECISIONS.md`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -q -rs`
+  (72 passed, 0 skipped con DeepShip descargado).
+- **Siguiente paso exacto:** F2-T02: pagar DT-006 (mejoras menores) e incluir `-rs`.
+
 ## 2026-10-11 · F1 Datos cerrada (F1-T08)
 - **Qué se hizo:** pasada del reviewer sobre F1: sin hallazgos críticos ni altos; 3 medios y 13
   bajos. David aprobó D-014 (`vessels.csv` conserva el extracto de los metafiles bajo el supuesto
@@ -80,21 +94,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline
   tools/build_vessel_table.py` y `sha256sum datasets/manifests/vessels.csv`.
 - **Siguiente paso exacto:** F1-T06b: comprobación de fugas y test de DT-002.
-
-## 2026-10-11 · F1-T05 cerrada: subcomando `qc`
-- **Qué se hizo:** numpy 2.4.6 y scipy 1.17.1 fijados (D-008). `src/sonar_pipeline/qc.py` mide
-  formato, duración, offset DC, saturación, NaN o infinitos y silencio, y escribe
-  `outputs/qc/qc.csv` sin excluir nada. 10 tests con señales sintéticas (16 en total, en verde).
-  Sobre los 63 WAV: formato correcto, sin recortes, NaN ni silencio; duraciones de 6 a 204 s
-  (mediana 47 s); **los 63 tienen un offset DC positivo casi constante (0,027 a 0,032)**, en la
-  mayoría mayor que la señal (mediana 6 veces la desviación típica).
-- **Qué quedó a medias:** nada. Por acuerdo con David, la comparación de duración con el
-  metafile pasó a F1-T06b.
-- **Ficheros tocados:** `requirements.txt`, `src/sonar_pipeline/qc.py`,
-  `src/sonar_pipeline/__main__.py`, `tests/test_qc.py`, `tests/test_cli.py`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose build`, los tests y `docker compose run --rm pipeline
-  qc` (unos 4 s; dice "63 WAV files checked").
-- **Después:** F1-T05b cerrada con D-009 (aprobada): no se excluye ninguna grabación; el offset
-  DC se resta en F2. Nota en F3 sobre el desequilibrio de segmentos por clase.
-- **Siguiente paso exacto:** F1-T06a: tabla WAV → buque con `data-engineer`.

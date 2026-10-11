@@ -5,13 +5,13 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F2 Señal** (tareas pendientes de proponer y aprobar)
+- **Fase actual:** **F2 Señal**
 
 | Fase | Nombre | Estado |
 |---|---|---|
 | F0 | Setup | [x] |
 | F1 | Datos | [x] |
-| F2 | Señal | [ ] |
+| F2 | Señal | [~] |
 | F3 | Modelo | [ ] |
 | F4 | Entrega | [ ] |
 
@@ -52,13 +52,23 @@ quedan a alto nivel.
 - [x] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David (D-013) · determinista (búsqueda exacta sin azar, D-013); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa y queda como test permanente sobre el `split.csv` versionado (D-012); al regenerarla sale el mismo fichero
 - [x] F1-T08 · Pasada del reviewer sobre F1 y cierre de fase · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
-## F2 · Señal
+## F2 · Señal — [~] en curso (tareas aprobadas por David el 2026-10-11)
 
 - **Objetivo:** preprocesado (quitar el offset DC, normalizar, segmentar), LOFAR y DEMON.
 - **Entregable:** subcomando `features` y figuras de ejemplo en `outputs/`.
-- **Al empezar:** pagar DT-004 (test que regenera `vessels.csv`) y DT-006 (mejoras menores).
 - **Criterio de salida:** tests con señales sintéticas: un tono conocido aparece en el LOFAR en
-  su frecuencia, y una modulación conocida aparece en el DEMON en su frecuencia.
+  su frecuencia, y una modulación conocida aparece en el DEMON en su frecuencia; la pasada del
+  reviewer no deja hallazgos graves abiertos.
+
+- [x] F2-T01 · Pagar DT-004: test que regenera `vessels.csv` · data-engineer · el test ejecuta `build_vessel_table.py` sobre `datasets/raw/DeepShip`, escribe en una carpeta temporal y compara byte a byte con la versionada; se salta si no hay audios; pasa en Docker
+- [ ] F2-T02 · Pagar DT-006 (mejoras menores) · orquestador (+ data-engineer para `tools/`) · id repetido avisa o falla; `qc.csv` en LF y ordenado; el test de `qc` compara contenido; el test de `--help` comprueba los subcomandos de verdad; imagen base con versión exacta; `.gitignore` sin distinguir mayúsculas; los tests de datos se saltan si no hay audios; el comando de tests de CLAUDE.md y del README lleva `-rs` para que se vean los saltados (aprobado por David); cada punto con su test o verificación
+- [ ] F2-T03 · Proponer parámetros de preprocesado, LOFAR, DEMON y formato de salida · orquestador → David · decisión aprobada y apuntada (D-015); si el segmento dura más de 6 s, revisar D-009
+- [ ] F2-T04 · Módulo de preprocesado: offset DC por grabación (D-009), normalización y segmentación · orquestador · tests sintéticos: el offset desaparece, número de segmentos exacto, ningún segmento cruza grabaciones, cada grabación da al menos un segmento
+- [ ] F2-T05 · LOFAR (STFT, dB, normalización de fondo) · orquestador · un tono sintético de frecuencia conocida da el máximo en su bin (±1 bin); el ruido blanco normalizado queda plano
+- [ ] F2-T06 · DEMON (paso banda, envolvente con Hilbert, paso bajo, diezmado, espectro) · orquestador · ruido en banda modulado a `fm` conocida da un pico en `fm` (±1 bin); sin modulación no hay pico
+- [ ] F2-T07 · Subcomando `features` · orquestador · lee `split.csv`, escribe en `datasets/processed/` con un índice por segmento (`wav_path`, clase, partición, n.º de segmento); determinista; test de principio a fin con un mini dataset sintético; sobre los datos reales informa de los segmentos por clase y partición; README actualizado
+- [ ] F2-T08 · Figuras de ejemplo en `outputs/figures/` (LOFARgram y DEMON de una grabación por clase, y validación sintética) · orquestador · se generan desde la CLI; matplotlib aprobada antes como dependencia (regla 3, D-002)
+- [ ] F2-T09 · Pasada del reviewer y cierre de F2 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
 ## F3 · Modelo
 
