@@ -17,6 +17,25 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T10 cerrada: interpretabilidad y comprobación de épocas
+- **Qué se hizo:** `src/sonar_pipeline/interpret.py` y `evaluate --interpretability` (val, modelos
+  congelados, 34 s en CPU): importancia por permutación de bandas (línea base), saliencia y
+  oclusión (CNN), comprobación de épocas; resultados en `outputs/results/interpretability.json`,
+  mapas en `interpretability_maps.npz`, resumen añadido a `metrics.json` y figura
+  `outputs/figures/interpretability_bands.png`. David aprobó anotar en DT-005 la evidencia de
+  test. Resultados: **no hay líneas fijas de época** (ninguna en ≥75 % de una época y ≤25 % de la
+  otra) ni zumbido de red compartido; las épocas difieren en el nivel medio de algunas bandas
+  (1240-1280 Hz 0,99 dB; 80-120 Hz 0,70; 1440-1480 Hz 0,54). La línea base se apoya en 40-80,
+  1240-1280 y 1440-1480 Hz: dos de sus tres bandas principales son de las que más separan épocas
+  (Spearman +0,29, p 0,039). Las CNN dependen casi solo de 0-40 Hz (y algo de 80-120 Hz), sin
+  correlación global con la diferencia entre épocas. Las importancias son pequeñas (≤0,03 de F1;
+  ≤0,11 de probabilidad). 214 tests.
+- **Qué quedó a medias:** proponer a David anotar esta evidencia en DT-005.
+- **Ficheros tocados:** `src/sonar_pipeline/{interpret,figures,__main__}.py`,
+  `tests/test_interpret.py`, `PLAN.md`, `HANDOFF.md`, `DECISIONS.md` (nota de test en DT-005).
+- **Cómo verificarlo:** `docker compose run --rm pipeline evaluate --interpretability`.
+- **Siguiente paso exacto:** F3-T11: pasada del reviewer y cierre de F3.
+
 ## 2026-10-11 · F3-T09 cerrada: test evaluado una vez
 - **Qué se hizo:** `src/sonar_pipeline/evaluate.py` y `evaluate` (CPU por defecto): carga los
   pesos versionados, puntúa test y escribe `outputs/results/metrics.json` (val, coste, tiempos,
@@ -93,20 +112,3 @@ Plantilla:
 - **Siguiente paso exacto:** F3-T07: CNN base sin aumento, en la GPU de David (override
   `compose.gpu.yaml`). Escribir y probar el código con datos sintéticos; medir el tiempo de una
   época sin datos reales; **avisar a David con la estimación antes de entrenar**.
-
-## 2026-10-11 · F3-T06 en curso: línea base entrenada y versionada
-- **Qué se hizo:** `src/sonar_pipeline/baseline.py` y `train --model baseline` (opciones
-  `--models-dir`, `--bootstrap`, `--permutation-test N`). Con el visto bueno de David se entrenó
-  (29 s en CPU): C=10 elegido en val (curva casi plana, 0,34-0,38). Val: F1 macro 0,381 por
-  segmento (IC 0,27-0,46) y 0,486 por grabación; dentro de época, Cargo frente a Tug 0,75 por
-  segmento y Passengership frente a Tanker 0,58. Validación cruzada por buque en train + val:
-  0,370 ± 0,113. 5212 parámetros. Pesos en `models/baseline.npz` (64 kB, sin pickle) y
-  `models/baseline.json`, versionados antes del test de permutación, como pidió David.
-- **Qué quedó a medias:** el test de permutación (200), pendiente del visto bueno de David con la
-  estimación de tiempo (cada validación cruzada tarda ~1 s).
-- **Ficheros tocados:** `src/sonar_pipeline/{baseline,__main__}.py`, `tests/test_baseline.py`,
-  `tests/test_duration_check.py`, `models/baseline.{npz,json}`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline train --model baseline` (mismo C y
-  mismas cifras).
-- **Siguiente paso exacto:** con el visto bueno de David, `train --model baseline
-  --permutation-test 200`; después cerrar F3-T06.

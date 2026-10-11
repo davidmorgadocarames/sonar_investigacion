@@ -374,3 +374,52 @@ def plot_results(models: dict, figures_dir: Path) -> list[Path]:
         plot_roc(models, figures_dir / "results_roc_segment.png", "segment"),
         plot_roc(models, figures_dir / "results_roc_recording.png", "recording"),
     ]
+
+
+def plot_interpretability(report: dict, figures_dir: Path) -> Path:
+    """Per LOFAR band (val): baseline permutation importance, occlusion of both CNNs, and how
+    much the band differs between recording eras (DT-005). One panel per measure."""
+    lows = np.array([b["lo_hz"] for b in report["baseline"]["lofar"]])
+    width = report["lofar_band_hz"] * 0.85
+    panels = [
+        (
+            "Línea base: caída del F1 macro al permutar la banda",
+            [b["value"] for b in report["baseline"]["lofar"]],
+            MODEL_COLOURS["baseline"],
+        ),
+        (
+            "CNN sin aumento: caída de la probabilidad de la clase real al ocultar la banda",
+            [b["value"] for b in report["cnn"]["cnn"]["occlusion_lofar"]],
+            MODEL_COLOURS["cnn"],
+        ),
+        (
+            "CNN con aumento: caída de la probabilidad de la clase real al ocultar la banda",
+            [b["value"] for b in report["cnn"]["cnn_aug"]["occlusion_lofar"]],
+            MODEL_COLOURS["cnn_aug"],
+        ),
+        (
+            "Diferencia de nivel medio entre épocas (dB, buques de train + val)",
+            report["era_check"]["band_difference_db"],
+            MUTED,
+        ),
+    ]
+    fig, axes = plt.subplots(
+        len(panels), 1, figsize=(10, 9), sharex=True, layout="constrained"
+    )
+    fig.suptitle(
+        f"Interpretabilidad en val por bandas de LOFAR de {report['lofar_band_hz']:g} Hz",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    for ax, (title, values, colour) in zip(axes, panels, strict=True):
+        ax.bar(lows + report["lofar_band_hz"] / 2, values, width=width, color=colour)
+        ax.axhline(0, color=MUTED, linewidth=0.8)
+        ax.set_title(title, color=INK, fontsize=8.5, loc="left")
+        ax.grid(axis="y", color=GRID, linewidth=0.6)
+        ax.set_axisbelow(True)
+        _style(ax)
+    axes[-1].set_xlabel("Frecuencia (Hz)")
+    axes[-1].set_xlim(0, lows[-1] + report["lofar_band_hz"])
+    return _save(fig, figures_dir / "interpretability_bands.png")

@@ -176,6 +176,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="cpu (reference, default), cuda or auto.",
     )
     evaluate.add_argument(
+        "--interpretability",
+        action="store_true",
+        help="Instead of scoring test, compute the interpretability on val with the frozen "
+        "models (F3-T10) and add it to metrics.json.",
+    )
+    evaluate.add_argument(
         "--bootstrap",
         type=int,
         default=2000,
@@ -363,7 +369,40 @@ def cmd_train(args: argparse.Namespace) -> int:
     return 1
 
 
+def cmd_interpretability(args: argparse.Namespace) -> int:
+    from sonar_pipeline.interpret import run_interpretability
+
+    report = run_interpretability(
+        args.processed_dir, args.models_dir, args.results_dir, args.figures_dir
+    )
+
+    def top(entries, n=5):
+        best = sorted(entries, key=lambda b: -b["value"])[:n]
+        return ", ".join(
+            f"{b['lo_hz']:g}-{b['hi_hz']:g} Hz ({b['value']:.3f})" for b in best
+        )
+
+    print("Interpretability on val (frozen models; test not used):")
+    print(f"  baseline, top LOFAR bands: {top(report['baseline']['lofar'])}")
+    print(f"  baseline, top DEMON bands: {top(report['baseline']['demon'], 3)}")
+    for name, entry in report["cnn"].items():
+        print(f"  {name}, top LOFAR occlusion: {top(entry['occlusion_lofar'])}")
+    era = report["era_check"]
+    print(f"  era lines ({era['era_line_rule']}): {era['era_lines_hz'] or 'none'}")
+    for name, m in era["models"].items():
+        print(
+            f"  {name}: Spearman with the era difference {m['spearman_rho']:+.2f} "
+            f"(p {m['spearman_p']:.3f}), top-5 overlap {m['top_overlap']}/5"
+        )
+    print(f"Written to {args.results_dir / 'interpretability.json'}")
+    for path in report.get("figures", []):
+        print(f"Figure: {path}")
+    return 0
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
+    if args.interpretability:
+        return cmd_interpretability(args)
     from sonar_pipeline.evaluate import evaluate_models
 
     result = evaluate_models(
