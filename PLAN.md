@@ -107,7 +107,7 @@ quedan a alto nivel.
 - [x] F3-T08 · CNN con aumento de datos (`train --model cnn-aug`) · orquestador · misma CNN y semillas, con enmascarado de frecuencia y tiempo y pequeños desplazamientos solo en train; comparación con F3-T07 en val; se conservan e informan los dos modelos; **aviso a David con estimación de tiempo antes de entrenar**
 - [x] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` (con la métrica general de 4 clases y la de dentro de cada época, y el clasificador de duración de DT-005 como referencia) y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
 - [x] F3-T10 · Interpretabilidad · orquestador · línea base: importancia por permutación de bandas de frecuencia; CNN: saliencia por gradientes y oclusión sobre el LOFARgram; mapas en `.npz` y PNG, resumen por banda y clase en `metrics.json`; comprobar si las bandas importantes son líneas fijas compartidas por todos los buques de una época (50/60 Hz, armónicos del equipo), señal de que se aprende la época (DT-005)
-- [ ] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
+- [~] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
 ## F4 · Entrega
 
