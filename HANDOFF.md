@@ -17,6 +17,22 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F4-T06 cerrada: el friend-tester reproduce la evaluación 2
+- **Qué se hizo:** con el visto bueno de David, el friend-tester clonó `b581d0c` en una carpeta
+  temporal (ya borrada) y siguió solo el README por la opción A (CPU), sin entrenar: build
+  1 min 14 s (con caché), tests sin datos 237 passed y 8 skipped, descarga de DeepShip ~1 min,
+  `qc` 4 s, `features` 17 s, tests con datos 244 passed y 1 skipped, **`evaluate` 30 s con cifras
+  idénticas a la tabla del README y a `docs/results/eval2.json`** (F1, intervalos y
+  `weights_sha256` de los tres modelos), `report` 2 s con `git status` vacío (informe idéntico).
+  Espacio: clon 21 MB, DeepShip 1,2 GB, rasgos 82 MB. Su `code_sha256` (`5abdb24b…`) corresponde a
+  `b581d0c`. Con la aprobación de David: README con el tercer motivo de tests saltados, `flag_dc`
+  esperables y aviso de que el `code_sha256` difiere; tabla de procedencia con la reproducción y
+  el "no comprobado" de los hilos pasado a comprobado (cifras idénticas con 4 hilos).
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `README.md`, `docs/results/README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** repetir los pasos del README en un clon limpio.
+- **Siguiente paso exacto:** F4-T07: reviewer, cierre de F4 y etiqueta `v0.1`.
+
 ## 2026-10-11 · F4-T05 cerrada: DT-001 pagada (UID y GID del host)
 - **Qué se hizo:** `compose.yaml` ejecuta el contenedor con `user: "${HOST_UID:-1000}:${HOST_GID:-1000}"`
   (en Linux, en `.env` con `id -u` e `id -g`; en Windows y macOS no hace falta). La imagen usa
@@ -86,16 +102,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
   tests/test_figures.py`.
 - **Siguiente paso exacto:** F4-T03: subcomando `report`.
-
-## 2026-10-11 · F4 empezada; F4-T01 cerrada: decisiones de la entrega (D-021)
-- **Qué se hizo:** David aprobó las 7 tareas de F4 y D-021: figuras en `docs/figures/` (las de la
-  ronda 1 se copian tal cual), informe `docs/report.md` generado por `report` solo desde lo
-  versionado, DT-001 pagada ya (UID y GID del host en el compose), etiqueta `v0.1` tras el
-  reviewer y **sin virtualenv** (Docker aísla Python y librerías; un virtualenv rompería la
-  reproducción exacta). El friend-tester clonará en
-  `C:\Users\Gatrix\AppData\Local\Temp\tmp.XXXXXXXXXX\sonar_investigacion` (aprobado; el disco C:
-  tiene 79 GB libres).
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** leer D-021 y la sección F4 de PLAN.md.
-- **Siguiente paso exacto:** F4-T02: figura de minutos por clase y partición.

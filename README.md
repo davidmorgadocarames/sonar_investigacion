@@ -79,8 +79,9 @@ docker compose run --rm --entrypoint python pipeline -m pytest -rs
 
 Tarda alrededor de un minuto. Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
 lista los tests saltados y por qué: sin los datos descargados se saltan los que los necesitan
-(dicen `not found` o `without WAVs`), y en la opción A se salta el de determinismo en CUDA (dice
-`no CUDA here`). Saltarse no es un error.
+(dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
+features first`), y en la opción A se salta el de determinismo en CUDA (dice `no CUDA here`).
+Saltarse no es un error.
 
 ## Datos
 
@@ -123,7 +124,8 @@ docker compose run --rm pipeline features
 ```
 
 - `qc` revisa los 63 WAV (formato, duración, offset DC, saturación...) en unos segundos y escribe
-  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero.
+  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero. Es normal que marque `flag_dc` en
+  casi todas las grabaciones: todas tienen un offset DC, y `features` lo corrige (D-009).
 - `features` tarda menos de un minuto. Comprueba que cada WAV es idéntico al de la versión
   fijada (SHA-256 de `datasets/manifests/vessels.csv`), quita el offset DC de cada grabación, la
   corta en segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación
@@ -164,6 +166,11 @@ cifras de F1 macro por segmento, idénticas a las del informe (`docs/results/eva
 | `baseline` | `segment F1 0.374 (0.27-0.47)` |
 | `cnn` | `segment F1 0.115 (0.07-0.16)` |
 | `cnn_aug` | `segment F1 0.252 (0.17-0.34)` |
+
+Si comparas tu `metrics.json` con `docs/results/eval2.json`, el `code_sha256` será distinto: el
+código cambió después de la evaluación 2 sin afectar a las cifras (detalle en
+[docs/results/README.md](docs/results/README.md)). Las métricas y los `weights_sha256` deben
+coincidir.
 
 Otras opciones de `evaluate`:
 
