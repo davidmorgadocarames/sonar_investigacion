@@ -64,6 +64,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Folder for the .npz files, index.csv and features_meta.json "
         "(default: %(default)s).",
     )
+    features.add_argument(
+        "--figures",
+        action="store_true",
+        help="Also plot the LOFARgram and DEMON of the longest recording of each class.",
+    )
+    features.add_argument(
+        "--figures-dir",
+        type=Path,
+        default=Path("outputs/figures"),
+        help="Folder for the figures (default: %(default)s).",
+    )
     return parser
 
 
@@ -83,7 +94,8 @@ def cmd_qc(args: argparse.Namespace) -> int:
 def cmd_features(args: argparse.Namespace) -> int:
     from sonar_pipeline.features import SPLITS, run_features
 
-    summary = run_features(args.data_dir, args.split, args.output_dir)
+    figures_dir = args.figures_dir if args.figures else None
+    summary = run_features(args.data_dir, args.split, args.output_dir, figures_dir)
     total = sum(summary.counts.values())
     print(f"Features: {summary.n_recordings} recordings, {total} segments of 3 s.")
     classes = sorted({c for c, _ in summary.counts})
@@ -92,6 +104,8 @@ def cmd_features(args: argparse.Namespace) -> int:
         row = [summary.counts[(c, s)] for s in SPLITS]
         print(f"  {c:<14}" + "".join(f"{n:>7}" for n in row) + f"{sum(row):>7}")
     print(f"Written to {summary.output_dir}")
+    for path in summary.figures:
+        print(f"Figure: {path}")
     return 0
 
 

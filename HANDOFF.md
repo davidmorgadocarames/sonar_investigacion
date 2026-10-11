@@ -17,6 +17,24 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T08 cerrada: figuras de ejemplo
+- **Qué se hizo:** David aprobó D-016 (matplotlib 3.11.2, backend Agg; la imagen pasa de 116 a
+  147 MB). `src/sonar_pipeline/figures.py`: LOFARgram con escala secuencial azul (0 a 15 dB sobre
+  el fondo) y DEMON medio (desde 1 Hz). `features --figures [--figures-dir]` dibuja la grabación
+  más larga de cada clase en `outputs/figures/example_<clase>.png`. Las figuras de validación
+  sintética salen de `tests/test_figures.py --figures-dir outputs/figures` (opción en
+  `tests/conftest.py`): `validation_lofar.png` (tono de 440 Hz) y `validation_demon.png`
+  (modulación de 12 Hz). Revisadas a ojo: Passengership/4 (MALASPINA) muestra en DEMON los
+  armónicos del paso de pala cada 11,3 Hz. README actualizado. 136 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `requirements.txt`, `src/sonar_pipeline/figures.py`,
+  `src/sonar_pipeline/features.py`, `src/sonar_pipeline/__main__.py`, `tests/conftest.py`,
+  `tests/test_figures.py`, `tests/test_features.py`, `README.md`, `DECISIONS.md`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline features --figures` y abrir
+  `outputs/figures/`.
+- **Siguiente paso exacto:** F2-T09: pasada del reviewer sobre F2 y cierre de fase.
+
 ## 2026-10-11 · F2-T07 cerrada: subcomando `features`
 - **Qué se hizo:** `src/sonar_pipeline/features.py` y el subcomando `features` (`--data-dir`,
   `--split`, `--output-dir`): lee `split.csv`, preprocesa, calcula LOFAR y DEMON y escribe en
@@ -84,15 +102,3 @@ Plantilla:
   tests/test_preprocess.py`.
 - **Siguiente paso exacto:** F2-T05: LOFAR (diezmado a 4 kHz, STFT Hann 0,5 s / 0,25 s, TPSW,
   dB sobre el fondo) con los tests del tono y del ruido blanco.
-
-## 2026-10-11 · F2-T03 cerrada: parámetros de la señal (D-015)
-- **Qué se hizo:** `.dockerignore` excluye el audio en cualquier carpeta y sin distinguir
-  mayúsculas (commit aparte, pedido por David). David aprobó D-015: segmentos de 3 s sin
-  solapamiento (1889 en total, Tug 67/66/63), RMS = 1 por segmento, LOFAR a 4 kHz con ventana de
-  0,5 s y TPSW (11 × 1001), DEMON de 2 a 8 kHz con envolvente de Hilbert a 500 Hz (301 bins,
-  0 a 100 Hz), y un `.npz` por partición más `index.csv` y `features_meta.json`.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `.dockerignore`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** leer D-015 en DECISIONS.md.
-- **Siguiente paso exacto:** F2-T04: módulo de preprocesado (offset DC por grabación, RMS = 1,
-  segmentos de 3 s) con tests sintéticos; los parámetros como constantes en un único módulo.

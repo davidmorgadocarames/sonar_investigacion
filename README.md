@@ -91,6 +91,20 @@ docker compose run --rm pipeline features
   test), `index.csv` (una fila por segmento) y `features_meta.json` (parámetros usados). Esa
   carpeta no se sube a git.
 
+Figuras de ejemplo (en `outputs/figures/`, que no se sube a git):
+
+```bash
+docker compose run --rm pipeline features --figures
+docker compose run --rm --entrypoint python pipeline -m pytest tests/test_figures.py --figures-dir outputs/figures
+```
+
+- El primero calcula los rasgos y dibuja, para la grabación más larga de cada clase, su
+  LOFARgram (tiempo hacia abajo, líneas tonales en azul oscuro) y su DEMON medio:
+  `example_<clase>.png`.
+- El segundo dibuja la validación con señales sintéticas: un tono de 440 Hz debe salir en
+  440 Hz en el LOFAR (`validation_lofar.png`), y un ruido modulado a 12 Hz debe dar un pico en
+  12 Hz en el DEMON (`validation_demon.png`).
+
 ## Evaluación con los pesos entrenados
 
 *Pendiente (fase F4).*

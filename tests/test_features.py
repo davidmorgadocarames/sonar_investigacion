@@ -120,6 +120,42 @@ def test_features_are_deterministic(dataset, tmp_path):
             np.testing.assert_array_equal(a[key], b[key])
 
 
+def test_features_figures_one_per_class(dataset, tmp_path, capsys):
+    data, split = dataset
+    figures = tmp_path / "figures"
+    argv = ["features", "--data-dir", str(data), "--split", str(split)]
+    argv += [
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--figures",
+        "--figures-dir",
+        str(figures),
+    ]
+    assert main(argv) == 0
+    names = sorted(p.name for p in figures.iterdir())
+    assert names == ["example_cargo.png", "example_tanker.png", "example_tug.png"]
+    assert "Figure:" in capsys.readouterr().out
+
+
+def test_no_figures_without_flag(dataset, tmp_path):
+    data, split = dataset
+    assert run(data, split, tmp_path / "out") == 0
+    assert not (tmp_path / "out" / "figures").exists()
+
+
+def test_example_is_the_longest_recording_of_each_class():
+    from sonar_pipeline.features import example_recordings
+
+    index = [
+        {"wav_path": "Cargo/1.wav", "vessel_class": "Cargo"},
+        {"wav_path": "Cargo/3.wav", "vessel_class": "Cargo"},
+        {"wav_path": "Cargo/3.wav", "vessel_class": "Cargo"},
+        {"wav_path": "Tug/5.wav", "vessel_class": "Tug"},
+        {"wav_path": "Tug/6.wav", "vessel_class": "Tug"},
+    ]
+    assert example_recordings(index) == {"Cargo": "Cargo/3.wav", "Tug": "Tug/5.wav"}
+
+
 def test_missing_wav_fails(dataset, tmp_path):
     data, split = dataset
     (data / "Tug" / "5.wav").unlink()

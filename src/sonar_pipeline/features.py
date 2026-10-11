@@ -43,6 +43,7 @@ class FeatureSummary:
     counts: Counter  # (vessel_class, split) -> number of segments
     n_recordings: int
     output_dir: Path
+    figures: list[Path]
 
 
 def sha256_of(path: Path) -> str:
@@ -98,7 +99,47 @@ def metadata(split_csv: Path) -> dict:
     }
 
 
-def run_features(data_dir: Path, split_csv: Path, output_dir: Path) -> FeatureSummary:
+def example_recordings(index: list[dict]) -> dict[str, str]:
+    """The longest recording of every class (first in split.csv order on ties)."""
+    n_segments = Counter(r["wav_path"] for r in index)
+    chosen = {}
+    for r in index:
+        best = chosen.get(r["vessel_class"])
+        if best is None or n_segments[r["wav_path"]] > n_segments[best]:
+            chosen[r["vessel_class"]] = r["wav_path"]
+    return chosen
+
+
+def write_figures(
+    index: list[dict], lofar_by_id: dict, demon_by_id: dict, figures_dir: Path
+) -> list[Path]:
+    from sonar_pipeline.figures import plot_recording
+
+    written = []
+    for vessel_class, wav_path in sorted(example_recordings(index).items()):
+        rows = [r for r in index if r["wav_path"] == wav_path]
+        ids = [r["segment_id"] for r in rows]
+        demon_mean = np.mean([demon_by_id[i] for i in ids], axis=0)
+        title = (
+            f"{vessel_class} · {wav_path} · {rows[0]['vessel_group'].split('/', 1)[1]} "
+            f"· {rows[0]['split']} · {len(ids)} segmentos de 3 s"
+        )
+        written.append(
+            plot_recording(
+                np.stack([lofar_by_id[i] for i in ids]),
+                lofar_frequencies(),
+                demon_mean / demon_mean.max(),
+                demon_frequencies(segment_length()),
+                title,
+                figures_dir / f"example_{vessel_class.lower()}.png",
+            )
+        )
+    return written
+
+
+def run_features(
+    data_dir: Path, split_csv: Path, output_dir: Path, figures_dir: Path | None = None
+) -> FeatureSummary:
     rows = read_split(split_csv)
     missing = [r["wav_path"] for r in rows if not (data_dir / r["wav_path"]).is_file()]
     if missing:
@@ -112,6 +153,7 @@ def run_features(data_dir: Path, split_csv: Path, output_dir: Path) -> FeatureSu
     lofars = {s: [] for s in SPLITS}
     demons = {s: [] for s in SPLITS}
     ids = {s: [] for s in SPLITS}
+    lofar_by_id, demon_by_id = {}, {}
     for row in rows:
         segments = preprocess(load_wav(data_dir / row["wav_path"]))
         for i, seg in enumerate(segments):
@@ -128,8 +170,10 @@ def run_features(data_dir: Path, split_csv: Path, output_dir: Path) -> FeatureSu
                 }
             )
             ids[row["split"]].append(segment_id)
-            lofars[row["split"]].append(lofar(seg).astype(np.float32))
-            demons[row["split"]].append(demon(seg).astype(np.float32))
+            lofar_by_id[segment_id] = lofar(seg).astype(np.float32)
+            demon_by_id[segment_id] = demon(seg).astype(np.float32)
+            lofars[row["split"]].append(lofar_by_id[segment_id])
+            demons[row["split"]].append(demon_by_id[segment_id])
 
     output_dir.mkdir(parents=True, exist_ok=True)
     n_samples = segment_length()
@@ -155,5 +199,11 @@ def run_features(data_dir: Path, split_csv: Path, output_dir: Path) -> FeatureSu
         newline="\n",
     )
 
+    figures = []
+    if figures_dir is not None:
+        figures = write_figures(index, lofar_by_id, demon_by_id, figures_dir)
+
     counts = Counter((r["vessel_class"], r["split"]) for r in index)
-    return FeatureSummary(counts=counts, n_recordings=len(rows), output_dir=output_dir)
+    return FeatureSummary(
+        counts=counts, n_recordings=len(rows), output_dir=output_dir, figures=figures
+    )

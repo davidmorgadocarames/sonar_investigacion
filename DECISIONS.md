@@ -238,6 +238,18 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   commit por variable de entorno o montar `.git` en el contenedor. El mismo criterio vale para
   `metrics.json` en F3. El espectro DEMON es de magnitud. Aprobado por David.
 
+### D-016 · matplotlib para las figuras
+- **Fecha:** 2026-10-11
+- **Contexto:** el entregable de F2 incluye figuras de ejemplo (F2-T08), y F3 y F4 necesitarán
+  matrices de confusión, curvas ROC y el informe. CLAUDE.md prohíbe un modo demo con datos
+  sintéticos.
+- **Alternativas:** (a) matplotlib; (b) no hacer figuras; (c) otra librería de gráficos.
+- **Decisión:** (a), con la versión fijada en `requirements.txt` y el backend `Agg` (PNG sin
+  pantalla). Las figuras de los datos reales se generan con `features --figures` en
+  `outputs/figures/`; las de validación con señales sintéticas, desde un test con la opción
+  `--figures-dir`, para que las señales sintéticas sigan existiendo solo en `tests/`.
+- **Motivo:** es la librería estándar, se usará en F3 y F4, y añade unos 30-40 MB a la imagen.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
