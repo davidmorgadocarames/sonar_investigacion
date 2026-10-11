@@ -17,6 +17,21 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · README con las gráficas explicadas (`v0.1.1`)
+- **Qué se hizo:** a petición de David, la sección "En gráficas" del README explica cada figura:
+  qué son Cargo, Passengership, Tanker y Tug, y entrenamiento, validación y test (y por qué se
+  parte por buque); qué son LOFAR y DEMON y qué prueban los 440 Hz y 12 Hz sintéticos; cómo leer
+  el LOFARgram y el DEMON del MALASPINA (líneas tonales hacia 80, 594 y 682 Hz; eje hacia
+  2,8-3 Hz; paso de pala cada 11,3 Hz y armónicos, que sugieren 4 palas; cifras comprobadas con
+  los rasgos); los tres modelos, las dos rondas y cómo leer el F1 con intervalos y azar; las
+  matrices de confusión y por qué las CNN colapsan hacia una clase (explicación razonada, no
+  demostrada); y qué mide el eje vertical de cada panel de bandas. Solo el README (no el
+  informe). Etiqueta `v0.1.1` sobre este commit (`v0.1` no se mueve, regla 9).
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** ver el README en GitHub en la etiqueta `v0.1.1`.
+- **Siguiente paso exacto:** ninguno obligatorio; F5 (opcional) si David la pide.
+
 ## 2026-10-11 · F4 Entrega cerrada (F4-T07) y etiqueta `v0.1`
 - **Qué se hizo:** pasada del reviewer sobre F4: sin hallazgos críticos ni altos; 5 medios y 11
   bajos, todos resueltos con la aprobación de David. Informe: conclusiones calculadas desde los
@@ -93,22 +108,3 @@ Plantilla:
 - **Ficheros tocados:** `README.md`, `compose.gpu.yaml`, `PLAN.md`, `HANDOFF.md`.
 - **Cómo verificarlo:** leer el README; `docker compose config --images` con y sin `.env`.
 - **Siguiente paso exacto:** F4-T05: pagar DT-001 (UID y GID del host).
-
-## 2026-10-11 · F4-T03 cerrada: subcomando `report` e informe
-- **Qué se hizo:** `src/sonar_pipeline/report.py` y `report` (`--results-dir`, `--figures-dir`,
-  `--manifests-dir`, `--output`, `--collect-figures DIR`). `report --collect-figures
-  outputs/figures` copió una vez 16 figuras a `docs/figures/{signal,eval1,eval2}/` (5,3 MB; las
-  de la ronda 1 tal cual); `report` dibuja `docs/figures/data_minutes.png` y escribe
-  `docs/report.md` (resumen, datos, señal, modelos y protocolo, las dos rondas con tablas,
-  permutación e interpretabilidad, limitaciones y procedencia) solo desde `docs/results/` y los
-  manifiestos: no entrena ni puntúa test; regenerarlo da los mismos bytes. `compose.yaml` monta
-  `./docs` para que `report` escriba desde Docker. Tabla de procedencia ampliada con las figuras
-  de señal (`9f1f99b`, `c867b025…`; el código de la señal no ha cambiado desde entonces) y el
-  informe. El test de la CLI ahora exige que todos los subcomandos estén implementados. 243 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/{report,__main__}.py`, `tests/test_report.py`,
-  `tests/test_cli.py`, `compose.yaml`, `docs/report.md`, `docs/figures/**`,
-  `docs/results/README.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline report` y comprobar que `git status`
-  no cambia.
-- **Siguiente paso exacto:** F4-T04: README completo.

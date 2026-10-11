@@ -5,7 +5,7 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** ninguna obligatoria: F0-F4 hechas (`v0.1`); F5 es opcional
+- **Fase actual:** ninguna obligatoria: F0-F4 hechas (`v0.1`, `v0.1.1`); F5 es opcional
 
 | Fase | Nombre | Estado |
 |---|---|---|

@@ -14,36 +14,144 @@ Informe completo: [docs/report.md](docs/report.md).
 
 ## En gráficas
 
-Las figuras completas, con sus cifras, están en el informe; estas son las principales.
+Las figuras principales, con lo necesario para leerlas. Las cifras completas están en el informe.
 
-**Datos.** Minutos de audio por clase y partición; ningún buque está en dos particiones.
+### 1. Datos
 
 ![Minutos por clase y partición](docs/figures/data_minutes.png)
 
-**Señal.** Validación con señales sintéticas: un tono de 440 Hz aparece en su bin del LOFAR y
-una modulación de 12 Hz en el del DEMON.
+**Las cuatro clases de buque:**
+
+- **Cargo:** buque de carga (portacontenedores, graneleros). Grande, con motor diésel lento y
+  hélice grande.
+- **Passengership:** buque de pasaje; en este subconjunto son sobre todo transbordadores (ferris).
+- **Tanker:** petrolero o buque cisterna, que transporta líquidos a granel.
+- **Tug:** remolcador. Pequeño pero muy potente; empuja o arrastra a otros barcos.
+
+**Entrenamiento, validación y test.** Con *entrenamiento* aprende el modelo; con *validación* se
+eligen sus ajustes; *test* se reserva para medir el resultado final sin haberlo usado antes. La
+partición se hace **por buque**: si el mismo barco estuviera en entrenamiento y en test, el
+modelo podría reconocer *ese barco concreto* en vez de su tipo, y el resultado saldría inflado.
+
+**Cómo se lee.** Cada barra son minutos de audio; encima, `b` es el número de buques y `g` el de
+grabaciones. Destacan el desequilibrio (Cargo tiene mucho más audio que el resto) y que Tug solo
+tiene 3 buques, uno en cada partición.
+
+### 2. Señal: qué son LOFAR y DEMON
+
+Un sonar pasivo no emite nada: solo escucha con un hidrófono el ruido que radia el barco. Ese
+ruido lleva dos tipos de información, y cada técnica extrae uno:
+
+- **LOFAR** (*Low Frequency Analysis and Recording*) muestra qué frecuencias suenan y cómo
+  evolucionan en el tiempo. Sirve para ver las **líneas tonales**: sonidos de frecuencia fija que
+  produce la maquinaria (motor, generadores, bombas).
+- **DEMON** (*Detection of Envelope Modulation On Noise*): la hélice produce un ruido ancho por
+  **cavitación** (burbujas que colapsan), y ese ruido "late" al ritmo de la hélice. DEMON mide a
+  qué ritmo late, lo que revela la velocidad del eje y el número de palas.
 
 ![Validación LOFAR](docs/figures/signal/validation_lofar.png)
 ![Validación DEMON](docs/figures/signal/validation_demon.png)
 
-**Un buque real.** LOFARgram y DEMON de una grabación de Passengership (líneas tonales arriba;
-armónicos del paso de pala abajo).
+**Qué significan 440 Hz y 12 Hz.** Son pruebas con señales sintéticas cuya respuesta se conoce de
+antemano. Un tono de 440 Hz (la nota *la*) escondido en ruido debe aparecer como un pico justo
+en 440 Hz en el LOFAR, lo que comprueba que el eje de frecuencias es correcto. Un ruido que
+"late" 12 veces por segundo, como lo haría una hélice, debe dar un pico en 12 Hz en el DEMON. La
+línea discontinua marca la frecuencia conocida: si el pico cae sobre ella, el procesado es
+fiable.
+
+### 3. Un buque real
 
 ![Ejemplo Passengership](docs/figures/signal/example_passengership.png)
 
-**Resultados en test (ronda 2, final).** F1 macro con intervalo del 95 % frente al azar medido,
-con 4 clases y dentro de cada época de grabación.
+Grabación de entrenamiento de un Passengership (el MALASPINA).
+
+- **LOFARgram (arriba).** En horizontal, la frecuencia (0 a 2000 Hz); en vertical, el tiempo
+  hacia abajo; el color indica cuánto sobresale cada frecuencia del ruido de fondo, en dB. Las
+  **líneas verticales** son líneas tonales: frecuencias que se mantienen en el tiempo (aquí,
+  hacia 80, 594 y 682 Hz) y que funcionan como una "huella" de la maquinaria del barco.
+- **DEMON (abajo).** En horizontal, la frecuencia de modulación (0 a 100 Hz). El pico hacia
+  2,8-3 Hz y su doble (5,7 Hz) son el **ritmo del eje** (unas 170-180 vueltas por minuto). La
+  serie cada 11,3 Hz (11,3, 22,7, 34, 45,3...) es el **paso de pala** y sus **armónicos**: un
+  armónico es un múltiplo entero de una frecuencia base. Como 11,3 / 2,8 ≈ 4, sugiere una hélice
+  de **4 palas**.
+
+Estos son los rasgos que un clasificador debería aprender para distinguir buques: qué líneas
+tonales tiene cada barco y a qué ritmo late su hélice.
+
+### 4. Resultados en test
 
 ![F1 con intervalos](docs/figures/eval2/results_f1.png)
 
-**Matrices de confusión (ronda 2).** Por segmento y por grabación.
+**Los tres modelos usan exactamente los mismos datos** (los mismos segmentos de 3 s y la misma
+partición); solo cambia el modelo y cómo se entrena:
+
+- **Línea base:** una regresión logística, el modelo más simple. Ve un resumen de cada segmento
+  (el LOFAR promediado en el tiempo más el DEMON: 1302 números) y aprende un peso por frecuencia.
+  Sirve de referencia.
+- **CNN sin aumento:** una red neuronal convolucional que ve el LOFARgram completo (11 instantes
+  × 1001 frecuencias) y el DEMON, y puede aprender patrones más complejos.
+- **CNN con aumento:** la misma red, pero durante el entrenamiento cada segmento se altera al azar
+  (se tapan bandas de frecuencia o instantes y se desplaza un poco en el tiempo) para que no lo
+  memorice. Validación y test nunca se alteran.
+
+**Ronda 1 y ronda 2.** En la ronda 1 se entrenaron los modelos y se evaluó test por primera vez.
+Después, una revisión del código encontró fallos de implementación y de medida (por ejemplo, dos
+de las ocho salidas de la rama DEMON de la CNN valían siempre cero). Se arreglaron **sin cambiar
+nada para mejorar la cifra**, se reentrenaron las dos CNN y se evaluó test una segunda y última
+vez: es la **ronda 2**, la de esta gráfica. La línea base no cambió.
+
+**Cómo se lee.** El *F1 macro* va de 0 a 1 (1 es acertar todo) y pondera igual las cuatro clases.
+Cada punto lleva su **intervalo del 95 %** (la barra vertical) y la línea discontinua es el
+**azar medido** (lo que sacaría un clasificador que responde al azar). El grupo de la izquierda
+usa las 4 clases; los otros dos comparan clases **grabadas en la misma época** (Cargo frente a
+Tug, de 2017; Passengership frente a Tanker, de 2016), que es lo que de verdad mide la firma del
+buque, porque en esas parejas las condiciones de grabación son las mismas.
+
+**Conclusión.** Solo la línea base tiene todo su intervalo por encima del azar con 4 clases, y
+dentro de cada época ningún modelo lo supera.
+
+### 5. Matrices de confusión
 
 ![Matrices de confusión](docs/figures/eval2/results_confusion.png)
 
-**Qué bandas usa cada modelo (sobre val).** Comparadas con las bandas que más difieren entre
-épocas de grabación.
+**Cómo se leen.** Las **filas** son la clase real y las **columnas**, la clase que predijo el
+modelo. La **diagonal** son los aciertos. Cada número es qué fracción de esa clase real acabó en
+esa columna (entre paréntesis, el recuento). Arriba, **por segmento** (cada trozo de 3 s); abajo,
+**por grabación** (la media de todos sus segmentos).
+
+**Por qué la CNN sin aumento lo predice casi todo como Passengership y la CNN con aumento casi
+todo como Cargo.** Es un síntoma de que **no generalizan**, no una preferencia real por esas
+clases. Con solo 43 buques, la red **memoriza los buques de entrenamiento** (su mejor resultado en
+validación llega hacia la época 3 y después solo memoriza); ante buques que nunca ha visto, sus
+salidas **se colapsan hacia una sola clase**. Qué clase "gana" no tiene un significado físico:
+depende del azar del entrenamiento (la semilla y el aumento), y por eso cambia de una CNN a otra.
+Es una explicación razonada a partir de las curvas de entrenamiento, no algo demostrado con un
+experimento específico.
+
+La **línea base** acierta sobre todo Cargo y Tanker, y confunde Tug con Cargo, dos clases grabadas en la
+misma época, lo que encaja con la limitación de la época.
+
+### 6. Qué frecuencias usa cada modelo
 
 ![Interpretabilidad por bandas](docs/figures/eval2/interpretability_bands.png)
+
+**Eje horizontal:** bandas de 40 Hz del LOFAR, de 0 a 2000 Hz. **Eje vertical, panel a panel:**
+
+1. **Línea base:** cuánto **baja el F1** si se desordena esa banda entre segmentos (se rompe su
+   relación con la clase). Cuanto más alta la barra, más depende el modelo de esa banda; los
+   valores negativos o cercanos a cero indican que la banda no le sirve.
+2. y 3. **Las dos CNN:** cuánto **baja la probabilidad de acertar la clase real** si se tapa esa
+   banda (se rellena con el valor medio).
+4. **Diferencia entre épocas:** cuánto difiere el **nivel medio de cada banda entre las
+   grabaciones de 2016 y las de 2017**, en dB. Una barra alta indica una banda que delata la época
+   de grabación.
+
+**Qué se busca y qué se ve.** Si las bandas que usa un modelo coinciden con las que delatan la
+época, el modelo podría estar aprendiendo la época y no el buque. La línea base usa sobre todo
+40-80, 1240-1280 y 1440-1480 Hz, y **las dos últimas están entre las que más difieren entre
+épocas**. Las CNN dependen sobre todo de **0-40 Hz**, frecuencias muy bajas donde dominan el ruido
+del mar y de la plataforma de grabación más que la firma del buque. Todas las importancias son
+pequeñas: ninguna banda decide por sí sola.
 
 ## Requisitos
 
