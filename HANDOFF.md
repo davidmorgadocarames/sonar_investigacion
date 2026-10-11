@@ -17,6 +17,25 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2-T07 cerrada: subcomando `features`
+- **Qué se hizo:** `src/sonar_pipeline/features.py` y el subcomando `features` (`--data-dir`,
+  `--split`, `--output-dir`): lee `split.csv`, preprocesa, calcula LOFAR y DEMON y escribe en
+  `datasets/processed/` `features_{train,val,test}.npz` (`segment_id`, `lofar`, `demon`,
+  `lofar_hz`, `demon_hz`), `index.csv` y `features_meta.json`. Datos reales: 18 s, 1889 segmentos
+  (Cargo 457/129/185, Passengership 225/77/75, Tanker 328/108/109, Tug 67/66/63), 84 MB, sin NaN.
+  4 tests de principio a fin con un mini dataset sintético (tono en LOFAR y modulación en DEMON
+  por segmento, determinismo, errores). README: sección "Control de calidad y rasgos". David
+  aprobó el ajuste de D-015 (`project_commit` null en Docker; `code_sha256`). David pidió que se le
+  avise antes de entrenar (nota en F3 de PLAN.md). 130 tests.
+- **Qué quedó a medias:** nada. Los `.npz` no son idénticos byte a byte entre ejecuciones (el zip
+  guarda la hora); el test compara los arrays.
+- **Ficheros tocados:** `src/sonar_pipeline/features.py`, `src/sonar_pipeline/__main__.py`,
+  `tests/test_features.py`, `README.md`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm pipeline features` (dice "63 recordings, 1889
+  segments").
+- **Siguiente paso exacto:** F2-T08: figuras de ejemplo; antes, proponer a David matplotlib como
+  dependencia (regla 3, D-002).
+
 ## 2026-10-11 · F2-T06 cerrada: DEMON
 - **Qué se hizo:** `src/sonar_pipeline/demon.py` (D-015): paso banda Butterworth de orden 4 de 2
   a 8 kHz con `sosfiltfilt`, envolvente |Hilbert| menos su media, diezmado ×8 ×8 con
@@ -77,23 +96,3 @@ Plantilla:
 - **Cómo verificarlo:** leer D-015 en DECISIONS.md.
 - **Siguiente paso exacto:** F2-T04: módulo de preprocesado (offset DC por grabación, RMS = 1,
   segmentos de 3 s) con tests sintéticos; los parámetros como constantes en un único módulo.
-
-## 2026-10-11 · F2-T02 cerrada: DT-006 pagada
-- **Qué se hizo:** `build_vessel_table.py` falla si un id está repetido y si dos bloques empatan
-  sin ninguna duración coincidente (data-engineer, D-010). `qc.csv` en LF y orden natural; el test
-  de `qc` compara SHA-256; el test de `--help` comprueba exactamente los subcomandos; imagen
-  `python:3.11.17-slim`; `requirements.txt` solo desde PyPI (`TORCH_INDEX_URL` queda para PyTorch
-  en F3); `.gitignore` sin distinguir mayúsculas; los tests de datos se saltan con `docker run`
-  sin compose (70 passed, 10 skipped); `-rs` en CLAUDE.md. DT-006 pagada (aprobado por David).
-  80 tests.
-- **Qué quedó a medias:** nada. La sección "Comprobar la instalación" del README queda como nota
-  en F4 (decisión de David).
-- **Ficheros tocados:** `tools/build_vessel_table.py`, `src/sonar_pipeline/qc.py`, `tests/test_qc.py`,
-  `tests/test_cli.py`, `tests/test_vessel_table.py`, `tests/test_split_data.py`,
-  `tests/test_vessel_table_data.py`, `Dockerfile`, `requirements.txt`, `.gitignore`, `CLAUDE.md`,
-  `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
-  (80 passed) y `docker run --rm --entrypoint python sonar-pipeline:latest -m pytest -rs`
-  (70 passed, 10 skipped).
-- **Siguiente paso exacto:** F2-T03: proponer a David los parámetros de preprocesado, LOFAR,
-  DEMON y formato de salida (D-015).

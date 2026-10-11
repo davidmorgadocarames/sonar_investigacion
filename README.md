@@ -8,7 +8,8 @@ WAV → control de calidad → preprocesado → LOFAR y DEMON → clasificador �
 ```
 
 > **Estado:** en construcción. Este README se completa en la fase F4. Por ahora se puede
-> construir la imagen, descargar los datos y ejecutar el control de calidad (`qc`).
+> construir la imagen, descargar los datos, ejecutar el control de calidad (`qc`) y calcular
+> los rasgos LOFAR y DEMON (`features`).
 
 ## Requisitos
 
@@ -39,7 +40,7 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    ```
 
    Debe mostrar los comandos `qc`, `features`, `train`, `evaluate` y `report`. Por ahora
-   solo `qc` está implementado; los demás llegan en fases posteriores.
+   están implementados `qc` y `features`; los demás llegan en fases posteriores.
 
 ## Datos
 
@@ -71,6 +72,24 @@ que los ficheros son idénticos a los de la versión fijada. Deben quedar 63 fic
 repartidos en `Cargo/` (12), `Passengership/` (20), `Tanker/` (28) y `Tug/` (3).
 
 Si ya lo habías descargado, no hace falta repetirlo.
+
+## Control de calidad y rasgos
+
+Con los datos descargados, desde la carpeta `sonar_investigacion`:
+
+```bash
+docker compose run --rm pipeline qc
+docker compose run --rm pipeline features
+```
+
+- `qc` revisa los 63 WAV (formato, duración, offset DC, saturación...) en unos segundos y escribe
+  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero.
+- `features` tarda menos de un minuto. Quita el offset DC de cada grabación, la corta en
+  segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación de la
+  cavitación, 0 a 100 Hz) de cada segmento. Debe decir `63 recordings, 1889 segments` y escribir
+  en `datasets/processed/` unos 85 MB: un `features_<partición>.npz` por partición (train, val y
+  test), `index.csv` (una fila por segmento) y `features_meta.json` (parámetros usados). Esa
+  carpeta no se sube a git.
 
 ## Evaluación con los pesos entrenados
 

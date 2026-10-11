@@ -66,7 +66,7 @@ quedan a alto nivel.
 - [x] F2-T04 · Módulo de preprocesado: offset DC por grabación (D-009), normalización y segmentación · orquestador · tests sintéticos: el offset desaparece, número de segmentos exacto, ningún segmento cruza grabaciones, cada grabación da al menos un segmento
 - [x] F2-T05 · LOFAR (STFT, dB, normalización de fondo) · orquestador · un tono sintético de frecuencia conocida da el máximo en su bin (±1 bin); el ruido blanco normalizado queda plano
 - [x] F2-T06 · DEMON (paso banda, envolvente con Hilbert, paso bajo, diezmado, espectro) · orquestador · ruido en banda modulado a `fm` conocida da un pico en `fm` (±1 bin); sin modulación no hay pico
-- [ ] F2-T07 · Subcomando `features` · orquestador · lee `split.csv`, escribe en `datasets/processed/` con un índice por segmento (`wav_path`, clase, partición, n.º de segmento); determinista; test de principio a fin con un mini dataset sintético; sobre los datos reales informa de los segmentos por clase y partición; README actualizado
+- [x] F2-T07 · Subcomando `features` · orquestador · lee `split.csv`, escribe en `datasets/processed/` con un índice por segmento (`wav_path`, clase, partición, n.º de segmento); determinista; test de principio a fin con un mini dataset sintético; sobre los datos reales informa de los segmentos por clase y partición; README actualizado
 - [ ] F2-T08 · Figuras de ejemplo en `outputs/figures/` (LOFARgram y DEMON de una grabación por clase, y validación sintética) · orquestador · se generan desde la CLI; matplotlib aprobada antes como dependencia (regla 3, D-002)
 - [ ] F2-T09 · Pasada del reviewer y cierre de F2 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
@@ -95,6 +95,10 @@ quedan a alto nivel.
   - Los intervalos se calculan remuestreando grabaciones, no segmentos. Tug tiene una sola
     grabación en test: su ROC y su F1 serán muy inestables.
   - Dependencias a decidir: `scikit-learn`, `matplotlib` y `shap`.
+- **Nota (David, 2026-10-11):** avisar a David y esperar su visto bueno antes de lanzar
+  cualquier entrenamiento. Los pesos se guardan siempre en `models/` (volumen montado, quedan
+  en el PC de David); si ocupan menos de 10 MB se versionan también en git (a decidir al
+  detallar F3).
 - **Criterio de salida:** F1 macro, matriz de confusión e intervalos por bootstrap sobre test
   para los dos modelos; `evaluate` funciona en CPU con los pesos versionados.
 

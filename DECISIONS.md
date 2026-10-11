@@ -232,6 +232,11 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   cambia) y deja 196 segmentos de Tug. Escalar por segmento quita el nivel absoluto, que depende
   de la distancia (atenúa DT-005). La ventana de 0,5 s prima la resolución en frecuencia, que es
   para lo que sirve LOFAR; en 3 s las líneas tonales son estables y el eje del tiempo aporta poco.
+- **Ajuste (2026-10-11):** dentro de Docker no hay `.git` ni `git`, así que `project_commit` queda
+  `null` en `features_meta.json`. El código se identifica con `code_sha256` (hash de los `.py` del
+  paquete), junto al SHA-256 de `split.csv` y las versiones de numpy y scipy. Se descartó pasar el
+  commit por variable de entorno o montar `.git` en el contenedor. El mismo criterio vale para
+  `metrics.json` en F3. El espectro DEMON es de magnitud. Aprobado por David.
 
 ## Deuda técnica
 

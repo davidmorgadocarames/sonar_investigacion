@@ -43,6 +43,27 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("outputs/qc/qc.csv"),
         help="CSV report, one row per WAV (default: %(default)s).",
     )
+
+    features = subcommands["features"]
+    features.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path("datasets/raw/DeepShip"),
+        help="Folder with one subfolder per class (default: %(default)s).",
+    )
+    features.add_argument(
+        "--split",
+        type=Path,
+        default=Path("datasets/manifests/split.csv"),
+        help="Split manifest, one row per WAV (default: %(default)s).",
+    )
+    features.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("datasets/processed"),
+        help="Folder for the .npz files, index.csv and features_meta.json "
+        "(default: %(default)s).",
+    )
     return parser
 
 
@@ -59,7 +80,22 @@ def cmd_qc(args: argparse.Namespace) -> int:
     return 0
 
 
-HANDLERS = {"qc": cmd_qc}
+def cmd_features(args: argparse.Namespace) -> int:
+    from sonar_pipeline.features import SPLITS, run_features
+
+    summary = run_features(args.data_dir, args.split, args.output_dir)
+    total = sum(summary.counts.values())
+    print(f"Features: {summary.n_recordings} recordings, {total} segments of 3 s.")
+    classes = sorted({c for c, _ in summary.counts})
+    print(f"  {'class':<14}" + "".join(f"{s:>7}" for s in SPLITS) + f"{'total':>7}")
+    for c in classes:
+        row = [summary.counts[(c, s)] for s in SPLITS]
+        print(f"  {c:<14}" + "".join(f"{n:>7}" for n in row) + f"{sum(row):>7}")
+    print(f"Written to {summary.output_dir}")
+    return 0
+
+
+HANDLERS = {"qc": cmd_qc, "features": cmd_features}
 
 
 def main(argv: list[str] | None = None) -> int:
