@@ -17,6 +17,21 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3 empezada; F3-T01 cerrada: diseño del modelo (D-018)
+- **Qué se hizo:** David aprobó las 11 tareas de F3 y una F5 opcional (atención, después de F4).
+  D-018 recoge el diseño: regresión logística sobre media temporal de LOFAR + DEMON; CNN de dos
+  ramas (~80 000 parámetros) con BatchNorm, LeakyReLU, AdamW, lr en coseno, minibatches de 32,
+  pesos por clase y parada temprana; CNN con aumento de datos comparada en val; decisión por
+  grabación con media de probabilidades; bootstrap por grabaciones; ROC Pd/Pfa; importancia por
+  permutación, saliencia y oclusión; pesos en `models/` versionados; `metrics.json` con
+  parámetros, FLOPs y tiempos. Descartados SHAP, SwiGLU, RoPE, RMSNorm y GQA.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer D-018 y la sección F3 de PLAN.md.
+- **Siguiente paso exacto:** F3-T02: proponer D-019 (scikit-learn y PyTorch CPU). **Antes de
+  cualquier entrenamiento o test de permutación, avisar a David con una estimación de tiempo; y
+  hacer commit de un modelo entrenado antes de permutar.** Test no se mira hasta F3-T09.
+
 ## 2026-10-11 · F2 Señal cerrada (F2-T09)
 - **Qué se hizo:** pasada del reviewer sobre F2: sin hallazgos críticos ni altos; los 2 medios y
   los 9 bajos se arreglaron en F2-T10 (ajuste 2 de D-015 y D-017, aprobados por David). Criterio
@@ -90,20 +105,3 @@ Plantilla:
   segments").
 - **Siguiente paso exacto:** F2-T08: figuras de ejemplo; antes, proponer a David matplotlib como
   dependencia (regla 3, D-002).
-
-## 2026-10-11 · F2-T06 cerrada: DEMON
-- **Qué se hizo:** `src/sonar_pipeline/demon.py` (D-015): paso banda Butterworth de orden 4 de 2
-  a 8 kHz con `sosfiltfilt`, envolvente |Hilbert| menos su media, diezmado ×8 ×8 con
-  `resample_poly` (500 Hz), espectro de magnitud con ventana Hann (301 bins de 1/3 Hz, 0 a
-  100 Hz), bins por debajo de 1 Hz a 0 y máximo 1. 23 tests con 3 semillas: un ruido modulado a
-  3,4, 7,5, 12 y 50 Hz da el pico en su bin (±1) y más de 20 veces la mediana; con una modulación
-  del 10 % se sigue encontrando; sin modulación el pico no pasa de 5 veces la mediana; una
-  modulación por debajo de 1 kHz no aparece. Comprobado que, sin el paso banda, el último test
-  falla. 127 tests.
-- **Qué quedó a medias:** nada. Se usa espectro de magnitud (D-015 no fijaba magnitud o potencia).
-- **Ficheros tocados:** `src/sonar_pipeline/demon.py`, `tests/test_demon.py`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
-  tests/test_demon.py`.
-- **Siguiente paso exacto:** F2-T07: subcomando `features` (lee `split.csv`, escribe los `.npz`,
-  `index.csv` y `features_meta.json` en `datasets/processed/`) y README.

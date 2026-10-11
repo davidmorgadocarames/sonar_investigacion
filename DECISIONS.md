@@ -270,6 +270,59 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** no añade ninguna herramienta (regla 3) y una reconstrucción desde cero instala
   exactamente los mismos paquetes (comprobado con `pip freeze`).
 
+### D-018 · Diseño del modelo y de la evaluación (F3)
+- **Fecha:** 2026-10-11
+- **Contexto:** F3 compara una línea base clásica con una CNN, sin y con aumento de datos. Hay
+  1889 segmentos (train 1077, val 380, test 432) de 43 buques; Tug tiene 3 (1/1/1). Cada
+  segmento tiene un LOFAR de 11 × 1001 y un DEMON de 301 (D-015).
+- **Alternativas descartadas:** random forest como línea base; SHAP; SwiGLU, RoPE, RMSNorm y
+  Grouped Query Attention; atención en la CNN (pasa a F5, opcional).
+- **Decisión:**
+  - **Reglas:** test no se mira hasta F3-T09; todo se decide con val o con validación cruzada en
+    train + val. Antes de cualquier entrenamiento o test de permutación se avisa a David con una
+    estimación del tiempo (para que no use el PC) y se espera su visto bueno. Primero se hace
+    commit de un modelo entrenado y después se lanza el test de permutación.
+  - **Línea base:** media temporal del LOFAR (1001) + DEMON (301); `StandardScaler` ajustado con
+    train; regresión logística multinomial L2 con `class_weight="balanced"`; C en {0,001; 0,01;
+    0,1; 1; 10} elegido con el F1 macro de val por segmento. Validación cruzada estratificada y
+    agrupada por buque (5 particiones) en train + val. Test de permutación: 200 permutaciones de
+    las clases entre grupos de buque con la misma validación cruzada; p = (1 + n.º ≥ observado) /
+    201.
+  - **CNN (unos 80 000 parámetros):** rama LOFAR con 3 bloques Conv2d (16, 32, 64 filtros;
+    kernels (3,7), (3,5), (3,3)) con BatchNorm y LeakyReLU, pooling solo en frecuencia (×4, ×4,
+    ×2) y pooling adaptativo a 1 × 8; rama DEMON con 2 bloques Conv1d (16, 32) y pooling
+    adaptativo a 8; cabeza 768 → dropout 0,3 → 64 → LeakyReLU → dropout → 4. Entrada
+    normalizada con media y desviación de train por rama, guardadas con los pesos.
+  - **Entrenamiento de la CNN:** AdamW (sin weight decay en sesgos ni BatchNorm), lr en coseno,
+    minibatches de 32 barajados con semilla, CrossEntropy con pesos por clase, hasta 60 épocas
+    con parada temprana (paciencia 10) por F1 macro de val, PyTorch determinista con hilos
+    fijados. Búsqueda lr ∈ {1e-3, 3e-4} × weight decay ∈ {1e-3, 1e-2} con una semilla; la mejor
+    configuración se entrena con 3 semillas y se guarda la mejor en val.
+  - **CNN con aumento:** la misma configuración y semillas; solo en train y cada transformación
+    con probabilidad 0,5: en LOFAR hasta 2 bandas de frecuencia de 100 Hz como máximo y 1 bloque
+    de hasta 2 tramas rellenados con la media de train, y desplazamiento temporal de ±2 tramas;
+    en DEMON hasta 1 banda de 3,3 Hz. Se compara con la CNN base en val (3 semillas) y se
+    conservan los dos modelos.
+  - **Decisión por grabación:** media de las probabilidades de sus segmentos y argmax; todo se
+    informa por segmento y por grabación.
+  - **Evaluación:** bootstrap de 2000 remuestreos de grabaciones dentro de cada clase, intervalos
+    del 95 % por percentiles; matriz de confusión normalizada por clase real; ROC una frente al
+    resto con AUC y Pd a Pfa = 1 % interpolada.
+  - **Interpretabilidad (sobre val):** línea base, importancia por permutación de 50 bandas de
+    40 Hz del LOFAR y 10 de 10 Hz del DEMON (10 repeticiones); CNN, saliencia |∂logit/∂entrada|
+    media por clase y oclusión con una banda de 40 Hz.
+  - **Pesos:** `models/baseline.npz` (sin pickle), `models/cnn.pt` y `models/cnn_aug.pt`
+    (cargados con `weights_only=True`), cada uno con un `.json` de configuración y métricas de
+    val; se versionan en git (menos de 10 MB).
+  - **DT-005:** regresión logística que solo ve la duración de la grabación; F1 en val informado.
+  - **`metrics.json`:** por modelo, parámetros, FLOPs, tiempo de entrenamiento e inferencia con
+    CPU, hilos y versiones, y resultados en val y test por segmento y por grabación (F1 macro y
+    por clase con intervalos, confusión, ROC); trazabilidad (SHA-256 de `split.csv` y de los
+    rasgos, `code_sha256`, semillas); además, test de permutación, DT-005 e interpretabilidad.
+- **Motivo:** con tan pocos buques, la regularización, los pesos por clase y medir la
+  variabilidad (semillas, validación cruzada por buque, bootstrap por grabaciones) importan más
+  que la complejidad del modelo. Aprobado por David.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

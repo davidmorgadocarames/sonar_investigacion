@@ -81,7 +81,9 @@ quedan a alto nivel.
 - **Reglas de la fase (David, 2026-10-11):**
   - **Test no se mira hasta F3-T09.** Todo ajuste y toda comparación (también con o sin aumento
     de datos) se decide con val o con validación cruzada dentro de train + val.
-  - **Avisar a David y esperar su visto bueno antes de lanzar cualquier entrenamiento.**
+  - **Avisar a David y esperar su visto bueno antes de lanzar cualquier entrenamiento o test
+    de permutación, con una estimación del tiempo que tardará** (para que no use el PC).
+  - Primero se hace commit de un modelo entrenado y después se lanza el test de permutación.
   - Los pesos se guardan siempre en `models/` (volumen montado, quedan en el PC de David); si
     ocupan menos de 10 MB se versionan también en git.
 - **Contexto (notas de F1 y F2):** Tug tiene 3 buques (1/1/1), así que su métrica en test sale de
@@ -95,14 +97,14 @@ quedan a alto nivel.
   la línea base, la CNN y la CNN con aumento; `evaluate` funciona en CPU con los pesos
   versionados; la pasada del reviewer no deja hallazgos graves abiertos.
 
-- [~] F3-T01 · Proponer el diseño del modelo y de la evaluación · orquestador → David · decisión aprobada y apuntada (D-018): línea base, arquitectura y entrenamiento de la CNN, aumento de datos, agregación por grabación, validación cruzada y test de permutación por buque, contenido de `metrics.json`, interpretabilidad, versionado de pesos
+- [x] F3-T01 · Proponer el diseño del modelo y de la evaluación · orquestador → David · decisión aprobada y apuntada (D-018): línea base, arquitectura y entrenamiento de la CNN, aumento de datos, agregación por grabación, validación cruzada y test de permutación por buque, contenido de `metrics.json`, interpretabilidad, versionado de pesos
 - [ ] F3-T02 · Dependencias: scikit-learn y PyTorch CPU · orquestador · decisión aprobada (D-019); PyTorch desde `TORCH_INDEX_URL` en un paso aparte; lista completa regenerada (D-017); build OK y tamaño de la imagen medido e informado
 - [ ] F3-T03 · Módulo de datos: carga de `.npz` e índice, etiquetas, pesos por clase y agregación por grabación (media de probabilidades) · orquestador · tests con datos de juguete; nunca mezcla particiones
 - [ ] F3-T04 · Módulo de métricas y `metrics.json` · orquestador · F1 macro y por clase con bootstrap por grabaciones; matriz de confusión por segmento y por grabación; ROC Pd/Pfa una frente al resto con AUC y Pd a Pfa = 1 %; trazabilidad (SHA-256 de `split.csv` y de los rasgos, `code_sha256`, semillas, versiones); parámetros, FLOPs, tiempo de entrenamiento y de inferencia con el hardware y los hilos; tests con casos de resultado conocido
 - [ ] F3-T05 · Comprobar DT-005 con un clasificador trivial (solo duración de la grabación) · orquestador · F1 en val informado a David y decisión sobre si preocupa
-- [ ] F3-T06 · Línea base: regresión logística (`train --model baseline`) · orquestador · estandarización y pesos por clase; hiperparámetros con val; validación cruzada agrupada por buque en train + val; test de permutación con etiquetas permutadas por buque; pesos en `models/`; **aviso a David antes de entrenar**
-- [ ] F3-T07 · CNN base sin aumento de datos (`train --model cnn`) · orquestador · rama 2D (LOFAR) y 1D (DEMON); BatchNorm, LeakyReLU, AdamW con weight decay, decaimiento del lr, minibatches de 32-64, pesos por clase, parada temprana con F1 macro de val, semillas fijadas; pesos en `models/`; **aviso a David antes de entrenar**
-- [ ] F3-T08 · CNN con aumento de datos (`train --model cnn-aug`) · orquestador · misma CNN y semillas, con enmascarado de frecuencia y tiempo y pequeños desplazamientos solo en train; comparación con F3-T07 en val; se conservan e informan los dos modelos; **aviso a David antes de entrenar**
+- [ ] F3-T06 · Línea base: regresión logística (`train --model baseline`) · orquestador · estandarización y pesos por clase; hiperparámetros con val; validación cruzada agrupada por buque en train + val; pesos en `models/` con commit; después, test de permutación con etiquetas permutadas por buque; **aviso a David con estimación de tiempo antes de entrenar y antes de permutar**
+- [ ] F3-T07 · CNN base sin aumento de datos (`train --model cnn`) · orquestador · rama 2D (LOFAR) y 1D (DEMON); BatchNorm, LeakyReLU, AdamW con weight decay, decaimiento del lr, minibatches de 32-64, pesos por clase, parada temprana con F1 macro de val, semillas fijadas; pesos en `models/`; **aviso a David con estimación de tiempo antes de entrenar**
+- [ ] F3-T08 · CNN con aumento de datos (`train --model cnn-aug`) · orquestador · misma CNN y semillas, con enmascarado de frecuencia y tiempo y pequeños desplazamientos solo en train; comparación con F3-T07 en val; se conservan e informan los dos modelos; **aviso a David con estimación de tiempo antes de entrenar**
 - [ ] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
 - [ ] F3-T10 · Interpretabilidad · orquestador · línea base: importancia por permutación de bandas de frecuencia; CNN: saliencia por gradientes y oclusión sobre el LOFARgram; mapas en `.npz` y PNG, resumen por banda y clase en `metrics.json`
 - [ ] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
