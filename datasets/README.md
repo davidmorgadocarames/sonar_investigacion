@@ -7,7 +7,7 @@
 - **Fuente:** https://github.com/irfankamboh/DeepShip, último commit
   `77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6` (2023-03-23), revisado el 2026-10-10.
   - Es un **subconjunto** del dataset: 63 WAV, unos 733 MB y 1,59 h en total (Cargo 12,
-    Passengership 20, Tanker 28, Tug 3), de 44 buques distintos según
+    Passengership 20, Tanker 28, Tug 3), de 44 nombres de buque distintos según
     los metafiles (43 grupos de partición tras D-011).
   - Formato de todos los WAV: 32 kHz, mono, float32. El módulo `wave` de Python no puede
     leerlos ([D-008](../DECISIONS.md)).
@@ -68,6 +68,11 @@ Regenerarla con los mismos datos da un fichero idéntico byte a byte.
 - **`match_source`:** `id` (id = número y la duración coincide: 35), `duration` (la duración
   coincide con otra fila: 26) o `id_unverified` (ninguna duración coincide y se toma la fila por
   id: 2, Passengership 30 y 37, ambas COLUMBIA).
+  - Por qué es razonable que sean COLUMBIA: por el orden cronológico, el WAV 30 solo puede ir en
+    la fila 30. El WAV 37 (162 s) encaja con las filas 35, 36 y 37 del metafile, tres
+    grabaciones consecutivas de COLUMBIA del mismo día (2016-08-27) que suman 23 + 9 + 133 =
+    165 s. En cualquier caso, los dos van al grupo COLUMBIA y no pueden separarse entre
+    particiones (D-007).
 - **`vessel_group`:** clase + nombre normalizado (sin espacios a los lados, en mayúsculas y con
   los espacios internos colapsados). Todos los nombres que empiezan por "QUEEN OF" forman un solo
   grupo, al que también se une BOWEN QUEEN por precaución ([D-011](../DECISIONS.md)). Ningún

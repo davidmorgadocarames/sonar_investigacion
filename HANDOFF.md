@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F1 Datos cerrada (F1-T08)
+- **Qué se hizo:** pasada del reviewer sobre F1: sin hallazgos críticos ni altos; 3 medios y 13
+  bajos. David aprobó D-014 (`vessels.csv` conserva el extracto de los metafiles bajo el supuesto
+  de licencia), DT-004 (test que regenere `vessels.csv`, al empezar F2), DT-005 (clase frente a
+  época de grabación, a vigilar en F3) y DT-006 (mejoras menores, en F2). Documentación corregida
+  (README: `qc` implementado e imagen de unos 500 MB; PLAN; CLAUDE.md; agente data-engineer;
+  "44 nombres de buque"; argumento de que Passengership 37 es COLUMBIA).
+- **Qué quedó a medias:** nada de F1. F2 no tiene tareas detalladas.
+- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`, `README.md`, `CLAUDE.md`,
+  `datasets/README.md`, `.claude/agents/data-engineer.md`.
+- **Cómo verificarlo:** los tests en Docker (71) y `docker compose run --rm --entrypoint python
+  pipeline tools/check_leaks.py` (OK).
+- **Siguiente paso exacto:** empezar F2 con el procedimiento de inicio de fase: proponer a David
+  las tareas de F2 (incluidas DT-004 y DT-006, y decidir la longitud de segmento), compararlas con
+  PLAN.md y esperar su aprobación. Abrir Claude Code dentro de `sonar_investigacion` para que se
+  carguen los subagentes de `.claude/agents/`.
+
 ## 2026-10-11 · F1-T06c cerrada: partición por buque
 - **Qué se hizo:** `data-engineer` creó `tools/make_split.py` (búsqueda exacta, coste L1 sobre las
   fracciones de minutos por clase) y generó `datasets/manifests/split.csv` (SHA-256
@@ -81,19 +98,3 @@ Plantilla:
 - **Después:** F1-T05b cerrada con D-009 (aprobada): no se excluye ninguna grabación; el offset
   DC se resta en F2. Nota en F3 sobre el desequilibrio de segmentos por clase.
 - **Siguiente paso exacto:** F1-T06a: tabla WAV → buque con `data-engineer`.
-
-## 2026-10-11 · F1-T04 cerrada: descarga de DeepShip desde el README
-- **Qué se hizo:** se revisaron las tareas pendientes de F1 (T05b, T06a, T06b y T06c nuevas;
-  aprobadas por David) y se añadió a CLAUDE.md el procedimiento de inicio y cierre de fase.
-  Sección "Datos" del README con dos comandos git y uno de comprobación. El friend-tester los
-  siguió en un clon limpio: 58 s de descarga, 63 WAV (12/20/28/3), 68 de 68 ficheros idénticos
-  byte a byte y `git status` del proyecto vacío.
-- **Qué quedó a medias:** nada de F1-T04. Sugerencias del friend-tester sin aplicar (pendientes
-  de David): indicar en el README el tamaño de la imagen (unos 205 MB) y desglosar los 1,2 GB
-  (unos 500 MB son `.git`), y medir el build con la caché de Docker vacía (prueba de F4).
-- **Ficheros tocados:** `README.md`, `datasets/README.md`, `PLAN.md`, `CLAUDE.md`, `HANDOFF.md`.
-  El clon local `datasets/raw/DeepShip` tiene ahora `core.autocrlf=false` (fuera de git).
-- **Cómo verificarlo:** seguir la sección "Datos" del [README](README.md) en una carpeta
-  temporal; `git -C datasets/raw/DeepShip status` debe decir "working tree clean".
-- **Siguiente paso exacto:** F1-T05: añadir numpy y scipy con versión fijada (D-008) e
-  implementar `qc` con tests de señales sintéticas.

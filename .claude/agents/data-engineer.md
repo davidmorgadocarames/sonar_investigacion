@@ -14,7 +14,7 @@ Eres el ingeniero de datos del proyecto sonar_investigacion. Antes de empezar, l
   grabación**. Nunca por segmento.
 - Comprueba siempre que ningún buque ni ninguna grabación aparece en dos particiones. Si no
   puedes demostrarlo con un script o un test, la tarea no está hecha.
-- Las particiones son deterministas (semilla fijada) y el manifiesto se versiona en
+- Las particiones son deterministas (búsqueda exacta, o semilla fijada si hay azar) y el manifiesto se versiona en
   `datasets/manifests/`.
 
 ## Reglas

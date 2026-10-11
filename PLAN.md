@@ -5,12 +5,12 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F1 Datos**
+- **Fase actual:** **F2 Señal** (tareas pendientes de proponer y aprobar)
 
 | Fase | Nombre | Estado |
 |---|---|---|
 | F0 | Setup | [x] |
-| F1 | Datos | [ ] |
+| F1 | Datos | [x] |
 | F2 | Señal | [ ] |
 | F3 | Modelo | [ ] |
 | F4 | Entrega | [ ] |
@@ -31,13 +31,13 @@ quedan a alto nivel.
 - [x] F0-T03 · CLAUDE.md, DECISIONS.md, README.md, datasets/README.md y subagentes · orquestador · ficheros en commit; CLAUDE.md con menos de 120 líneas
 - [x] F0-T04 · PLAN.md y HANDOFF.md, con F1 detallada · orquestador · último commit en `origin/main`
 
-## F1 · Datos — [ ] fase actual
+## F1 · Datos — [x] hecha (2026-10-11)
 
 - **Objetivo:** tener DeepShip localizado, verificado, con control de calidad y particionado sin
   fugas, y decidir cómo le llegan los datos al amigo.
-- **Entregable:** script de obtención con checksums, subcomando `qc`, manifiesto de partición
+- **Entregable:** comandos de descarga en el README (D-006), subcomando `qc`, manifiesto de partición
   versionado y comprobación de fugas.
-- **Criterio de salida:** licencia confirmada; decisión de distribución aprobada; manifiesto en
+- **Criterio de salida:** licencia revisada y supuesto aceptado por David (D-014); decisión de distribución aprobada; manifiesto en
   `datasets/manifests/`; la comprobación de fugas pasa; la pasada del reviewer no deja
   hallazgos graves abiertos.
 
@@ -49,13 +49,14 @@ quedan a alto nivel.
 - [x] F1-T05b · Proponer qué hacer con las grabaciones que el QC marque (muy cortas, con offset DC, saturadas...): excluirlas, conservarlas o tratarlas aparte · orquestador → David · decisión aprobada y apuntada en DECISIONS.md (D-009)
 - [x] F1-T06a · Tabla WAV → buque en `datasets/manifests/`, generada por un script de `tools/` a partir de los metafiles (D-007) · data-engineer · incluye el SHA-256 de cada WAV y el origen de cada asignación (id o duración); los grupos dudosos van juntos; al regenerarla sale el mismo fichero
 - [x] F1-T06b · Comprobación de fugas en `tools/` y test de DT-002, antes de partir · data-engineer · falla si un buque o una grabación aparece en dos particiones; tiene un test con un caso con fuga y otro sin ella; otro test comprueba que la duración de cada WAV coincide con la de su fila del metafile en los 61 casos verificados (paga DT-002); un listado de grupos con nombres parecidos revisado con David (paga DT-003)
-- [x] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David (D-013) · determinista (semilla fijada); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa y queda como test permanente sobre el `split.csv` versionado (D-012); al regenerarla sale el mismo fichero
-- [ ] F1-T08 · Pasada del reviewer sobre F1 y cierre de fase · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
+- [x] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David (D-013) · determinista (búsqueda exacta sin azar, D-013); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa y queda como test permanente sobre el `split.csv` versionado (D-012); al regenerarla sale el mismo fichero
+- [x] F1-T08 · Pasada del reviewer sobre F1 y cierre de fase · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
 ## F2 · Señal
 
 - **Objetivo:** preprocesado (quitar el offset DC, normalizar, segmentar), LOFAR y DEMON.
 - **Entregable:** subcomando `features` y figuras de ejemplo en `outputs/`.
+- **Al empezar:** pagar DT-004 (test que regenera `vessels.csv`) y DT-006 (mejoras menores).
 - **Criterio de salida:** tests con señales sintéticas: un tono conocido aparece en el LOFAR en
   su frecuencia, y una modulación conocida aparece en el DEMON en su frecuencia.
 

@@ -7,8 +7,8 @@ Passengership, Tanker, Tug):
 WAV → control de calidad → preprocesado → LOFAR y DEMON → clasificador → evaluación → informe
 ```
 
-> **Estado:** esqueleto. Este README se completa en la fase F4. Por ahora solo se puede
-> construir la imagen y ver la ayuda.
+> **Estado:** en construcción. Este README se completa en la fase F4. Por ahora se puede
+> construir la imagen, descargar los datos y ejecutar el control de calidad (`qc`).
 
 ## Requisitos
 
@@ -26,7 +26,7 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    cd sonar_investigacion
    ```
 
-2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 205 MB:
+2. Construye la imagen. La primera vez tarda unos minutos; la imagen ocupa unos 500 MB:
 
    ```bash
    docker compose build
@@ -38,8 +38,8 @@ No hace falta instalar Python ni nada más: todo se ejecuta dentro del contenedo
    docker compose run --rm pipeline --help
    ```
 
-   Debe mostrar los comandos `qc`, `features`, `train`, `evaluate` y `report`. Todavía no
-   están implementados.
+   Debe mostrar los comandos `qc`, `features`, `train`, `evaluate` y `report`. Por ahora
+   solo `qc` está implementado; los demás llegan en fases posteriores.
 
 ## Datos
 

@@ -190,10 +190,27 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   un orden fijo: grupos por duración descendente y luego por nombre, probando train < val < test.
   David aprobó la partición resultante (SHA-256 `51564cf1…b5a7`).
 
+### D-014 · `vessels.csv` versiona un extracto de los metafiles de DeepShip
+- **Fecha:** 2026-10-11
+- **Contexto:** la revisión de F1 (F1-T08) señaló que `datasets/manifests/vessels.csv` copia parte
+  de los metafiles de DeepShip (nombre del buque, código AIS, fecha, hora, duración y el 7.º
+  campo) para 63 grabaciones, y que la licencia de DeepShip no está confirmada (solo hay un
+  supuesto de uso académico).
+- **Alternativas:** (a) conservar todas las columnas; (b) quitar las que no hacen falta para
+  partir (código AIS, fecha, hora y 7.º campo).
+- **Decisión:** (a). `vessels.csv` conserva sus columnas y datos, bajo el mismo supuesto de
+  licencia que D-006: uso académico con cita, en un repositorio privado. No se redistribuye ningún
+  audio. El criterio de salida de F1 pasa a ser "licencia revisada y supuesto aceptado por David".
+- **Motivo:** son datos factuales y pocos, y son necesarios para trazar cada asignación WAV →
+  buque (D-010).
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
 |---|---|---|---|---|---|
 | DT-001 | El UID 1000 del usuario `app` está fijo en la imagen. | Es el UID habitual del primer usuario en Linux, y en Docker Desktop (Windows y macOS) no afecta. | En Linux, con otro UID, el contenedor no puede escribir en los volúmenes montados (`outputs/`). | En F4, si el friend-tester lo detecta. | Abierta |
-| DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06/T07: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Pagada (2026-10-11): `tests/test_vessel_table_data.py` |
+| DT-002 | La asignación WAV → buque no viene dada directamente: 35 WAV se unen por id, 26 se deducen comparando su duración con la del metafile y 2 (Passengership 30 y 37) no cuadran por duración. | En los 61 casos verificados la duración coincide con un margen de 1 s, y los 2 dudosos se agrupan con COLUMBIA (D-007), así que no pueden separarse entre particiones. | Si una deducción fuera errónea, una grabación podría ir a la partición equivocada y provocar una fuga. | En F1-T06b: un test que compruebe que la duración de cada WAV coincide con la de su fila asignada en los 61 casos verificados. | Pagada (2026-10-11): `tests/test_vessel_table_data.py` |
 | DT-003 | Algunos nombres de buque de los metafiles parecen cortados ("QUEEN OF", "CABO DE", "OTTO H", "SPIRIT OF"...). Un mismo buque podría aparecer con dos nombres distintos y formar dos grupos. | No se ha visto en los 44 grupos con WAV; los nombres cortados conocidos sin WAV no afectan a la partición, y "QUEEN OF" ya es un solo grupo (D-007). | Si ocurriera, el mismo buque podría acabar en dos particiones (fuga). | En F1-T06b: listar los grupos con WAV cuyos nombres se parezcan (p. ej., mismo prefijo) y revisarlos con David. | Pagada (2026-10-11): listado revisado con David; D-011 |
+| DT-004 | Ningún test regenera `vessels.csv` desde los audios: si cambian las reglas de `build_vessel_table.py` (agrupación, alineamiento) y no se regenera la tabla, los tests siguen en verde con la tabla antigua. | La tabla actual está comprobada a mano y por los tests de DT-002. | El script y la tabla podrían divergir sin aviso; al regenerarla cambiarían grupos y partición sin que nadie lo haya decidido. | Al empezar F2: un test que ejecute el script sobre `datasets/raw/DeepShip`, escriba en una carpeta temporal y compare byte a byte con la versionada; se salta si no hay audios. | Abierta |
+| DT-005 | La clase coincide con la época de grabación: Cargo y Tug se grabaron en noviembre y diciembre de 2017, y Passengership y Tanker en 2016. Además, la duración depende de la clase (D-009). | No es una fuga entre particiones y no se puede corregir con estos datos. | Un modelo podría aprender la época, las condiciones del mar o la duración en vez de la firma del buque, y los resultados parecerían mejores de lo que son. | En F3: comprobar que un clasificador trivial (solo duración o ruido de fondo) no acierta demasiado, e informarlo junto a los resultados. | Abierta |
+| DT-006 | Mejoras técnicas menores de la revisión de F1: la asignación por id toma la primera fila sin avisar si el id estuviera repetido (`build_vessel_table.py`); `qc.csv` usa CRLF y orden lexicográfico; un test de `qc` compara solo nombres y no contenido; el test de `--help` busca subcadenas; `python:3.11-slim` sin versión exacta y el índice de PyTorch aplicado a todas las dependencias; las extensiones de audio de `.gitignore` distinguen mayúsculas (el hook `forbid-audio` sí lo cubre); los tests de datos fallan en vez de saltarse si se usa `docker run` sin compose. | Ninguna afecta hoy a los datos ni a la partición. | Bajo: fragilidad y pequeñas incoherencias. | En F2, al tocar esos ficheros. | Abierta |

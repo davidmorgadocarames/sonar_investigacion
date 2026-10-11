@@ -31,7 +31,7 @@ subagentes existen para trabajar con un contexto limpio; no pueden lanzar otros 
    se espera la aprobación de David. Si no la aprueba, no se apunta.
 3. **Infraestructura mínima.** No se añade ninguna herramienta que no pida una tarea concreta.
 4. **Audio.** Ningún audio entra en git sin aprobación expresa. Lo impiden `.gitignore` y el
-   hook `forbid-audio` de pre-commit. Cómo le llegan los datos al amigo se decide en F1.
+   hook `forbid-audio` de pre-commit. Cómo le llegan los datos al amigo está en D-006.
 5. **Particiones.** train/val/test se hacen **por buque** si los metadatos lo permiten; si no,
    por grabación. **Nunca por segmento.** El manifiesto con la partición se versiona en
    `datasets/manifests/`.
