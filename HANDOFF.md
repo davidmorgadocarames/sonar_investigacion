@@ -17,6 +17,24 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T04 cerrada: métricas y `metrics.json`
+- **Qué se hizo:** `src/sonar_pipeline/metrics.py`: F1 macro y por clase (sobre las 4 clases);
+  matriz de confusión en cuentas y normalizada por clase real; ROC una frente al resto (Pfa, Pd,
+  AUC, Pd a Pfa = 1 % interpolada); bootstrap de 2000 remuestreos de grabaciones dentro de cada
+  clase (percentiles del 95 %); `evaluate_split` por segmento y por grabación; coste (`torch_cost`
+  con el contador de FLOPs de PyTorch, `linear_model_cost`); `stopwatch`; hardware (CPU, hilos,
+  GPU, versiones); trazabilidad (de `features_meta.json` más un hash del contenido de los arrays,
+  porque los bytes del zip cambian); `write_metrics` (JSON estricto, NaN a null, claves
+  ordenadas, LF). El esquema de `metrics.json` está en el docstring del módulo. 15 tests con casos
+  calculados a mano (uno demuestra que se remuestrean grabaciones y no segmentos). 181 tests.
+- **Qué quedó a medias:** nada. Ojo: pre-commit no revisa ficheros nuevos sin `git add -N`.
+- **Ficheros tocados:** `src/sonar_pipeline/metrics.py`, `tests/test_metrics.py`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
+  tests/test_metrics.py`.
+- **Siguiente paso exacto:** F3-T05: clasificador trivial de DT-005 (solo duración de la
+  grabación). Es un ajuste de regresión logística de segundos: avisar a David igualmente.
+
 ## 2026-10-11 · F3-T03 cerrada: módulo de datos
 - **Qué se hizo:** `src/sonar_pipeline/dataset.py`: `CLASSES` en orden fijo (Cargo,
   Passengership, Tanker, Tug); `load_split` carga una partición y falla si un segmento del `.npz`
@@ -65,40 +83,3 @@ Plantilla:
 - **Siguiente paso exacto:** F3-T02: proponer D-019 (scikit-learn y PyTorch CPU). **Antes de
   cualquier entrenamiento o test de permutación, avisar a David con una estimación de tiempo; y
   hacer commit de un modelo entrenado antes de permutar.** Test no se mira hasta F3-T09.
-
-## 2026-10-11 · F2 Señal cerrada (F2-T09)
-- **Qué se hizo:** pasada del reviewer sobre F2: sin hallazgos críticos ni altos; los 2 medios y
-  los 9 bajos se arreglaron en F2-T10 (ajuste 2 de D-015 y D-017, aprobados por David). Criterio
-  de salida cumplido: un tono conocido aparece en el LOFAR en su bin y una modulación conocida en
-  el DEMON en su bin, con controles negativos que hacen fallar los tests si se rompe el
-  antialiasing o el paso banda. Entregable: subcomando `features` (1889 segmentos, unos 85 MB en
-  `datasets/processed/`) y figuras en `outputs/figures/`.
-- **Qué quedó a medias:** nada de F2. F3 no tiene tareas detalladas. Deudas abiertas: DT-001
-  (UID, F4) y DT-005 (clase frente a época, a vigilar en F3).
-- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
-  (152 passed).
-- **Siguiente paso exacto:** empezar F3 con el procedimiento de inicio de fase: proponer a David
-  las tareas (incluidas las notas de F3 en PLAN.md: pesos por clase, validación cruzada por buque,
-  `metrics.json`, DT-005, scikit-learn, PyTorch CPU, dónde se guardan y versionan los pesos) y
-  **avisar a David antes de lanzar cualquier entrenamiento**.
-
-## 2026-10-11 · F2-T10 cerrada: hallazgos de la revisión de F2 arreglados
-- **Qué se hizo:** el reviewer no dejó hallazgos críticos ni altos; 2 medios y 9 bajos, todos
-  arreglados con aprobación de David. M1: LOFAR diezmado a 5 kHz (ajuste 2 de D-015); un tono de
-  2100 Hz ya no aparece en 1900 Hz; tests de 2050 a 3000 Hz que fallan con el diezmado antiguo.
-  M2: D-017, `requirements.txt` con todas las dependencias (directas y transitivas); un build sin
-  caché instala exactamente lo mismo. `features` comprueba el SHA-256 de cada WAV contra
-  `vessels.csv`, guarda el SHA de `vessels.csv`, el commit de DeepShip (77725726…) y la versión
-  de matplotlib, y borra `.npz` de particiones vacías; figuras solo de train y con el tiempo y la
-  frecuencia en su sitio. Tests nuevos: bin exacto, aliasing en DEMON (falla con diezmado sin
-  filtro), independencia entre grabaciones, partición del índice. Agentes con `-rs`; README con
-  la imagen en unos 630 MB (los 116/147 MB de antes eran tamaños comprimidos). 152 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/{params,lofar,demon,features,figures,__main__}.py`,
-  `tests/test_{lofar,demon,features,figures}.py`, `requirements.txt`, `README.md`,
-  `.claude/agents/{data-engineer,reviewer}.md`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
-  (152 passed) y `docker compose run --rm pipeline features --figures`.
-- **Siguiente paso exacto:** cerrar F2 (F2-T09) y empezar F3 con el procedimiento de inicio de
-  fase; avisar a David antes de cualquier entrenamiento.
