@@ -5,13 +5,13 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F2 Señal**
+- **Fase actual:** **F3 Modelo** (tareas pendientes de proponer y aprobar)
 
 | Fase | Nombre | Estado |
 |---|---|---|
 | F0 | Setup | [x] |
 | F1 | Datos | [x] |
-| F2 | Señal | [~] |
+| F2 | Señal | [x] |
 | F3 | Modelo | [ ] |
 | F4 | Entrega | [ ] |
 
@@ -52,7 +52,7 @@ quedan a alto nivel.
 - [x] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David (D-013) · determinista (búsqueda exacta sin azar, D-013); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa y queda como test permanente sobre el `split.csv` versionado (D-012); al regenerarla sale el mismo fichero
 - [x] F1-T08 · Pasada del reviewer sobre F1 y cierre de fase · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
-## F2 · Señal — [~] en curso (tareas aprobadas por David el 2026-10-11)
+## F2 · Señal — [x] hecha (2026-10-11)
 
 - **Objetivo:** preprocesado (quitar el offset DC, normalizar, segmentar), LOFAR y DEMON.
 - **Entregable:** subcomando `features` y figuras de ejemplo en `outputs/`.
@@ -68,7 +68,7 @@ quedan a alto nivel.
 - [x] F2-T06 · DEMON (paso banda, envolvente con Hilbert, paso bajo, diezmado, espectro) · orquestador · ruido en banda modulado a `fm` conocida da un pico en `fm` (±1 bin); sin modulación no hay pico
 - [x] F2-T07 · Subcomando `features` · orquestador · lee `split.csv`, escribe en `datasets/processed/` con un índice por segmento (`wav_path`, clase, partición, n.º de segmento); determinista; test de principio a fin con un mini dataset sintético; sobre los datos reales informa de los segmentos por clase y partición; README actualizado
 - [x] F2-T08 · Figuras de ejemplo en `outputs/figures/` (LOFARgram y DEMON de una grabación por clase, y validación sintética) · orquestador · se generan desde la CLI; matplotlib aprobada antes como dependencia (regla 3, D-002)
-- [~] F2-T09 · Pasada del reviewer y cierre de F2 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
+- [x] F2-T09 · Pasada del reviewer y cierre de F2 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 - [x] F2-T10 · Arreglar los hallazgos de la revisión de F2 (aprobado por David) · orquestador · LOFAR diezmado a 5 kHz sin aliasing en 0-2 kHz (ajuste de D-015) con test de tonos a 2050 y 2100 Hz; todas las dependencias fijadas (D-017); `features` comprueba el SHA-256 de los WAV, guarda el SHA de `vessels.csv` y el commit de DeepShip y borra `.npz` antiguos; figuras solo de train y ejes correctos; tests de bin exacto, aliasing en DEMON, independencia entre grabaciones y partición del índice; documentación coherente
 
 ## F3 · Modelo

@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F2 Señal cerrada (F2-T09)
+- **Qué se hizo:** pasada del reviewer sobre F2: sin hallazgos críticos ni altos; los 2 medios y
+  los 9 bajos se arreglaron en F2-T10 (ajuste 2 de D-015 y D-017, aprobados por David). Criterio
+  de salida cumplido: un tono conocido aparece en el LOFAR en su bin y una modulación conocida en
+  el DEMON en su bin, con controles negativos que hacen fallar los tests si se rompe el
+  antialiasing o el paso banda. Entregable: subcomando `features` (1889 segmentos, unos 85 MB en
+  `datasets/processed/`) y figuras en `outputs/figures/`.
+- **Qué quedó a medias:** nada de F2. F3 no tiene tareas detalladas. Deudas abiertas: DT-001
+  (UID, F4) y DT-005 (clase frente a época, a vigilar en F3).
+- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (152 passed).
+- **Siguiente paso exacto:** empezar F3 con el procedimiento de inicio de fase: proponer a David
+  las tareas (incluidas las notas de F3 en PLAN.md: pesos por clase, validación cruzada por buque,
+  `metrics.json`, DT-005, scikit-learn, PyTorch CPU, dónde se guardan y versionan los pesos) y
+  **avisar a David antes de lanzar cualquier entrenamiento**.
+
 ## 2026-10-11 · F2-T10 cerrada: hallazgos de la revisión de F2 arreglados
 - **Qué se hizo:** el reviewer no dejó hallazgos críticos ni altos; 2 medios y 9 bajos, todos
   arreglados con aprobación de David. M1: LOFAR diezmado a 5 kHz (ajuste 2 de D-015); un tono de
@@ -90,20 +107,3 @@ Plantilla:
   tests/test_demon.py`.
 - **Siguiente paso exacto:** F2-T07: subcomando `features` (lee `split.csv`, escribe los `.npz`,
   `index.csv` y `features_meta.json` en `datasets/processed/`) y README.
-
-## 2026-10-11 · F2-T05 cerrada: LOFAR
-- **Qué se hizo:** `src/sonar_pipeline/lofar.py` (D-015): diezmado a 4 kHz con `resample_poly`,
-  STFT Hann de 0,5 s / 0,25 s (11 tramas × 1001 bins de 2 Hz), TPSW por trama a lo largo de la
-  frecuencia y dB sobre el fondo (suelo numérico de -100 dB). 9 tests: un tono débil (0,1 en ruido
-  de 1) a 440, 333 y 1234,5 Hz da el máximo en su bin (±1) en todas las tramas y a más de 10 dB;
-  un tono de 3 kHz no se cuela en 1 kHz; el ruido blanco y el rojo quedan planos (±10 % entre
-  bandas). Comprobado que los tests fallan con un diezmado sin filtro (alias de 15,6 dB) y sin
-  TPSW (ruido rojo 69 veces más fuerte en unas bandas que en otras). 104 tests.
-- **Qué quedó a medias:** nada. Nota: el ruido normalizado queda en un nivel constante de unos
-  +1,4 dB en potencia media (-0,9 dB de media en dB), no en 0 exacto, por el recorte de la segunda
-  pasada del TPSW; no afecta a la forma.
-- **Ficheros tocados:** `src/sonar_pipeline/lofar.py`, `tests/test_lofar.py`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
-  tests/test_lofar.py`.
-- **Siguiente paso exacto:** F2-T06: DEMON con el test de la modulación conocida.
