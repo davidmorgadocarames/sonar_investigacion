@@ -5,15 +5,16 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F3 Modelo** (tareas pendientes de proponer y aprobar)
+- **Fase actual:** **F3 Modelo**
 
 | Fase | Nombre | Estado |
 |---|---|---|
 | F0 | Setup | [x] |
 | F1 | Datos | [x] |
 | F2 | Señal | [x] |
-| F3 | Modelo | [ ] |
+| F3 | Modelo | [~] |
 | F4 | Entrega | [ ] |
+| F5 | Atención (opcional) | [ ] |
 
 ---
 
@@ -71,37 +72,40 @@ quedan a alto nivel.
 - [x] F2-T09 · Pasada del reviewer y cierre de F2 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 - [x] F2-T10 · Arreglar los hallazgos de la revisión de F2 (aprobado por David) · orquestador · LOFAR diezmado a 5 kHz sin aliasing en 0-2 kHz (ajuste de D-015) con test de tonos a 2050 y 2100 Hz; todas las dependencias fijadas (D-017); `features` comprueba el SHA-256 de los WAV, guarda el SHA de `vessels.csv` y el commit de DeepShip y borra `.npz` antiguos; figuras solo de train y ejes correctos; tests de bin exacto, aliasing en DEMON, independencia entre grabaciones y partición del índice; documentación coherente
 
-## F3 · Modelo
+## F3 · Modelo — [~] en curso (tareas aprobadas por David el 2026-10-11)
 
-- **Objetivo:** una línea base clásica (rasgos + regresión logística o random forest) frente a
-  una CNN pequeña en PyTorch.
-- **Entregable:** subcomandos `train` y `evaluate`, y pesos exportados a `models/`.
-- **Nota:** Tug solo tiene 3 buques, así que su métrica en test saldrá de una sola grabación.
-  Al detallar F3, valorar una validación cruzada agrupada por buque además del bootstrap.
-- **Nota:** la duración de las grabaciones depende de la clase (D-009); al segmentar, cada clase
-  aportará un número de segmentos muy distinto (Cargo tiene el doble de horas que
-  Passengership). Compensarlo con pesos por clase o muestreo equilibrado.
-- **Nota:** la partición (D-013) cumple 60/20/20 por clase, pero en el total test pesa un 23 %
-  (57/20/23). En Tanker hay varios repartos con coste 0 y se elige el primero en orden fijo:
-  reproducible, pero arbitrario.
-- **Nota (propuesta de resultados, a concretar en tareas y decisiones al detallar F3):**
-  - Todas las métricas van a `outputs/results/metrics.json`: trazabilidad (commit del proyecto,
-    commit de DeepShip, SHA-256 de `split.csv`, semillas y versiones), métricas por modelo y
-    clase con intervalos por bootstrap, matriz de confusión, puntos ROC y AUC, por segmento y
-    por grabación.
-  - Gráficas: matriz de confusión normalizada (línea base y CNN); F1 macro con intervalos;
-    curvas ROC como Pd frente a Pfa, una por clase (una frente al resto), con AUC, Pfa en escala
-    logarítmica y Pd a Pfa = 1 %; SHAP sobre la línea base (qué frecuencias de LOFAR y DEMON usa);
-    mapa de oclusión o Grad-CAM sobre el LOFARgram para la CNN.
-  - Los intervalos se calculan remuestreando grabaciones, no segmentos. Tug tiene una sola
-    grabación en test: su ROC y su F1 serán muy inestables.
-  - Dependencias a decidir: `scikit-learn`, `matplotlib` y `shap`.
-- **Nota (David, 2026-10-11):** avisar a David y esperar su visto bueno antes de lanzar
-  cualquier entrenamiento. Los pesos se guardan siempre en `models/` (volumen montado, quedan
-  en el PC de David); si ocupan menos de 10 MB se versionan también en git (a decidir al
-  detallar F3).
-- **Criterio de salida:** F1 macro, matriz de confusión e intervalos por bootstrap sobre test
-  para los dos modelos; `evaluate` funciona en CPU con los pesos versionados.
+- **Objetivo:** una línea base clásica (regresión logística sobre rasgos) frente a una CNN pequeña
+  en PyTorch, entrenada sin y con aumento de datos.
+- **Entregable:** subcomandos `train` y `evaluate`, pesos en `models/` y
+  `outputs/results/metrics.json` con figuras.
+- **Reglas de la fase (David, 2026-10-11):**
+  - **Test no se mira hasta F3-T09.** Todo ajuste y toda comparación (también con o sin aumento
+    de datos) se decide con val o con validación cruzada dentro de train + val.
+  - **Avisar a David y esperar su visto bueno antes de lanzar cualquier entrenamiento.**
+  - Los pesos se guardan siempre en `models/` (volumen montado, quedan en el PC de David); si
+    ocupan menos de 10 MB se versionan también en git.
+- **Contexto (notas de F1 y F2):** Tug tiene 3 buques (1/1/1), así que su métrica en test sale de
+  una sola grabación; cada clase aporta un número de segmentos muy distinto (D-009), compensado
+  con pesos por clase; en el total test pesa un 23 % (57/20/23) y en Tanker el reparto con coste 0
+  se eligió en orden fijo (D-013); los intervalos se calculan remuestreando grabaciones, no
+  segmentos.
+- **Descartado (David, 2026-10-11):** SwiGLU, RoPE, RMSNorm, Grouped Query Attention (no aportan
+  a una CNN con estos datos) y SHAP (dependencias pesadas; se usa importancia por permutación).
+- **Criterio de salida:** F1 macro, matriz de confusión e intervalos por bootstrap sobre test para
+  la línea base, la CNN y la CNN con aumento; `evaluate` funciona en CPU con los pesos
+  versionados; la pasada del reviewer no deja hallazgos graves abiertos.
+
+- [~] F3-T01 · Proponer el diseño del modelo y de la evaluación · orquestador → David · decisión aprobada y apuntada (D-018): línea base, arquitectura y entrenamiento de la CNN, aumento de datos, agregación por grabación, validación cruzada y test de permutación por buque, contenido de `metrics.json`, interpretabilidad, versionado de pesos
+- [ ] F3-T02 · Dependencias: scikit-learn y PyTorch CPU · orquestador · decisión aprobada (D-019); PyTorch desde `TORCH_INDEX_URL` en un paso aparte; lista completa regenerada (D-017); build OK y tamaño de la imagen medido e informado
+- [ ] F3-T03 · Módulo de datos: carga de `.npz` e índice, etiquetas, pesos por clase y agregación por grabación (media de probabilidades) · orquestador · tests con datos de juguete; nunca mezcla particiones
+- [ ] F3-T04 · Módulo de métricas y `metrics.json` · orquestador · F1 macro y por clase con bootstrap por grabaciones; matriz de confusión por segmento y por grabación; ROC Pd/Pfa una frente al resto con AUC y Pd a Pfa = 1 %; trazabilidad (SHA-256 de `split.csv` y de los rasgos, `code_sha256`, semillas, versiones); parámetros, FLOPs, tiempo de entrenamiento y de inferencia con el hardware y los hilos; tests con casos de resultado conocido
+- [ ] F3-T05 · Comprobar DT-005 con un clasificador trivial (solo duración de la grabación) · orquestador · F1 en val informado a David y decisión sobre si preocupa
+- [ ] F3-T06 · Línea base: regresión logística (`train --model baseline`) · orquestador · estandarización y pesos por clase; hiperparámetros con val; validación cruzada agrupada por buque en train + val; test de permutación con etiquetas permutadas por buque; pesos en `models/`; **aviso a David antes de entrenar**
+- [ ] F3-T07 · CNN base sin aumento de datos (`train --model cnn`) · orquestador · rama 2D (LOFAR) y 1D (DEMON); BatchNorm, LeakyReLU, AdamW con weight decay, decaimiento del lr, minibatches de 32-64, pesos por clase, parada temprana con F1 macro de val, semillas fijadas; pesos en `models/`; **aviso a David antes de entrenar**
+- [ ] F3-T08 · CNN con aumento de datos (`train --model cnn-aug`) · orquestador · misma CNN y semillas, con enmascarado de frecuencia y tiempo y pequeños desplazamientos solo en train; comparación con F3-T07 en val; se conservan e informan los dos modelos; **aviso a David antes de entrenar**
+- [ ] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
+- [ ] F3-T10 · Interpretabilidad · orquestador · línea base: importancia por permutación de bandas de frecuencia; CNN: saliencia por gradientes y oclusión sobre el LOFARgram; mapas en `.npz` y PNG, resumen por banda y clase en `metrics.json`
+- [ ] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
 ## F4 · Entrega
 
@@ -119,3 +123,11 @@ quedan a alto nivel.
   ejemplo por clase, y validación con señales sintéticas).
 - **Criterio de salida:** la pasada del reviewer y la del friend-tester no dejan hallazgos
   bloqueantes.
+
+## F5 · Atención (opcional) — después de F4
+
+- **Objetivo (David, 2026-10-11):** fase completamente opcional, al terminar el proyecto entero:
+  comparar con la CNN base una capa pequeña que pondere las 11 tramas de tiempo y un transformer
+  diminuto sobre trozos de frecuencia.
+- **Nota:** con 43 buques el riesgo de sobreajuste es alto; la comparación se hace con las mismas
+  reglas que F3 (val para decidir, test una sola vez).
