@@ -46,7 +46,7 @@ quedan a alto nivel.
 - [x] F1-T03 · Inventariar DeepShip: estructura de carpetas, metadatos y si identifican el buque · data-engineer · informe con conteos por clase, buque y grabación, y unidad de partición elegida (buque o grabación) con su justificación (resultado: 63 WAV, 44 buques, partición por buque, D-007)
 - [x] F1-T04 · Comandos de descarga en el README (`git clone -c core.autocrlf=false` + checkout del commit fijado, D-006) · orquestador; prueba en limpio: friend-tester · siguiendo solo la sección "Datos" del README en una carpeta temporal limpia: quedan 63 WAV en `datasets/raw/DeepShip` (12/20/28/3), idénticos byte a byte a la fuente, y `git status` del proyecto no muestra ningún audio
 - [x] F1-T05 · Subcomando `qc` con numpy y scipy (D-008): frecuencia de muestreo, mono, float32, duración, offset DC, saturación (\|x\| ≥ 1,0), NaN o infinitos y silencio · orquestador · tests con señales sintéticas de respuesta conocida que pasan; `qc` escribe `outputs/qc/qc.csv` con una fila por WAV y no excluye ningún fichero (la comparación de duración con el metafile se hace en F1-T06b)
-- [ ] F1-T05b · Proponer qué hacer con las grabaciones que el QC marque (muy cortas, con offset DC, saturadas...): excluirlas, conservarlas o tratarlas aparte · orquestador → David · decisión aprobada y apuntada en DECISIONS.md
+- [x] F1-T05b · Proponer qué hacer con las grabaciones que el QC marque (muy cortas, con offset DC, saturadas...): excluirlas, conservarlas o tratarlas aparte · orquestador → David · decisión aprobada y apuntada en DECISIONS.md (D-009)
 - [ ] F1-T06a · Tabla WAV → buque en `datasets/manifests/`, generada por un script de `tools/` a partir de los metafiles (D-007) · data-engineer · incluye el SHA-256 de cada WAV y el origen de cada asignación (id o duración); los grupos dudosos van juntos; al regenerarla sale el mismo fichero
 - [ ] F1-T06b · Comprobación de fugas en `tools/` y test de DT-002, antes de partir · data-engineer · falla si un buque o una grabación aparece en dos particiones; tiene un test con un caso con fuga y otro sin ella; otro test comprueba que la duración de cada WAV coincide con la de su fila del metafile en los 61 casos verificados (paga DT-002)
 - [ ] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David · determinista (semilla fijada); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa; al regenerarla sale el mismo fichero
@@ -66,6 +66,9 @@ quedan a alto nivel.
 - **Entregable:** subcomandos `train` y `evaluate`, y pesos exportados a `models/`.
 - **Nota:** Tug solo tiene 3 buques, así que su métrica en test saldrá de una sola grabación.
   Al detallar F3, valorar una validación cruzada agrupada por buque además del bootstrap.
+- **Nota:** la duración de las grabaciones depende de la clase (D-009); al segmentar, cada clase
+  aportará un número de segmentos muy distinto (Cargo tiene el doble de horas que
+  Passengership). Compensarlo con pesos por clase o muestreo equilibrado.
 - **Criterio de salida:** F1 macro, matriz de confusión e intervalos por bootstrap sobre test
   para los dos modelos; `evaluate` funciona en CPU con los pesos versionados.
 

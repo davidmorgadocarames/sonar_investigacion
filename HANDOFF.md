@@ -31,8 +31,9 @@ Plantilla:
   `HANDOFF.md`.
 - **Cómo verificarlo:** `docker compose build`, los tests y `docker compose run --rm pipeline
   qc` (unos 4 s; dice "63 WAV files checked").
-- **Siguiente paso exacto:** F1-T05b: proponer a David quitar el offset DC en el preprocesado
-  (F2) sin excluir ficheros, y qué hacer con las grabaciones cortas.
+- **Después:** F1-T05b cerrada con D-009 (aprobada): no se excluye ninguna grabación; el offset
+  DC se resta en F2. Nota en F3 sobre el desequilibrio de segmentos por clase.
+- **Siguiente paso exacto:** F1-T06a: tabla WAV → buque con `data-engineer`.
 
 ## 2026-10-11 · F1-T04 cerrada: descarga de DeepShip desde el README
 - **Qué se hizo:** se revisaron las tareas pendientes de F1 (T05b, T06a, T06b y T06c nuevas;

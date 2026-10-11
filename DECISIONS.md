@@ -111,6 +111,22 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** numpy y scipy harán falta igualmente en F2 para LOFAR y DEMON, así que no se añade
   ninguna dependencia que no se fuera a usar.
 
+### D-009 · No se excluye ninguna grabación por el QC
+- **Fecha:** 2026-10-11
+- **Contexto:** el QC (F1-T05) marca un offset DC positivo casi constante (0,027 a 0,032) en los
+  63 WAV, en la mayoría mayor que la señal. 16 grabaciones duran menos de 25 s (la más corta, 6 s:
+  Passengership 30). No hay recortes, NaN ni silencio. La duración va ligada a la clase: todos
+  los Cargo y Tug duran más de 120 s, y casi todos los Passengership y Tanker son cortos.
+- **Alternativas:** (a) excluir los ficheros marcados (no quedaría ninguno); (b) excluir los que
+  duren menos de un umbral (vaciaría Passengership y Tanker); (c) conservar los 63 y tratar los
+  problemas en el preprocesado.
+- **Decisión:** (c). El offset DC se resta por grabación en el preprocesado de F2; `flag_dc` se
+  mantiene en el QC como información. No se excluye ninguna grabación corta: solo se exige que
+  cada una tenga al menos un segmento completo. Si en F2 el segmento elegido dura más de 6 s, se
+  revisa esta decisión para Passengership 30.
+- **Motivo:** ningún fichero es defectuoso; el offset se corrige restando la media, y con tan
+  pocos datos excluir recortaría las clases más pequeñas.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |
