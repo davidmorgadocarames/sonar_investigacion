@@ -17,6 +17,22 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F1-T06c cerrada: partición por buque
+- **Qué se hizo:** `data-engineer` creó `tools/make_split.py` (búsqueda exacta, coste L1 sobre las
+  fracciones de minutos por clase) y generó `datasets/manifests/split.csv` (SHA-256
+  `51564cf1…b5a7`), aprobado por David: 57/20/23 % de minutos en total, Tug 1/1/1, sin fugas.
+  4 tests permanentes sobre el split versionado; 71 tests en total. Notas añadidas en F3 y F4
+  (peso de test, empates en Tanker, propuesta de resultados con JSON, ROC Pd/Pfa y SHAP).
+- **Qué quedó a medias:** D-013 dice "con semilla fijada" (David prefiere mantenerlo), pero
+  `make_split.py` no usa semilla porque no tiene azar; pendiente de que David decida si se ajusta
+  el código o se deja así.
+- **Ficheros tocados:** `tools/make_split.py`, `datasets/manifests/split.csv`,
+  `tests/test_make_split.py`, `tests/test_split_data.py`, `datasets/README.md`, `DECISIONS.md`,
+  `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline tools/check_leaks.py`
+  (OK) y los tests en Docker.
+- **Siguiente paso exacto:** F1-T08: pasada del reviewer y cierre de F1.
+
 ## 2026-10-11 · F1-T06b cerrada: comprobación de fugas
 - **Qué se hizo:** `data-engineer` creó `tools/check_leaks.py` (falla si un buque o una
   grabación, también por SHA-256, aparece en dos particiones, o si el split no cuadra con
@@ -82,17 +98,3 @@ Plantilla:
   temporal; `git -C datasets/raw/DeepShip status` debe decir "working tree clean".
 - **Siguiente paso exacto:** F1-T05: añadir numpy y scipy con versión fijada (D-008) e
   implementar `qc` con tests de señales sintéticas.
-
-## 2026-10-11 · F1-T03 cerrada: inventario de DeepShip
-- **Qué se hizo:** `data-engineer` clonó la fuente en `datasets/raw/DeepShip` e hizo el
-  inventario: son 63 WAV (12/20/28/3), no 67; todos son float32 a 32 kHz y mono; hay 44 buques,
-  identificados en los `*-metafile`. David aprobó D-007 (partición por buque), D-008 (numpy y
-  scipy), DT-002 (asignación WAV → buque deducida en parte por duración), la corrección del
-  recuento en D-005 y `core.autocrlf=false` en D-006.
-- **Qué quedó a medias:** nada de F1-T03. El inventario (`outputs/inventory/
-  deepship_inventory.csv`) está fuera de git; F1-T06 versionará la tabla WAV → buque.
-- **Ficheros tocados:** `DECISIONS.md`, `PLAN.md`, `datasets/README.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** D-007, D-008 y DT-002 en [DECISIONS.md](DECISIONS.md); hay 12, 20, 28
-  y 3 WAV en las carpetas de `datasets/raw/DeepShip/`.
-- **Siguiente paso exacto:** F1-T04: escribir en el README los comandos de descarga y probarlos
-  en una carpeta temporal limpia.

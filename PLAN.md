@@ -49,7 +49,7 @@ quedan a alto nivel.
 - [x] F1-T05b · Proponer qué hacer con las grabaciones que el QC marque (muy cortas, con offset DC, saturadas...): excluirlas, conservarlas o tratarlas aparte · orquestador → David · decisión aprobada y apuntada en DECISIONS.md (D-009)
 - [x] F1-T06a · Tabla WAV → buque en `datasets/manifests/`, generada por un script de `tools/` a partir de los metafiles (D-007) · data-engineer · incluye el SHA-256 de cada WAV y el origen de cada asignación (id o duración); los grupos dudosos van juntos; al regenerarla sale el mismo fichero
 - [x] F1-T06b · Comprobación de fugas en `tools/` y test de DT-002, antes de partir · data-engineer · falla si un buque o una grabación aparece en dos particiones; tiene un test con un caso con fuga y otro sin ella; otro test comprueba que la duración de cada WAV coincide con la de su fila del metafile en los 61 casos verificados (paga DT-002); un listado de grupos con nombres parecidos revisado con David (paga DT-003)
-- [ ] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David · determinista (semilla fijada); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa y queda como test permanente sobre el `split.csv` versionado (D-012); al regenerarla sale el mismo fichero
+- [x] F1-T06c · Partición train/val/test por buque en `datasets/manifests/` · data-engineer, con las proporciones aprobadas por David (D-013) · determinista (semilla fijada); un buque de Tug en cada partición; reparto equilibrado por duración; la comprobación de fugas de F1-T06b pasa y queda como test permanente sobre el `split.csv` versionado (D-012); al regenerarla sale el mismo fichero
 - [ ] F1-T08 · Pasada del reviewer sobre F1 y cierre de fase · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 
 ## F2 · Señal
@@ -69,6 +69,21 @@ quedan a alto nivel.
 - **Nota:** la duración de las grabaciones depende de la clase (D-009); al segmentar, cada clase
   aportará un número de segmentos muy distinto (Cargo tiene el doble de horas que
   Passengership). Compensarlo con pesos por clase o muestreo equilibrado.
+- **Nota:** la partición (D-013) cumple 60/20/20 por clase, pero en el total test pesa un 23 %
+  (57/20/23). En Tanker hay varios repartos con coste 0 y se elige el primero en orden fijo:
+  reproducible, pero arbitrario.
+- **Nota (propuesta de resultados, a concretar en tareas y decisiones al detallar F3):**
+  - Todas las métricas van a `outputs/results/metrics.json`: trazabilidad (commit del proyecto,
+    commit de DeepShip, SHA-256 de `split.csv`, semillas y versiones), métricas por modelo y
+    clase con intervalos por bootstrap, matriz de confusión, puntos ROC y AUC, por segmento y
+    por grabación.
+  - Gráficas: matriz de confusión normalizada (línea base y CNN); F1 macro con intervalos;
+    curvas ROC como Pd frente a Pfa, una por clase (una frente al resto), con AUC, Pfa en escala
+    logarítmica y Pd a Pfa = 1 %; SHAP sobre la línea base (qué frecuencias de LOFAR y DEMON usa);
+    mapa de oclusión o Grad-CAM sobre el LOFARgram para la CNN.
+  - Los intervalos se calculan remuestreando grabaciones, no segmentos. Tug tiene una sola
+    grabación en test: su ROC y su F1 serán muy inestables.
+  - Dependencias a decidir: `scikit-learn`, `matplotlib` y `shap`.
 - **Criterio de salida:** F1 macro, matriz de confusión e intervalos por bootstrap sobre test
   para los dos modelos; `evaluate` funciona en CPU con los pesos versionados.
 
@@ -78,5 +93,10 @@ quedan a alto nivel.
 - **Entregable:** README completo, informe de resultados (subcomando `report`) y etiqueta `v0.1`.
 - **Nota:** si el amigo no ha descargado los audios, los tests que los necesitan se saltan sin
   llamar la atención; revisarlo con el friend-tester.
+- **Nota (propuesta de resultados):** el subcomando `report` genera la sección de resultados del
+  README y las figuras solo a partir de `metrics.json`. Las figuras del README deben quedar
+  versionadas fuera de `outputs/` (p. ej. `docs/figures/`), lo que requiere una decisión. Incluir
+  también las gráficas de datos (minutos por clase y partición) y de señal (LOFARgram y DEMON de
+  ejemplo por clase, y validación con señales sintéticas).
 - **Criterio de salida:** la pasada del reviewer y la del friend-tester no dejan hallazgos
   bloqueantes.

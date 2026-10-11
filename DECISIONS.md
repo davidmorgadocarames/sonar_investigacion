@@ -170,6 +170,21 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** cada dato vive en un solo sitio, y el cruce con `vessels.csv` detecta cualquier
   desajuste.
 
+### D-013 · Proporciones de la partición: 60/20/20 en minutos por clase
+- **Fecha:** 2026-10-11
+- **Contexto:** 43 grupos de buque y 95,4 min de audio (Cargo 11 grupos/38,7 min, Passengership
+  10/19,1, Tanker 19/27,7, Tug 3/9,9). El grupo más grande pesa el 27 % de Passengership y el
+  34 % de Tug.
+- **Alternativas:** (a) 60/20/20; (b) 70/15/15 (val y test con 1 o 2 buques por clase); (c) sin
+  val, con validación cruzada (se valorará en F3 dentro de train + val, sin tocar test).
+- **Decisión:** (a), medido en **minutos de audio dentro de cada clase**, asignando buques
+  enteros. Cada clase tiene al menos un buque en cada partición (Tug queda 1/1/1). Un algoritmo
+  determinista con semilla fijada elige el reparto más cercano al objetivo, y
+  `tools/check_leaks.py` lo valida.
+- **Motivo:** los segmentos del modelo salen de los minutos, no de los ficheros, cuyas
+  duraciones van de 6 s a 204 s. Con tan pocos buques el reparto será aproximado; la tabla real
+  de minutos por partición y clase se revisa con David antes del commit.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

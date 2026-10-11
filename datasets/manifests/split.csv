@@ -1,0 +1,64 @@
+wav_path,vessel_class,vessel_group,split
+Cargo/15.wav,Cargo,Cargo/NEW NADA,test
+Cargo/27.wav,Cargo,Cargo/SEASPAN RELIANT,train
+Cargo/38.wav,Cargo,Cargo/MERLIN ARROW,val
+Cargo/41.wav,Cargo,Cargo/SEASPAN RELIANT,train
+Cargo/44.wav,Cargo,Cargo/GLOVIS CENTURY,train
+Cargo/62.wav,Cargo,Cargo/ULTRA EXCELLENCE,train
+Cargo/69.wav,Cargo,Cargo/GLOVIS CHORUS,test
+Cargo/78.wav,Cargo,Cargo/GALLEON,val
+Cargo/96.wav,Cargo,Cargo/ORIENT TRADER,train
+Cargo/99.wav,Cargo,Cargo/MARGUERITE ACE,test
+Cargo/103.wav,Cargo,Cargo/AFRICAN KITE,train
+Cargo/110.wav,Cargo,Cargo/VIKING ADVENTURE,train
+Passengership/1.wav,Passengership,Passengership/QUEEN OF,test
+Passengership/4.wav,Passengership,Passengership/MALASPINA,train
+Passengership/5.wav,Passengership,Passengership/RUBY PRINCESS,test
+Passengership/6.wav,Passengership,Passengership/COASTAL INSPIRATION,train
+Passengership/8.wav,Passengership,Passengership/KENNICOTT,train
+Passengership/9.wav,Passengership,Passengership/CARNIVAL LEGEND,val
+Passengership/12.wav,Passengership,Passengership/MALASPINA,train
+Passengership/14.wav,Passengership,Passengership/QUEEN OF,test
+Passengership/16.wav,Passengership,Passengership/MALASPINA,train
+Passengership/17.wav,Passengership,Passengership/COASTAL RENAISSANCE,train
+Passengership/23.wav,Passengership,Passengership/QUEEN OF,test
+Passengership/27.wav,Passengership,Passengership/KENNICOTT,train
+Passengership/29.wav,Passengership,Passengership/CRYSTAL SERENITY,train
+Passengership/30.wav,Passengership,Passengership/COLUMBIA,val
+Passengership/31.wav,Passengership,Passengership/KENNICOTT,train
+Passengership/32.wav,Passengership,Passengership/COLUMBIA,val
+Passengership/33.wav,Passengership,Passengership/COASTAL INSPIRATION,train
+Passengership/37.wav,Passengership,Passengership/COLUMBIA,val
+Passengership/41.wav,Passengership,Passengership/CELEBRITY SOLSTICE,train
+Passengership/50.wav,Passengership,Passengership/COASTAL INSPIRATION,train
+Tanker/2.wav,Tanker,Tanker/CHERRY GALAXY,train
+Tanker/5.wav,Tanker,Tanker/LYNDA VICTORY,test
+Tanker/6.wav,Tanker,Tanker/CHAMPION EBONY,train
+Tanker/8.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/9.wav,Tanker,Tanker/SONGA RUBY,val
+Tanker/10.wav,Tanker,Tanker/NAVE ORBIT,train
+Tanker/12.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/13.wav,Tanker,Tanker/HIGH ENDURANCE,train
+Tanker/14.wav,Tanker,Tanker/ARGENT SUNRISE,val
+Tanker/18.wav,Tanker,Tanker/OVERSEAS ATHENS,train
+Tanker/19.wav,Tanker,Tanker/CARIBBEAN SPIRIT,train
+Tanker/20.wav,Tanker,Tanker/CHEMICAL AQUARIUS,val
+Tanker/21.wav,Tanker,Tanker/ARGENT DAISY,train
+Tanker/24.wav,Tanker,Tanker/NINA VICTORY,test
+Tanker/29.wav,Tanker,Tanker/ARGENT SUNRISE,val
+Tanker/30.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/32.wav,Tanker,Tanker/CHAMPION CORNELIA,val
+Tanker/33.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/35.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/38.wav,Tanker,Tanker/ARGENT DAISY,train
+Tanker/39.wav,Tanker,Tanker/ARDMORE CHEYENNE,test
+Tanker/41.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/42.wav,Tanker,Tanker/AMAGI GALAXY,test
+Tanker/43.wav,Tanker,Tanker/CHEMBULK MINNEAPOLIS,test
+Tanker/47.wav,Tanker,Tanker/KIRKEHOLMEN,train
+Tanker/48.wav,Tanker,Tanker/OCEAN RELIANCE,test
+Tanker/49.wav,Tanker,Tanker/WORLD HARMONY,val
+Tanker/50.wav,Tanker,Tanker/CHERRY GALAXY,train
+Tug/9.wav,Tug,Tug/MILLENNIUMSTAR,train
+Tug/40.wav,Tug,Tug/SEASPAN COMMANDER,val
+Tug/49.wav,Tug,Tug/SEASPAN EAGLE,test

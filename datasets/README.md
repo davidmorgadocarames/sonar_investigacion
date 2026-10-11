@@ -81,8 +81,8 @@ manifiesto con la partición se versiona en `manifests/`.
 
 ### Formato de `manifests/split.csv`
 
-Lo genera F1-T06c. Una fila por WAV (los 63 de `vessels.csv`), ordenadas como `vessels.csv`
-(clase y número de WAV); UTF-8 con finales de línea LF. Columnas obligatorias (puede haber más):
+Lo genera `tools/make_split.py` (F1-T06c). Una fila por WAV (los 63 de `vessels.csv`),
+ordenadas como `vessels.csv` (clase y número de WAV); UTF-8 con finales de línea LF. Columnas obligatorias (puede haber más):
 
 | Columna | Contenido |
 |---|---|
@@ -92,6 +92,41 @@ Lo genera F1-T06c. Una fila por WAV (los 63 de `vessels.csv`), ordenadas como `v
 | `split` | `train`, `val` o `test`. |
 
 `vessels.csv` es la referencia: el SHA-256, la duración, la clase y el grupo se toman de ahí.
+
+### Cómo se genera `manifests/split.csv`
+
+```bash
+docker compose run --rm --entrypoint python pipeline tools/make_split.py
+```
+
+Lee solo `vessels.csv` (no necesita los audios) y reparte **grupos de buque enteros**, clase a
+clase, con objetivo 60/20/20 (train/val/test) en duración de audio dentro de cada clase
+([D-013](../DECISIONS.md)). La duración de un grupo es la suma de `wav_duration_s` de sus WAV.
+
+- **Coste:** suma, en las tres particiones, de |fracción real − fracción objetivo| (0 = exacto).
+  Se calcula en enteros (microsegundos), sin errores de redondeo.
+- **Restricción:** cada clase tiene al menos un grupo en cada partición (Tug queda 1/1/1).
+- **Búsqueda:** ramificación y poda exacta, sin aleatoriedad (no hace falta semilla). Los grupos
+  se recorren por duración descendente y nombre, probando train, val y test en ese orden.
+- **Empates:** gana la primera asignación óptima en ese orden. Regenerarla da el mismo fichero
+  byte a byte.
+- Antes de escribir valida con `check_split` de `tools/check_leaks.py`; si algo falla, no
+  escribe y sale con código 1.
+
+Resultado (minutos; fracción real frente al objetivo 0,60/0,20/0,20):
+
+| Clase | train: grupos/WAV/min (frac) | val: grupos/WAV/min (frac) | test: grupos/WAV/min (frac) | Coste |
+|---|---|---|---|---|
+| Cargo | 6 / 7 / 22,95 (0,593) | 2 / 2 / 6,50 (0,168) | 3 / 3 / 9,28 (0,240) | 0,079 |
+| Passengership | 6 / 12 / 11,40 (0,597) | 2 / 4 / 3,88 (0,203) | 2 / 4 / 3,82 (0,200) | 0,007 |
+| Tanker | 8 / 16 / 16,60 (0,600) | 5 / 6 / 5,53 (0,200) | 6 / 6 / 5,53 (0,200) | 0,000 |
+| Tug | 1 / 1 / 3,38 (0,342) | 1 / 1 / 3,33 (0,337) | 1 / 1 / 3,17 (0,320) | 0,515 |
+| Total | 21 / 36 / 54,33 (0,570) | 10 / 13 / 19,25 (0,202) | 12 / 14 / 21,80 (0,229) | — |
+
+Tug no puede acercarse al objetivo: tiene 3 buques de duración parecida y cada partición necesita
+uno. Los tests de `tests/test_split_data.py` comprueban sobre el `split.csv` versionado que no
+hay fugas, que cada clase tiene un grupo en cada partición (Tug 1/1/1) y que regenerarlo da los
+mismos bytes.
 
 ### Comprobación de fugas (`tools/check_leaks.py`)
 
