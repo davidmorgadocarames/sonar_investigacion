@@ -17,6 +17,22 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3-T03 cerrada: módulo de datos
+- **Qué se hizo:** `src/sonar_pipeline/dataset.py`: `CLASSES` en orden fijo (Cargo,
+  Passengership, Tanker, Tug); `load_split` carga una partición y falla si un segmento del `.npz`
+  es de otra partición en `index.csv`, si falta alguno o si hay clases desconocidas;
+  `class_weights` (n / (k · n_k), como `balanced`; falla si falta una clase);
+  `baseline_features` (media temporal del LOFAR + DEMON, 1302 columnas); `aggregate_by_recording`
+  (media de probabilidades; falla si una grabación mezcla etiquetas). 10 tests, uno sobre los
+  rasgos reales: 1077/380/432 segmentos, todas las clases en cada partición, ninguna grabación ni
+  buque en dos particiones. 166 tests.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `src/sonar_pipeline/dataset.py`, `tests/test_dataset.py`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs
+  tests/test_dataset.py`.
+- **Siguiente paso exacto:** F3-T04: módulo de métricas y estructura de `metrics.json`.
+
 ## 2026-10-11 · F3-T02 cerrada: scikit-learn y PyTorch (D-019)
 - **Qué se hizo:** David aprobó D-019 tras ver su GPU (RTX 4060, 8 GB, driver 610.62).
   scikit-learn 1.9.1 en `requirements.txt` (con cloudpickle, joblib, narwhals, threadpoolctl);
@@ -86,21 +102,3 @@ Plantilla:
   (152 passed) y `docker compose run --rm pipeline features --figures`.
 - **Siguiente paso exacto:** cerrar F2 (F2-T09) y empezar F3 con el procedimiento de inicio de
   fase; avisar a David antes de cualquier entrenamiento.
-
-## 2026-10-11 · F2-T08 cerrada: figuras de ejemplo
-- **Qué se hizo:** David aprobó D-016 (matplotlib 3.11.2, backend Agg; la imagen pasa de 116 a
-  147 MB). `src/sonar_pipeline/figures.py`: LOFARgram con escala secuencial azul (0 a 15 dB sobre
-  el fondo) y DEMON medio (desde 1 Hz). `features --figures [--figures-dir]` dibuja la grabación
-  más larga de cada clase en `outputs/figures/example_<clase>.png`. Las figuras de validación
-  sintética salen de `tests/test_figures.py --figures-dir outputs/figures` (opción en
-  `tests/conftest.py`): `validation_lofar.png` (tono de 440 Hz) y `validation_demon.png`
-  (modulación de 12 Hz). Revisadas a ojo: Passengership/4 (MALASPINA) muestra en DEMON los
-  armónicos del paso de pala cada 11,3 Hz. README actualizado. 136 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `requirements.txt`, `src/sonar_pipeline/figures.py`,
-  `src/sonar_pipeline/features.py`, `src/sonar_pipeline/__main__.py`, `tests/conftest.py`,
-  `tests/test_figures.py`, `tests/test_features.py`, `README.md`, `DECISIONS.md`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm pipeline features --figures` y abrir
-  `outputs/figures/`.
-- **Siguiente paso exacto:** F2-T09: pasada del reviewer sobre F2 y cierre de fase.
