@@ -17,6 +17,23 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F1-T05 cerrada: subcomando `qc`
+- **Qué se hizo:** numpy 2.4.6 y scipy 1.17.1 fijados (D-008). `src/sonar_pipeline/qc.py` mide
+  formato, duración, offset DC, saturación, NaN o infinitos y silencio, y escribe
+  `outputs/qc/qc.csv` sin excluir nada. 10 tests con señales sintéticas (16 en total, en verde).
+  Sobre los 63 WAV: formato correcto, sin recortes, NaN ni silencio; duraciones de 6 a 204 s
+  (mediana 47 s); **los 63 tienen un offset DC positivo casi constante (0,027 a 0,032)**, en la
+  mayoría mayor que la señal (mediana 6 veces la desviación típica).
+- **Qué quedó a medias:** nada. Por acuerdo con David, la comparación de duración con el
+  metafile pasó a F1-T06b.
+- **Ficheros tocados:** `requirements.txt`, `src/sonar_pipeline/qc.py`,
+  `src/sonar_pipeline/__main__.py`, `tests/test_qc.py`, `tests/test_cli.py`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose build`, los tests y `docker compose run --rm pipeline
+  qc` (unos 4 s; dice "63 WAV files checked").
+- **Siguiente paso exacto:** F1-T05b: proponer a David quitar el offset DC en el preprocesado
+  (F2) sin excluir ficheros, y qué hacer con las grabaciones cortas.
+
 ## 2026-10-11 · F1-T04 cerrada: descarga de DeepShip desde el README
 - **Qué se hizo:** se revisaron las tareas pendientes de F1 (T05b, T06a, T06b y T06c nuevas;
   aprobadas por David) y se añadió a CLAUDE.md el procedimiento de inicio y cierre de fase.

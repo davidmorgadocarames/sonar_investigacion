@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from sonar_pipeline.__main__ import COMMANDS
+from sonar_pipeline.__main__ import COMMANDS, HANDLERS
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess:
@@ -24,7 +24,7 @@ def test_help_lists_all_commands():
         assert name in result.stdout
 
 
-@pytest.mark.parametrize("command", list(COMMANDS))
+@pytest.mark.parametrize("command", [c for c in COMMANDS if c not in HANDLERS])
 def test_unimplemented_command_fails(command):
     result = run_cli(command)
     assert result.returncode != 0
