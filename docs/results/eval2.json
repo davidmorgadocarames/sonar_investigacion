@@ -1,0 +1,577 @@
+{
+  "evaluation": 2,
+  "source": "outputs/results",
+  "code_sha256_at_evaluation": "3393ae4f22662457d592e5b52fee336579afc01ebf62d953c6db9a43f14c5e64",
+  "evaluation_hardware": {
+    "cpu": "Intel(R) Core(TM) i7-14700KF",
+    "device": "cpu",
+    "torch_threads": 14
+  },
+  "models": {
+    "baseline": {
+      "weights": "baseline.npz",
+      "weights_sha256": "1968677ae9e5c7a2799c8c92457531a98aaf7e8dbb734d1c652a8129c74f70a5",
+      "config": {
+        "c": 10.0
+      },
+      "cost": {
+        "flops_per_segment": 13020,
+        "parameters": 5212
+      },
+      "training_seconds": 0.17,
+      "training_device": "cpu",
+      "val": {
+        "segment": {
+          "f1_macro": 0.3812,
+          "ci95": [
+            0.2739,
+            0.4628
+          ],
+          "chance_f1_macro": 0.2457,
+          "f1_per_class": {
+            "Cargo": 0.6337,
+            "Passengership": 0.2489,
+            "Tanker": 0.4975,
+            "Tug": 0.1446
+          }
+        },
+        "recording": {
+          "f1_macro": 0.4861,
+          "ci95": [
+            0.3269,
+            0.6318
+          ],
+          "chance_f1_macro": 0.1992
+        },
+        "within_era": {
+          "2016": {
+            "classes": [
+              "Passengership",
+              "Tanker"
+            ],
+            "segment": {
+              "f1_macro": 0.583,
+              "ci95": [
+                0.2816,
+                0.7881
+              ],
+              "chance_f1_macro": 0.496
+            },
+            "recording": {
+              "f1_macro": 0.4949,
+              "ci95": [
+                0.2,
+                0.8
+              ],
+              "chance_f1_macro": 0.4784
+            }
+          },
+          "2017": {
+            "classes": [
+              "Cargo",
+              "Tug"
+            ],
+            "segment": {
+              "f1_macro": 0.7521,
+              "ci95": [
+                0.7097,
+                0.7976
+              ],
+              "chance_f1_macro": 0.4864
+            },
+            "recording": {
+              "f1_macro": 0.4,
+              "ci95": [
+                0.4,
+                0.4
+              ],
+              "chance_f1_macro": 0.4222
+            }
+          }
+        }
+      },
+      "test": {
+        "segment": {
+          "f1_macro": 0.3739,
+          "ci95": [
+            0.2706,
+            0.4716
+          ],
+          "chance_f1_macro": 0.2379,
+          "f1_per_class": {
+            "Cargo": 0.6221,
+            "Passengership": 0.2963,
+            "Tanker": 0.524,
+            "Tug": 0.0533
+          }
+        },
+        "recording": {
+          "f1_macro": 0.4444,
+          "ci95": [
+            0.2341,
+            0.6101
+          ],
+          "chance_f1_macro": 0.2116
+        },
+        "within_era": {
+          "2016": {
+            "classes": [
+              "Passengership",
+              "Tanker"
+            ],
+            "segment": {
+              "f1_macro": 0.5273,
+              "ci95": [
+                0.4194,
+                0.7012
+              ],
+              "chance_f1_macro": 0.4928
+            },
+            "recording": {
+              "f1_macro": 0.5833,
+              "ci95": [
+                0.2308,
+                0.8901
+              ],
+              "chance_f1_macro": 0.4784
+            }
+          },
+          "2017": {
+            "classes": [
+              "Cargo",
+              "Tug"
+            ],
+            "segment": {
+              "f1_macro": 0.4698,
+              "ci95": [
+                0.3532,
+                0.5886
+              ],
+              "chance_f1_macro": 0.4684
+            },
+            "recording": {
+              "f1_macro": 0.4286,
+              "ci95": [
+                0.4286,
+                0.4286
+              ],
+              "chance_f1_macro": 0.4124
+            }
+          }
+        }
+      },
+      "grouped_cv": {
+        "mean": 0.3701,
+        "std": 0.1133
+      }
+    },
+    "cnn": {
+      "weights": "cnn.pt",
+      "weights_sha256": "bcda0f3385fde9ffa62ba68cd7b59a1574d9a0aed9278a0d87054bff5bf7dcce",
+      "config": {
+        "lr": 0.001,
+        "weight_decay": 0.01,
+        "seed": 0,
+        "lr_schedule": "ReduceLROnPlateau on val macro F1: x0.5 after 3 epochs without improvement",
+        "torch_threads": 4
+      },
+      "cost": {
+        "flops_per_segment": 75330880,
+        "parameters": 79076
+      },
+      "training_seconds": 3.13,
+      "training_device": "NVIDIA GeForce RTX 4060",
+      "val": {
+        "segment": {
+          "f1_macro": 0.3907,
+          "ci95": [
+            0.276,
+            0.4663
+          ],
+          "chance_f1_macro": 0.2457,
+          "f1_per_class": {
+            "Cargo": 0.0,
+            "Passengership": 0.3886,
+            "Tanker": 0.2581,
+            "Tug": 0.916
+          }
+        },
+        "recording": {
+          "f1_macro": 0.4548,
+          "ci95": [
+            0.375,
+            0.5705
+          ],
+          "chance_f1_macro": 0.1992
+        },
+        "within_era": {
+          "2016": {
+            "classes": [
+              "Passengership",
+              "Tanker"
+            ],
+            "segment": {
+              "f1_macro": 0.5277,
+              "ci95": [
+                0.1796,
+                0.7217
+              ],
+              "chance_f1_macro": 0.496
+            },
+            "recording": {
+              "f1_macro": 0.4505,
+              "ci95": [
+                0.2857,
+                0.697
+              ],
+              "chance_f1_macro": 0.4784
+            }
+          },
+          "2017": {
+            "classes": [
+              "Cargo",
+              "Tug"
+            ],
+            "segment": {
+              "f1_macro": 0.8267,
+              "ci95": [
+                0.6836,
+                0.9774
+              ],
+              "chance_f1_macro": 0.4864
+            },
+            "recording": {
+              "f1_macro": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "chance_f1_macro": 0.4222
+            }
+          }
+        }
+      },
+      "test": {
+        "segment": {
+          "f1_macro": 0.1151,
+          "ci95": [
+            0.0658,
+            0.1576
+          ],
+          "chance_f1_macro": 0.2379,
+          "f1_per_class": {
+            "Cargo": 0.0792,
+            "Passengership": 0.3013,
+            "Tanker": 0.0,
+            "Tug": 0.08
+          }
+        },
+        "recording": {
+          "f1_macro": 0.1111,
+          "ci95": [
+            0.1111,
+            0.1111
+          ],
+          "chance_f1_macro": 0.2116
+        },
+        "within_era": {
+          "2016": {
+            "classes": [
+              "Passengership",
+              "Tanker"
+            ],
+            "segment": {
+              "f1_macro": 0.2756,
+              "ci95": [
+                0.1548,
+                0.3611
+              ],
+              "chance_f1_macro": 0.4928
+            },
+            "recording": {
+              "f1_macro": 0.2857,
+              "ci95": [
+                0.2857,
+                0.2857
+              ],
+              "chance_f1_macro": 0.4784
+            }
+          },
+          "2017": {
+            "classes": [
+              "Cargo",
+              "Tug"
+            ],
+            "segment": {
+              "f1_macro": 0.6247,
+              "ci95": [
+                0.3874,
+                0.7733
+              ],
+              "chance_f1_macro": 0.4684
+            },
+            "recording": {
+              "f1_macro": 0.7333,
+              "ci95": [
+                0.2,
+                1.0
+              ],
+              "chance_f1_macro": 0.4124
+            }
+          }
+        }
+      },
+      "val_f1_by_seed": [
+        0.3907,
+        0.3644,
+        0.2327
+      ],
+      "val_f1_seed_mean": 0.3293,
+      "val_f1_seed_std": 0.0691
+    },
+    "cnn_aug": {
+      "weights": "cnn_aug.pt",
+      "weights_sha256": "701214ab0c5c2551825d742ed815c06e364802c1a2d1df758f25087e3ffaea7d",
+      "config": {
+        "lr": 0.001,
+        "weight_decay": 0.01,
+        "seed": 0,
+        "lr_schedule": "ReduceLROnPlateau on val macro F1: x0.5 after 3 epochs without improvement",
+        "torch_threads": 4
+      },
+      "cost": {
+        "flops_per_segment": 75330880,
+        "parameters": 79076
+      },
+      "training_seconds": 3.88,
+      "training_device": "NVIDIA GeForce RTX 4060",
+      "val": {
+        "segment": {
+          "f1_macro": 0.3582,
+          "ci95": [
+            0.2694,
+            0.4369
+          ],
+          "chance_f1_macro": 0.2457,
+          "f1_per_class": {
+            "Cargo": 0.511,
+            "Passengership": 0.0764,
+            "Tanker": 0.4359,
+            "Tug": 0.4096
+          }
+        },
+        "recording": {
+          "f1_macro": 0.0714,
+          "ci95": [
+            0.0714,
+            0.0714
+          ],
+          "chance_f1_macro": 0.1992
+        },
+        "within_era": {
+          "2016": {
+            "classes": [
+              "Passengership",
+              "Tanker"
+            ],
+            "segment": {
+              "f1_macro": 0.736,
+              "ci95": [
+                0.4633,
+                0.7958
+              ],
+              "chance_f1_macro": 0.496
+            },
+            "recording": {
+              "f1_macro": 0.5238,
+              "ci95": [
+                0.2857,
+                0.7917
+              ],
+              "chance_f1_macro": 0.4784
+            }
+          },
+          "2017": {
+            "classes": [
+              "Cargo",
+              "Tug"
+            ],
+            "segment": {
+              "f1_macro": 0.7337,
+              "ci95": [
+                0.7332,
+                0.7341
+              ],
+              "chance_f1_macro": 0.4864
+            },
+            "recording": {
+              "f1_macro": 0.4,
+              "ci95": [
+                0.4,
+                0.4
+              ],
+              "chance_f1_macro": 0.4222
+            }
+          }
+        }
+      },
+      "test": {
+        "segment": {
+          "f1_macro": 0.2516,
+          "ci95": [
+            0.1734,
+            0.3442
+          ],
+          "chance_f1_macro": 0.2379,
+          "f1_per_class": {
+            "Cargo": 0.5401,
+            "Passengership": 0.2804,
+            "Tanker": 0.1858,
+            "Tug": 0.0
+          }
+        },
+        "recording": {
+          "f1_macro": 0.2667,
+          "ci95": [
+            0.0882,
+            0.3654
+          ],
+          "chance_f1_macro": 0.2116
+        },
+        "within_era": {
+          "2016": {
+            "classes": [
+              "Passengership",
+              "Tanker"
+            ],
+            "segment": {
+              "f1_macro": 0.5941,
+              "ci95": [
+                0.3535,
+                0.8392
+              ],
+              "chance_f1_macro": 0.4928
+            },
+            "recording": {
+              "f1_macro": 0.7917,
+              "ci95": [
+                0.4949,
+                1.0
+              ],
+              "chance_f1_macro": 0.4784
+            }
+          },
+          "2017": {
+            "classes": [
+              "Cargo",
+              "Tug"
+            ],
+            "segment": {
+              "f1_macro": 0.4273,
+              "ci95": [
+                0.4266,
+                0.4276
+              ],
+              "chance_f1_macro": 0.4684
+            },
+            "recording": {
+              "f1_macro": 0.4286,
+              "ci95": [
+                0.4286,
+                0.4286
+              ],
+              "chance_f1_macro": 0.4124
+            }
+          }
+        }
+      },
+      "val_f1_by_seed": [
+        0.3582,
+        0.2562,
+        0.2771
+      ],
+      "val_f1_seed_mean": 0.2972,
+      "val_f1_seed_std": 0.044
+    }
+  },
+  "permutation_test": {
+    "c": 10.0,
+    "procedure": "C chosen on val inside every permutation, then grouped CV",
+    "n_permutations": 200,
+    "observed_f1_macro": 0.3700760369956331,
+    "null_mean": 0.27248979955649544,
+    "null_p95": 0.3639233678593911,
+    "exceed": 7,
+    "p_value": 0.03980099502487562,
+    "seconds": 1047.3605005089994
+  },
+  "interpretability": {
+    "split": "val",
+    "baseline_top_lofar_bands": [
+      "40-80 Hz",
+      "1240-1280 Hz",
+      "1440-1480 Hz",
+      "400-440 Hz",
+      "200-240 Hz"
+    ],
+    "cnn_top_lofar_occlusion": {
+      "cnn": [
+        "0-40 Hz",
+        "80-120 Hz",
+        "40-80 Hz",
+        "160-200 Hz",
+        "1320-1360 Hz"
+      ],
+      "cnn_aug": [
+        "0-40 Hz",
+        "80-120 Hz",
+        "440-480 Hz",
+        "960-1000 Hz",
+        "920-960 Hz"
+      ]
+    },
+    "era_lines_hz": [],
+    "top_difference_bands_hz": [
+      80.0,
+      1240.0,
+      1320.0,
+      1400.0,
+      1440.0
+    ],
+    "era_check_by_model": {
+      "baseline": {
+        "spearman_rho": 0.293,
+        "spearman_p": 0.039,
+        "top_overlap": 2
+      },
+      "cnn": {
+        "spearman_rho": 0.273,
+        "spearman_p": 0.055,
+        "top_overlap": 2
+      },
+      "cnn_aug": {
+        "spearman_rho": 0.022,
+        "spearman_p": 0.881,
+        "top_overlap": 1
+      }
+    }
+  },
+  "dt005_duration_val": {
+    "segment": {
+      "f1_macro": 0.932,
+      "ci95": [
+        0.6958,
+        0.9946
+      ],
+      "chance_f1_macro": 0.2457
+    },
+    "recording": {
+      "f1_macro": 0.8,
+      "ci95": [
+        0.6875,
+        0.9451
+      ],
+      "chance_f1_macro": 0.1992
+    }
+  }
+}

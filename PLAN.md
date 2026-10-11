@@ -5,14 +5,14 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F3 Modelo**
+- **Fase actual:** **F4 Entrega** (tareas pendientes de proponer y aprobar)
 
 | Fase | Nombre | Estado |
 |---|---|---|
 | F0 | Setup | [x] |
 | F1 | Datos | [x] |
 | F2 | Señal | [x] |
-| F3 | Modelo | [~] |
+| F3 | Modelo | [x] |
 | F4 | Entrega | [ ] |
 | F5 | Mejoras opcionales | [ ] |
 
@@ -72,7 +72,7 @@ quedan a alto nivel.
 - [x] F2-T09 · Pasada del reviewer y cierre de F2 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 - [x] F2-T10 · Arreglar los hallazgos de la revisión de F2 (aprobado por David) · orquestador · LOFAR diezmado a 5 kHz sin aliasing en 0-2 kHz (ajuste de D-015) con test de tonos a 2050 y 2100 Hz; todas las dependencias fijadas (D-017); `features` comprueba el SHA-256 de los WAV, guarda el SHA de `vessels.csv` y el commit de DeepShip y borra `.npz` antiguos; figuras solo de train y ejes correctos; tests de bin exacto, aliasing en DEMON, independencia entre grabaciones y partición del índice; documentación coherente
 
-## F3 · Modelo — [~] en curso (tareas aprobadas por David el 2026-10-11)
+## F3 · Modelo — [x] hecha (2026-10-11)
 
 - **Objetivo:** una línea base clásica (regresión logística sobre rasgos) frente a una CNN pequeña
   en PyTorch, entrenada sin y con aumento de datos.
@@ -107,7 +107,7 @@ quedan a alto nivel.
 - [x] F3-T08 · CNN con aumento de datos (`train --model cnn-aug`) · orquestador · misma CNN y semillas, con enmascarado de frecuencia y tiempo y pequeños desplazamientos solo en train; comparación con F3-T07 en val; se conservan e informan los dos modelos; **aviso a David con estimación de tiempo antes de entrenar**
 - [x] F3-T09 · Subcomando `evaluate` · orquestador · evalúa test una sola vez con los tres modelos; escribe `outputs/results/metrics.json` (con la métrica general de 4 clases y la de dentro de cada época, y el clasificador de duración de DT-005 como referencia) y las figuras (matriz de confusión, F1 con intervalos, ROC Pd/Pfa); funciona en CPU con los pesos versionados
 - [x] F3-T10 · Interpretabilidad · orquestador · línea base: importancia por permutación de bandas de frecuencia; CNN: saliencia por gradientes y oclusión sobre el LOFARgram; mapas en `.npz` y PNG, resumen por banda y clase en `metrics.json`; comprobar si las bandas importantes son líneas fijas compartidas por todos los buques de una época (50/60 Hz, armónicos del equipo), señal de que se aprende la época (DT-005)
-- [~] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
+- [x] F3-T11 · Pasada del reviewer y cierre de F3 · reviewer + orquestador · hallazgos enseñados a David; ningún hallazgo crítico ni alto abierto; decisiones y deudas propuestas
 - [x] F3-T12 · Arreglar los hallazgos de la revisión de F3 y reentrenar (aprobado por David; ajuste 2 de D-018) · orquestador · pooling sin ceros con test de formas reales; hilos fijados; generadores separados; ReduceLROnPlateau; Pd a Pfa = 1 % no medible si hay pocos negativos y ROC de clasificación; hash de código y hardware de entrenamiento; permutación con C dentro; azar medido; tests de folds por buque, interpretabilidad sin test y determinismo en CUDA; figuras desde `metrics.json`; reentrenar las dos CNN (y la línea base solo para trazabilidad) y repetir la permutación, **con aviso y estimación de tiempo a David antes de cada paso**; segunda y última evaluación de test, conservando la primera en `outputs/results/eval1/`
 
 ## F4 · Entrega
@@ -129,6 +129,11 @@ quedan a alto nivel.
   declara que Tug no es fiable y que las demás clases tienen pocos buques; la ROC es de
   clasificación (DT-007: la detección frente a ruido no se puede medir con DeepShip); el azar
   de referencia es el medido, no 0,25 fijo; la validación cruzada mezcla folds de 3 y 4 clases.
+- **Nota (D-020):** los resultados de F3 de las dos rondas están resumidos y versionados en
+  `docs/results/` (con la tabla de procedencia código ↔ resultado); el informe parte de ahí y
+  sigue la regla de procedencia de D-020. Hechos que debe recoger: los de la sección final de
+  `docs/results/README.md` (Tug no fiable, CNN con aumento por debajo del azar por grabación en
+  val, C en el borde de la rejilla, CV con folds de 3 y 4 clases, ROC de clasificación).
 - **Nota (propuesta de resultados):** el subcomando `report` genera la sección de resultados del
   README y las figuras solo a partir de `metrics.json`. Las figuras del README deben quedar
   versionadas fuera de `outputs/` (p. ej. `docs/figures/`), lo que requiere una decisión. Incluir
@@ -146,7 +151,8 @@ quedan a alto nivel.
   reglas que F3 (val para decidir, test una sola vez).
 - **Nota (David, 2026-10-11): reducir el sobreajuste de las CNN.** En F3 las dos CNN alcanzan su
   mejor val en las épocas 3-10 mientras la pérdida de train baja a 0,06-0,10, y el F1 de val
-  varía mucho entre semillas (±0,03 sin aumento, ±0,11 con aumento). Opciones a valorar: red más
+  varía mucho entre semillas (ronda 1: ±0,028 sin aumento y ±0,110 con aumento; ronda 2,
+  tras F3-T12: ±0,069 y ±0,044; en la ronda 2 el mejor val llega en la época 3). Opciones a valorar: red más
   pequeña, más dropout o weight decay, lr más bajo, más aumento de datos, promediar semillas.
   Cualquier cambio se aplica igual a las dos CNN (mismo weight decay y misma curva de lr) para
   que la comparación siga siendo justa. **Test ya se habrá mirado en F3-T09**, así que el

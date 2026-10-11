@@ -17,6 +17,31 @@ Plantilla:
 
 ---
 
+## 2026-10-11 · F3 Modelo cerrada (F3-T11)
+- **Qué se hizo:** segunda pasada del reviewer sobre F3-T12: sin hallazgos críticos ni altos; los
+  11 de la primera revisión, resueltos. Con la aprobación de David se arreglaron los 3 medios y 6
+  bajos nuevos (commit `5d8d820`): hilos fijados también en `evaluate`, `metrics.json` con
+  `"evaluation": 2` y `evaluate --refresh` (actualiza DT-005, permutación e interpretabilidad sin
+  puntuar test), comprobación de duración sin azar fijo y regenerada (solo val), línea de azar
+  omitida si falta una época, test de `pool_to` con menos valores que grupos. **El test de
+  determinismo en CUDA pasó en la imagen GPU** (233 tests en GPU y en CPU). D-020: resúmenes de
+  las dos rondas en `docs/results/eval{1,2}.json` (con `tools/summarize_results.py`) y
+  `docs/results/README.md` con la comparación y la **tabla de procedencia** (commit y
+  `code_sha256` de cada resultado; los de la ronda 2 coinciden con `ab383dd`; la evaluación 2
+  corrió con 14 hilos y sin el arreglo B5, sin efecto práctico, no comprobado para no mirar test
+  otra vez). DT-005 actualizada con la ronda 2 y las ρ de los tres modelos tratadas igual; nota de
+  F5 corregida. Resultado de F3: solo la línea base supera al azar (0,374 frente a 0,238; p =
+  0,040), y dentro de cada época ningún modelo se distingue del azar.
+- **Qué quedó a medias:** nada de F3. F4 no tiene tareas detalladas.
+- **Ficheros tocados:** `tools/summarize_results.py`, `tests/test_summarize_results.py`,
+  `docs/results/{eval1.json,eval2.json,README.md}`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (235 passed) y leer `docs/results/README.md`.
+- **Siguiente paso exacto:** empezar F4 con el procedimiento de inicio de fase: proponer a David
+  las tareas (README con opciones A y B, "Comprobar la instalación", subcomando `report`,
+  figuras versionadas, limitaciones declaradas, friend-tester, etiqueta `v0.1`, DT-001) y
+  esperar su aprobación.
+
 ## 2026-10-11 · F3-T12 cerrada: permutación con C dentro y segunda evaluación de test
 - **Qué se hizo:** con el visto bueno de David: (5) test de permutación con la elección de C
   dentro de cada permutación, 17,5 min en CPU (se estimaron 8-10): F1 real 0,370 frente a media
@@ -92,23 +117,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm pipeline evaluate` (mismas cifras).
 - **Siguiente paso exacto:** F3-T10: interpretabilidad (sobre val) y comprobación de bandas de
   época.
-
-## 2026-10-11 · F3-T08 cerrada: CNN con aumento de datos
-- **Qué se hizo:** `make_augment` y `train_cnn_aug` en `cnn.py`, `train --model cnn-aug`: misma
-  lr y weight decay que `models/cnn.json` y mismas semillas; solo en train y con p = 0,5 cada
-  una: 1-2 bandas de LOFAR de hasta 100 Hz, un bloque de 1-2 tramas, desplazamiento circular de
-  ±1-2 tramas y una banda de DEMON de hasta 3,3 Hz, rellenas con la media de train.
-  Reproducible (comprobado en CUDA). 0,27 s por época en GPU. Con el visto bueno de David se
-  entrenó en 14 s. Val: semillas 0,536 / 0,357 / 0,272 (media 0,388 ± 0,110) frente a la CNN sin
-  aumento 0,376 / 0,309 / 0,332 (media 0,339 ± 0,028). Modelo guardado (semilla 0): F1 macro
-  0,536 por segmento (IC 0,40-0,62) y 0,554 por grabación; dentro de época, Cargo frente a Tug
-  0,93 y Passengership frente a Tanker 0,79. **Ojo:** quedarse con la mejor semilla en val
-  infla la cifra de val; la comparación justa es la media por semillas, y la mejora (+0,05) es
-  menor que la variación entre semillas. Pesos en `models/cnn_aug.{pt,json}`. 207 tests.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `src/sonar_pipeline/{cnn,__main__}.py`, `tests/test_cnn.py`,
-  `tests/test_duration_check.py`, `models/cnn_aug.{pt,json}`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm pipeline
-  train --model cnn-aug`.
-- **Siguiente paso exacto:** F3-T09: `evaluate`, test una sola vez con los tres modelos (sin
-  entrenamiento); `metrics.json` y figuras.
