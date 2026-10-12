@@ -519,6 +519,28 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   la validación cruzada repetida estima mejor que el hold-out repetido (Kim, 2009); 5 folds
   permiten el 60/20/20 con Tug en entrenamiento; 5 repeticiones como en UniqueShip (Hashemi et
   al., 2026). Referencias completas en el README. Aprobado por David.
+- **Ajuste 1 (2026-10-12, F5-T02, aprobado por David antes de entrenar):**
+  - **Clases con menos de 5 buques (hoy solo Tug):** en cada partición, 1 buque en test, 1 en
+    validación y el resto en entrenamiento (Tug 1/1/1 en las 25), rotando de forma que cada buque
+    cae en test y en validación el mismo número de veces ±1 (Tug: 9/8/8). Solo esas clases rompen
+    el 60/20/20, por falta de buques; con un dataset mayor (todas las clases con 5 o más) todo
+    sería 60/20/20 sin cambiar el código. Consecuencia: en Tug un mismo buque cae en test varias
+    veces por repetición, así que el solapamiento entre particiones es mayor en esa clase que el
+    que corrige la prueba de Nadeau y Bengio. Que no se repita la pareja (test, validación) de Tug
+    dentro de una repetición se cumple de forma empírica (tests), no demostrada.
+  - **Métrica simplificada:** con las 4 clases siempre presentes, la cifra principal, la elección
+    de configuración y la prueba de Nadeau y Bengio usan el **F1 macro de 4 clases por partición**
+    (media ± desviación de las 25); la matriz de confusión conjunta de todas las predicciones de
+    test es un complemento.
+  - **Reparto de las clases con 5 o más buques:** se baraja con la semilla de la repetición, se
+    asigna de forma voraz y se ajusta con búsqueda local hasta un desvío de minutos por fold no
+    mayor que el del mejor reparto determinista más un 10 % de 1/5 de la clase (hasta 1000
+    intentos). Así las 5 repeticiones dan agrupaciones de buques realmente distintas. Desvío
+    máximo resultante: Tanker 10,5 %, Cargo 25,4 % y Passengership 41,5 %, inevitable en las dos
+    últimas por un buque muy largo en cada una.
+  - **Reproducibilidad:** el reparto depende del generador de numpy (PCG64), que no garantiza el
+    mismo flujo entre versiones; el CSV versionado es la referencia, numpy está fijado y el test de
+    regeneración detectaría un cambio (2.3.5 y 2.4.6 dan los mismos bytes).
 
 ## Deuda técnica
 

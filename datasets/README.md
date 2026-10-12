@@ -133,6 +133,50 @@ uno. Los tests de `tests/test_split_data.py` comprueban sobre el `split.csv` ver
 hay fugas, que cada clase tiene un grupo en cada partición (Tug 1/1/1) y que regenerarlo da los
 mismos bytes.
 
+### Validación cruzada 5 × 5 (`manifests/cv_splits.csv`, F5)
+
+Las 25 particiones de la ronda 3 ([D-024](../DECISIONS.md)). Las genera
+`tools/make_cv_splits.py` leyendo solo `vessels.csv`:
+
+```bash
+docker compose run --rm --entrypoint python pipeline tools/make_cv_splits.py [--summary]
+```
+
+Una fila por (repetición, vuelta, WAV): 25 × 63 = 1575 filas, ordenadas por `repetition`,
+`fold` y el orden de `vessels.csv`; UTF-8 con LF. Columnas: `repetition` (0-4), `fold` (0-4),
+`wav_path`, `vessel_class`, `vessel_group` y `split` (`train`, `val` o `test`).
+
+La regla depende del número de buques de la clase:
+
+- **Clases con 5 o más buques** (Cargo 11, Passengership 10, Tanker 19). En la repetición r
+  (semilla r, `numpy.random.default_rng(r)`) sus buques enteros se reparten en 5 folds: arranque
+  voraz desde un orden aleatorio y búsqueda local (mover o intercambiar buques) hasta que ningún
+  fold se aleje de 1/5 de los minutos de la clase más que el mejor reparto determinista más un
+  10 % de 1/5. En la vuelta k: test = fold k, validación = fold k + 1 (circular), entrenamiento
+  = el resto. Cada buque pasa una vez por test y una por validación en cada repetición.
+- **Clases con 3 o 4 buques** (hoy solo Tug, con 3). Con 5 folds habría particiones sin la clase
+  en test o en validación, así que no usan folds: en cada partición hay exactamente 1 buque en
+  test, 1 en validación y el resto (1 o 2) en entrenamiento. Las parejas (test, validación) de
+  las 25 particiones siguen una rotación por bloques de n particiones; en cada bloque, cada buque
+  pasa una vez por test y una por validación (validación = test + un desplazamiento fijo del
+  bloque). Así, sobre las 25 particiones, cada buque cae en test y en validación el mismo número
+  de veces ±1: los Tug caen 9/8/8 veces en test y 8/9/8 en validación. El azar (semilla de la
+  repetición) elige el desplazamiento de cada bloque y el orden de los buques dentro de él, y
+  evita repetir pareja en las 5 vueltas de una repetición.
+- **Clases con menos de 3 buques:** error; no podrían estar en los tres papeles a la vez.
+- Resultado: las 4 clases tienen al menos un buque en entrenamiento, validación y test en las 25
+  particiones. Con un dataset mayor, en el que todas las clases tuvieran al menos 5 buques, todo
+  seguiría la regla de los 5 folds (60/20/20 en buques).
+- El desequilibrio máximo de minutos de un fold respecto a 1/5 de su clase es 25 % en Cargo,
+  42 % en Passengership y 11 % en Tanker: los buques largos (6,3 min en Cargo y 5,1 en
+  Passengership) impiden equilibrar mejor. Las 5 repeticiones agrupan los buques de Cargo,
+  Passengership y Tanker de forma distinta. `--summary` imprime, además, los buques, WAV y
+  minutos por clase y papel de cada partición, y cuántas veces cae cada buque de Tug en test,
+  validación y entrenamiento.
+- Antes de escribir valida cada partición con `check_split` y las condiciones anteriores; si
+  algo falla, no escribe y sale con código 1. `tests/test_cv_splits_data.py` vuelve a comprobarlo
+  sobre el fichero versionado y que regenerarlo da los mismos bytes.
+
 ### Comprobación de fugas (`tools/check_leaks.py`)
 
 ```bash

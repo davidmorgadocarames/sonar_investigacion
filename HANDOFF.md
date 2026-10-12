@@ -17,6 +17,27 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T02 cerrada: particiones 5 × 5 por buque
+- **Qué se hizo:** `data-engineer` creó `tools/make_cv_splits.py` y
+  `datasets/manifests/cv_splits.csv` (1575 filas, md5 `3558f6ff…`): 25 particiones (5
+  repeticiones × 5 vueltas). Clases con 5 o más buques: 5 folds por repetición con minutos
+  equilibrados (tolerancia sobre el mejor reparto), vuelta k con test = fold k y validación =
+  fold k + 1; cada buque una vez en test y una en validación por repetición. Tras una primera
+  versión en la que Tug faltaba de test en 10 particiones y de validación en otras 10, David
+  aprobó que las clases con menos de 5 buques vayan 1/1/resto: Tug 1/1/1 en las 25 (test 9/8/8,
+  validación 8/9/8) y la métrica simplificada (F1 macro de 4 clases por partición). Ajuste 1 de
+  D-024 con estas reglas, el algoritmo con tolerancia, el desequilibrio de minutos (Cargo 25 %,
+  Passengership 42 %, Tanker 10,5 %) y la dependencia del generador de numpy. Sin fugas en
+  ninguna partición; 4 clases en los tres papeles en todas; regeneración idéntica. 41 tests
+  nuevos (288 en total).
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `tools/make_cv_splits.py`, `datasets/manifests/cv_splits.csv`,
+  `tests/test_make_cv_splits.py`, `tests/test_cv_splits_data.py`, `datasets/README.md`,
+  `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline
+  tools/make_cv_splits.py --summary` y `git status` sin cambios.
+- **Siguiente paso exacto:** F5-T03: motor de validación cruzada y JSON por entrenamiento.
+
 ## 2026-10-12 · F5 empezada; F5-T01 cerrada: protocolo de la ronda 3 (D-024)
 - **Qué se hizo:** David aprobó F5 (9 tareas, sin ARM ni preentrenados) y D-024: validación
   cruzada repetida 5 × 5 por buque (60/20/20, rotando entrenamiento, validación y test; cada buque
@@ -89,20 +110,3 @@ Plantilla:
 - **Ficheros tocados:** `README.md`, `docs/results/README.md`, `PLAN.md`, `HANDOFF.md`.
 - **Cómo verificarlo:** repetir los pasos del README en un clon limpio.
 - **Siguiente paso exacto:** F4-T07: reviewer, cierre de F4 y etiqueta `v0.1`.
-
-## 2026-10-11 · F4-T05 cerrada: DT-001 pagada (UID y GID del host)
-- **Qué se hizo:** `compose.yaml` ejecuta el contenedor con `user: "${HOST_UID:-1000}:${HOST_GID:-1000}"`
-  (en Linux, en `.env` con `id -u` e `id -g`; en Windows y macOS no hace falta). La imagen usa
-  `HOME=/tmp`, `MPLCONFIGDIR=/tmp/matplotlib` y pytest sin caché, porque un UID del host no tiene
-  carpeta personal ni puede escribir en `/app`. Comprobado con el UID 4321: 244 tests en verde y
-  `report` escribe en una carpeta nueva ficheros a su nombre (informe idéntico). La prueba también
-  reprodujo el problema de DT-001: con un UID distinto no se pueden sobrescribir ficheros creados
-  por otro UID. La imagen GPU sigue viendo la RTX 4060. `tests/test_container.py` (2 tests).
-  README: paso "Solo en Linux". D-019 con el ajuste del separador (aprobado por David).
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `Dockerfile`, `compose.yaml`, `tests/test_container.py`, `README.md`,
-  `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `HOST_UID=4321 HOST_GID=4321 docker compose run --rm --entrypoint python
-  pipeline -m pytest -q`.
-- **Siguiente paso exacto:** F4-T06: pasada del friend-tester (clon en la carpeta temporal
-  aprobada; opción A; debe reproducir `docs/results/eval2.json`).
