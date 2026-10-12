@@ -5,7 +5,7 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** **F5 Mejoras opcionales** (F0-F4 hechas: `v0.1`, `v0.1.1`)
+- **Fase actual:** **F6 README para terceros** (F0-F4 hechas: `v0.1`, `v0.1.1`; F5 pendiente de su cierre y etiqueta `v0.2`, F5-T09)
 
 | Fase | Nombre | Estado |
 |---|---|---|
@@ -15,6 +15,7 @@ quedan a alto nivel.
 | F3 | Modelo | [x] |
 | F4 | Entrega | [x] |
 | F5 | Mejoras opcionales | [~] |
+| F6 | README para terceros | [~] |
 
 ---
 
@@ -199,9 +200,19 @@ quedan a alto nivel.
 - [x] F5-T08 · Gráficas, informe y README · orquestador · las 15 gráficas y análisis acordados en el informe; en el README, diagrama de caja del F1 de test, comparación por parejas o efecto del aumento, precisión frente a coste, matrices conjuntas e interpretabilidad, cada una explicada; README e informe organizados por etapas; **sección de arquitecturas** (David, 2026-10-12) que explica cómo funciona la CNN sola, el transformer solo y el híbrido, y cada componente usado: BatchNorm, LeakyReLU, RMSNorm, RoPE, GQA, SwiGLU, AdamW, weight decay, calentamiento y decaimiento del lr, tokens y parada temprana; **justificación de cada configuración** (David, 2026-10-12): por qué existen A-D (y la rejilla de C) en cada red, qué hipótesis prueba cada una y por qué ganó la elegida, con la media de validación de las 25 particiones; tabla de procedencia actualizada
 - [~] F5-T09 · Reviewer, friend-tester, cierre de F5 y etiqueta `v0.2` · reviewer + friend-tester + orquestador · sin hallazgos críticos ni altos abiertos; el friend-tester sigue el README nuevo en limpio sin atascos (David, 2026-10-12); etiqueta publicada · **espera a F5-T10 y F5-T11** (David, 2026-10-12: `v0.2` con los resultados reentrenados); reviewer y friend-tester ya pasados sobre `a6c9aac`
 - [x] F5-T10 · **Obligatoria (David, 2026-10-12).** Arreglar el calentamiento del lr (ajuste 3 de D-024), guardar la norma del gradiente y el tiempo de carga de datos en el JSON de cada entrenamiento, y reentrenar la ronda 3 · orquestador · test que exige que el lr llegue al configurado tras el calentamiento; arreglos menores del reviewer (hilos y `started` en `round3.json`; dispositivo y hardware en los JSON de interpretabilidad y detalles); **aviso a David con el tiempo medido antes de cualquier uso de la GPU**; los 7 modelos reentrenados por bloques; los resultados actuales, conservados como histórico en `docs/results/round3_initial/` con su procedencia; comparación nueva frente a inicial; interpretabilidad, detalles, informe (con el aviso de reentrenamiento) y README actualizados; la línea base y la CNN deben dar las mismas cifras que antes
-- [~] F5-T11 · README limpio y comprobación rápida (David, 2026-10-12) · orquestador · README sin cronología ni rondas anteriores: resumen breve, datos y señal, protocolo con sus 9 referencias, modelos por dentro (con las 3 referencias del calentamiento), por qué cada configuración, resultados con las 15 gráficas explicadas (cómo se lee y qué se ve), conclusiones, puesta en marcha, limitaciones, procedencia (una frase que enlaza el informe completo y docs/results/README.md), equipo, carpetas, licencia y cita; `evaluate --round 3 --check` puntúa en CPU los 7 modelos representativos y comprueba que reproducen `round3.json` (±0,005) y sustituye en el README a `evaluate` de F3; figuras de datos nuevas sin partición fija (por clase, y matriz buques × 25 particiones) en README e informe; el informe sigue completo; arreglos bajos del reviewer de F5-T10 (pies de las figuras nuevas, test de que la regla de meseta no actúa en el calentamiento, notas de procedencia, frase en el ajuste 3 de D-024); friend-tester sobre el README nuevo
+- [x] F5-T11 · README limpio y comprobación rápida (David, 2026-10-12) · orquestador · README sin cronología ni rondas anteriores: resumen breve, datos y señal, protocolo con sus 9 referencias, modelos por dentro (con las 3 referencias del calentamiento), por qué cada configuración, resultados con las 15 gráficas explicadas (cómo se lee y qué se ve), conclusiones, puesta en marcha, limitaciones, procedencia (una frase que enlaza el informe completo y docs/results/README.md), equipo, carpetas, licencia y cita; `evaluate --round 3 --check` puntúa en CPU los 7 modelos representativos y comprueba que reproducen `round3.json` (±0,005) y sustituye en el README a `evaluate` de F3; figuras de datos nuevas sin partición fija (por clase, y matriz buques × 25 particiones) en README e informe; el informe sigue completo; arreglos bajos del reviewer de F5-T10 (pies de las figuras nuevas, test de que la regla de meseta no actúa en el calentamiento, notas de procedencia, frase en el ajuste 3 de D-024); friend-tester sobre el README nuevo
 
 - **Contexto previo (F3 y F4):** en F3 las dos CNN alcanzan su mejor val en las épocas 3-10
   mientras la pérdida de train baja a 0,06-0,10, y el F1 de val varía mucho entre semillas (ronda
   1: ±0,028 sin aumento y ±0,110 con aumento; ronda 2: ±0,069 y ±0,044). Test se miró en F3-T09 y
   F3-T12: el informe declara que la ronda 3 llega después.
+
+## F6 · README para terceros — [~] en curso (David, 2026-10-12)
+
+- **Objetivo:** que el README se entienda sin conocer la historia del proyecto.
+- **Principios (David, 2026-10-12):** sin nombrar a David en el texto (salvo el © de la
+  licencia); los comandos no cambian (`--round 3` se mantiene en comandos y rutas), pero el texto
+  no habla de "ronda 3"; sin códigos D-0xx ni DT-0xx en el README (se dice de qué iba cada
+  decisión); el informe completo se conserva como registro histórico.
+
+- [x] F6-T01 · Aclaraciones del README tras el friend-tester · orquestador · sin el nombre de David en GQA ni en la instalación; explicación al principio de que DeepShip siempre tiene barco sonando y de la diferencia entre la ROC de detección (Pd/Pfa con grabaciones sin barco, no medible aquí) y la ROC de clasificación que se hace; "round 3" solo en comandos y rutas, explicado una vez; ayuda de la línea de comandos sin fases internas y con el tiempo real de `--check` (segundos); `features` imprime los segmentos y explica que los tres `.npz` son solo almacenamiento y que hay 25 particiones (definidas en el README); `flag_dc` explicado y en las 63 grabaciones; sin códigos D-0xx/DT-0xx en el README; F1 macro definido desde el resumen; las dos cifras de variación con nombre propio (dispersión del modelo final entre particiones frente a variación por partición y por semilla); tests en verde y `report` sin cambios

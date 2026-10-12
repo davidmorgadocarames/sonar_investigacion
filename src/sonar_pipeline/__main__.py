@@ -23,8 +23,14 @@ ROUND3_MODELS = (
 COMMANDS = {
     "qc": ("Run quality control on raw WAV files.", "F1"),
     "features": ("Preprocess audio and compute LOFAR and DEMON features.", "F2"),
-    "train": ("Train the classifiers (F3) or run round 3 (F5, --round 3).", "F3"),
-    "evaluate": ("Evaluate trained models on the test split.", "F3"),
+    "train": (
+        "Train classifiers; --round 3: all 7 models (5x5 CV).",
+        "F3",
+    ),
+    "evaluate": (
+        "Evaluate models; --round 3: checks and summaries.",
+        "F3",
+    ),
     "report": ("Build the results report with figures.", "F4"),
 }
 
@@ -100,14 +106,15 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument(
         "--model",
         choices=TRAIN_MODELS,
-        help="duration: DT-005 check (recording duration only, scored on val); "
-        "baseline, cnn, cnn-aug: the models of D-018. Not with --round.",
+        help="duration: check whether the recording duration alone predicts the class "
+        "(scored on val); baseline, cnn, cnn-aug: the models of the earlier fixed-split "
+        "evaluation. Not with --round.",
     )
     train.add_argument(
         "--round",
         type=int,
         choices=(3,),
-        help="3: the 7 models of round 3 under 5 x 5 cross-validation by vessel (D-024), "
+        help="3: the 7 models under 5 x 5 cross-validation by vessel, "
         "one after another; resumes finished trainings. Not with --model.",
     )
     train.add_argument(
@@ -168,7 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-epochs",
         type=int,
         default=60,
-        help="cnn models: maximum epochs per run (default: %(default)s, D-018).",
+        help="Network models: maximum epochs per run (default: %(default)s).",
     )
     train.add_argument(
         "--bootstrap",
@@ -233,7 +240,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument(
         "--refresh",
         action="store_true",
-        help="Reload the DT-005, permutation and interpretability results into metrics.json "
+        help="Reload the duration check, permutation and interpretability results into metrics.json "
         "without scoring test again.",
     )
     evaluate.add_argument(
@@ -245,7 +252,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--interpretability",
         action="store_true",
         help="Instead of scoring test, compute the interpretability on val with the frozen "
-        "models (F3-T10) and add it to metrics.json.",
+        "models and add it to metrics.json.",
     )
     evaluate.add_argument(
         "--outputs-dir",
@@ -257,7 +264,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument(
         "--check",
         action="store_true",
-        help="--round 3: quick check (CPU, about a minute) that the 7 representative models in "
+        help="--round 3: quick check (CPU, a few seconds) that the 7 representative models in "
         "models/round3/representative/ reproduce their test F1 recorded in round3.json.",
     )
     evaluate.add_argument(
@@ -271,7 +278,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         choices=(3,),
         help="3 with --interpretability: interpretability of the round 3 final models on the "
-        "val of every partition (F5-T07); test is not used.",
+        "val of every partition; test is not used.",
     )
     evaluate.add_argument(
         "--splits",
@@ -292,7 +299,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--results-dir",
         type=Path,
         default=Path("docs/results"),
-        help="Versioned summaries eval1.json and eval2.json (default: %(default)s).",
+        help="Versioned result summaries (default: %(default)s).",
     )
     report.add_argument(
         "--figures-dir",
@@ -304,7 +311,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--manifests-dir",
         type=Path,
         default=Path("datasets/manifests"),
-        help="vessels.csv and split.csv, for the data section (default: %(default)s).",
+        help="vessels.csv and cv_splits.csv, for the data section (default: %(default)s).",
     )
     report.add_argument(
         "--output",
@@ -349,11 +356,14 @@ def cmd_features(args: argparse.Namespace) -> int:
         f"of {SEGMENT_S:g} s."
     )
     classes = sorted({c for c, _ in summary.counts})
-    print(f"  {'class':<14}" + "".join(f"{s:>7}" for s in SPLITS) + f"{'total':>7}")
+    print(f"  {'class':<14}{'segments':>9}")
     for c in classes:
-        row = [summary.counts[(c, s)] for s in SPLITS]
-        print(f"  {c:<14}" + "".join(f"{n:>7}" for n in row) + f"{sum(row):>7}")
-    print(f"Written to {summary.output_dir}")
+        print(f"  {c:<14}{sum(summary.counts[(c, s)] for s in SPLITS):>9}")
+    print(
+        f"Written to {summary.output_dir}. The segments are stored in three files "
+        "(features_train/val/test.npz) only to keep them; the evaluation joins them and uses "
+        "the 25 partitions of datasets/manifests/cv_splits.csv (5 repetitions x 5 folds)."
+    )
     for path in summary.figures:
         print(f"Figure: {path}")
     return 0
@@ -390,7 +400,7 @@ def train_duration(args: argparse.Namespace) -> int:
         args.processed_dir, args.vessels, output, args.bootstrap
     )
     print(
-        f"DT-005 check: logistic regression on recording duration, fitted in "
+        f"Duration check: logistic regression on recording duration, fitted in "
         f"{result['training']['seconds']:.2f} s; scored on val (test not used)."
     )
     print_val_scores(result["val"])

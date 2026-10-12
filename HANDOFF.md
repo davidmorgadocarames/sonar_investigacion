@@ -17,6 +17,29 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T11 y F6-T01 cerradas: README limpio para terceros
+- **Qué se hizo:** F5-T11 (`9d72af5`): README reescrito sin cronología ni rondas anteriores
+  (resumen, datos y señal, protocolo con sus 9 referencias, modelos con las 3 del calentamiento,
+  configuraciones, 15 gráficas con "cómo se lee" y "qué se ve", conclusiones, puesta en marcha,
+  limitaciones, procedencia), `evaluate --round 3 --check` (7 modelos representativos en CPU,
+  ~5 s, margen ±0,01), figuras de datos sin partición fija (`data_classes.png`,
+  `data_partitions.png`), instrucciones de las rondas 1 y 2 movidas a `docs/results/README.md`,
+  arreglos bajos del reviewer de F5-T10. Friend-tester en limpio en CPU: sin atascos, todo
+  reproducido. F6 (nueva fase, David): F6-T01 aplica sus dudas: sin el nombre de David en el
+  texto (salvo el © de la licencia, que David acepta), explicación de que DeepShip siempre tiene
+  barco y de la ROC de detección frente a la de clasificación, F1 macro definido en el resumen,
+  partición definida y los tres `.npz` explicados como almacenamiento (`features` ya no imprime
+  la tabla train/val/test), `flag_dc` explicado (en las 63), sin códigos D-0xx/DT-0xx en el
+  README, las dos cifras de variación con nombre propio, ayuda de la CLI sin fases internas y con
+  el tiempo real de `--check`. Los comandos no cambian (`--round 3`, decisión de David).
+- **Qué quedó a medias:** cierre de F5 (F5-T09) y etiqueta `v0.2`: falta que David decida si la
+  etiqueta va antes o después de F6-T01; cierre de F6 (reviewer).
+- **Ficheros tocados:** `README.md`, `src/sonar_pipeline/__main__.py`, `PLAN.md`, `HANDOFF.md`
+  (F6-T01); F5-T11 en su commit.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (355 pasan, 4 saltados de CUDA); `docker compose run --rm pipeline evaluate --round 3 --check`.
+- **Siguiente paso exacto:** preguntar a David por `v0.2` y por el cierre de F6.
+
 ## 2026-10-12 · F5-T10 cerrada: ronda 3 reentrenada con el lr arreglado
 - **Qué se hizo:** código en `7df7a96`: el lr pasa al 100 % en la 6.ª época y la regla de meseta
   empieza entonces (test que lo exige); cada época guarda la norma del gradiente (media y
@@ -124,23 +147,3 @@ Plantilla:
   --entrypoint python pipeline -m pytest -rs` (343 pasan, 1 saltado).
 - **Siguiente paso exacto:** F5-T08: gráficas, informe y README por etapas, con la sección de
   arquitecturas y la justificación de cada configuración.
-
-## 2026-10-12 · F5-T06 cerrada: ronda 3 completa (7 modelos, 5 × 5)
-- **Qué se hizo:** ronda 3 en la RTX 4060, en tres bloques seguidos (04:51-06:33, unas
-  1 h 40 min), sin fallos, con commit y push tras cada bloque (autorizado por David). F1 macro
-  de test por segmento (media ± desviación de las 25 particiones; azar medido 0,242):
-  línea base (C = 10) 0,331 ± 0,046; CNN (config. C) 0,316 ± 0,135; CNN con aumento (D)
-  0,299 ± 0,130; híbrido (B) 0,343 ± 0,126; híbrido con aumento (A) 0,340 ± 0,139; transformer
-  (B) 0,235 ± 0,080; transformer con aumento (B) 0,240 ± 0,085. Ninguna de las 13 comparaciones
-  es significativa con Holm; la más cercana es transformer frente a línea base (−0,096,
-  p = 0,052, Holm 0,68). Dentro de época (azar ≈ 0,5): 2017 (Cargo frente a Tug) híbrido 0,71
-  y CNN 0,66; 2016 (Passengership frente a Tanker) todos entre 0,49 y 0,59. Memoria de GPU
-  máxima 571 MiB. Todo en `docs/results/round3.json`; pesos representativos en
-  `models/round3/representative/`; JSON por entrenamiento en `outputs/round3/` (no versionados).
-- **Qué quedó a medias:** nada de F5-T06. Sin interpretar todavía con David.
-- **Ficheros tocados:** `docs/results/round3.json`, `models/round3/representative/`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `python -c "import json; print(json.load(open('docs/results/round3.json'))['comparisons'])"`
-  y `outputs/round3/run.log`.
-- **Siguiente paso exacto:** revisar los resultados con David y empezar F5-T07
-  (interpretabilidad de las configuraciones finales sobre validación).

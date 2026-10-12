@@ -10,6 +10,12 @@ la prueba de Nadeau y Bengio. Ningún modelo es significativamente mejor que la 
 logística (F1 macro 0,331 frente a un azar de 0,242). Y como la clase coincide con la época de
 grabación, no se puede afirmar que ningún modelo reconozca la firma del buque.
 
+**La métrica: F1 macro.** Para cada clase, el F1 combina cuántos de sus segmentos acierta el
+modelo (*exhaustividad*) y cuántas de sus predicciones de esa clase son correctas (*precisión*);
+el **F1 macro** es la media de las 4 clases, de modo que todas pesan igual aunque tengan menos
+datos (Tug tiene muchos menos que Cargo). Va de 0 a 1 (1 es acertar todo), y aquí el azar es 0,24.
+Es la cifra con la que se elige y se compara todo.
+
 ```
 WAV → control de calidad → preprocesado → LOFAR y DEMON → 7 modelos → validación cruzada 5 × 5 → informe
 ```
@@ -37,6 +43,19 @@ Informe completo, con todas las cifras: [docs/report.md](docs/report.md).
 ### Los datos
 
 ![Datos por clase](docs/figures/data_classes.png)
+
+**Todas las grabaciones de DeepShip tienen un barco sonando**: no hay ninguna de solo mar. Esto
+marca qué se puede medir:
+
+- **ROC de detección** (la típica de sonar): responde a "¿hay un barco o solo ruido de fondo?".
+  Pd es la fracción de grabaciones con barco en las que el sistema avisa, y **Pfa la fracción de
+  grabaciones de solo mar en las que avisa sin haber barco** (falsas alarmas). Necesita
+  grabaciones sin barco, así que con DeepShip **no se puede medir**.
+- **ROC de clasificación** (la que se hace aquí, gráfica 15): da por hecho que hay un barco y
+  pregunta "¿es de esta clase?". Se hace una curva por clase, por ejemplo Tug frente al resto:
+  **Pd** es la fracción de segmentos de Tug que el modelo reconoce como Tug, y **Pfa** la fracción
+  de segmentos de **otras clases** (Cargo, Passengership, Tanker) que confunde con Tug. Nunca mide
+  falsas alarmas ante mar vacío: mide confusiones entre tipos de barco.
 
 **Las cuatro clases de buque:**
 
@@ -102,14 +121,15 @@ tonales tiene cada barco y a qué ritmo late su hélice.
 Se comparan **7 modelos**: una línea base (regresión logística) y, sin y con aumento de datos,
 una CNN, un transformer y un híbrido CNN + transformer. **Todos se entrenan desde cero** con
 estos datos: ninguno está preentrenado. El diseño completo se fijó por escrito **antes de ver
-ningún resultado** ([D-024](DECISIONS.md) y sus ajustes).
+ningún resultado** ([registro de decisiones](DECISIONS.md)).
 
-Los 43 buques se reparten al azar en 5 grupos por clase, con buques enteros y minutos
+Una **partición** es un reparto de los buques entre entrenamiento, validación y test. Aquí hay
+**25**. Los 43 buques se reparten al azar en 5 grupos por clase, con buques enteros y minutos
 equilibrados. En cada vuelta, un grupo es test, otro validación y los otros tres entrenamiento
 (60/20/20), y se rota hasta que cada buque ha estado una vez en test. Se repite 5 veces con
 repartos distintos: **25 particiones**, y cada buque de Cargo, Passengership y Tanker cae en test
 5 veces. Tug solo tiene 3 buques, así que en todas las particiones va 1 a test, 1 a validación y
-1 a entrenamiento, y cada Tug cae en test 8 o 9 veces (ajuste 1 de D-024).
+1 a entrenamiento, y cada Tug cae en test 8 o 9 veces (regla fijada antes de entrenar).
 
 - **Elección:** cada modelo prueba sus configuraciones con la semilla 0 en las 25 particiones y
   se queda con la de mejor F1 medio de **validación**. Test no interviene en ninguna elección.
@@ -182,7 +202,7 @@ uno estandarizado. Aprende un peso por número y clase (5212 parámetros) y da l
 cada clase. `C` es la inversa de la regularización: cuanto más pequeño, más se frenan los pesos
 para que no memoricen. Usa pesos por clase para compensar el desequilibrio.
 
-### CNN: dos ramas convolucionales (D-018)
+### CNN: dos ramas convolucionales
 
 Una **red convolucional** aprende pequeños filtros que recorren la entrada buscando patrones
 locales, como una línea tonal o un pico de modulación, estén donde estén.
@@ -255,8 +275,8 @@ token de clase (aprendido) ─────────────────�
 - **GQA** (*grouped-query attention*): las cabezas comparten las claves y los valores por grupos.
   Con 4 cabezas y 2 grupos, cada pareja de cabezas usa las mismas claves y valores. Ahorra
   memoria y cálculo; con tantos grupos como cabezas es la atención clásica (también lo comprueba
-  un test). Con estos datos no mejora la precisión: se incluyó, a petición de David, para que el
-  modelo escale a un dataset mayor sin cambiar el código.
+  un test). Con estos datos no mejora la precisión: se incluyó porque el modelo está pensado para
+  usarse con un dataset mucho mayor, donde sí ahorra memoria y cálculo.
 - **SwiGLU:** la red que procesa cada token tras la atención: `W_down(SiLU(x·W_gate) ⊙ (x·W_up))`.
   Una rama decide cuánto deja pasar (la "puerta", con la activación SiLU) de lo que calcula la
   otra. Su tamaño interno es unas 8/3 veces `dim` (88 con `dim` 32 y 176 con 64): así tiene los
@@ -311,7 +331,8 @@ token de clase ─────────────────────�
 - La CNN tiene BatchNorm después de cada convolución (Ioffe y Szegedy, 2015), que estabiliza
   las activaciones desde la primera época, y no tiene *softmax* internos. Las CNN se entrenan
   bien sin calentamiento, y es lo habitual.
-- Además, la configuración A de la CNN es la CNN de partida (D-018), que no tenía
+- Además, la configuración A de la CNN es la CNN de partida, diseñada antes de esta evaluación,
+  que no tenía
   calentamiento: si se lo hubiéramos añadido, no sabríamos si un cambio en el resultado venía de
   la red o del calentamiento.
 
@@ -351,7 +372,7 @@ perfecto).
 
 | Config. | Qué cambia | Hipótesis que prueba | CNN | CNN + aum. |
 |---|---|---|---|---|
-| A | Nada: es la CNN de partida, D-018 (16-32-64 / 16-32 filtros) | Referencia | 0,396 | 0,397 |
+| A | Nada: es la CNN de partida, diseñada antes de esta evaluación (16-32-64 / 16-32 filtros) | Referencia | 0,396 | 0,397 |
 | B | La mitad de filtros (8-16-32 / 8-16) | ¿Sobra capacidad y por eso memoriza? | 0,369 | 0,380 |
 | C | Más regularización: dropout 0,5 y `wd` 5e-2 | ¿Falta freno? | **0,399** | 0,390 |
 | D | lr 3e-4 | En las pruebas previas lo mejor llegaba en las épocas 3-10: ¿aprende demasiado deprisa? | 0,380 | **0,398** |
@@ -380,8 +401,9 @@ que la variación entre particiones.
 
 ### Resumen de resultados
 
-F1 macro de test por segmento (4 clases), media ± desviación de las 25 particiones. El azar
-medido es 0,242 con 4 clases y ≈ 0,5 dentro de cada época, donde solo hay 2 clases.
+F1 macro de test por segmento (4 clases) del modelo final: media ± desviación de las 25
+particiones (la **dispersión del modelo final entre particiones**). El azar medido es 0,242 con
+4 clases y ≈ 0,5 dentro de cada época, donde solo hay 2 clases.
 
 | Modelo | Config. | F1 de test | Mín.-máx. | 2016: Passengership frente a Tanker | 2017: Cargo frente a Tug | Parámetros | MFLOPs |
 |---|---|---|---|---|---|---|---|
@@ -505,12 +527,20 @@ Simon, y por eso la cifra que se da es la de test.
 
 ![De dónde viene la variación](docs/figures/round3/round3_variance.png)
 
-**Cómo se lee.** Para cada red, la desviación del F1 de test **entre particiones** (con la media de
-sus semillas) y **entre semillas** dentro de una misma partición.
+**Cómo se lee.** Separa de dónde viene la variación del F1 de test de cada red:
 
-**Qué se ve.** La partición pesa más que la semilla en todas las redes (0,07-0,10 frente a
-0,03-0,09), como dicen Bouthillier et al. (2021): por eso se usan 25 particiones y no más
-semillas. Pero en las CNN y el híbrido la semilla también pesa mucho (0,06-0,09): con estos datos,
+- **Variación por partición:** la desviación entre las 25 particiones del F1 medio de las 3
+  semillas de cada partición, cada una puntuada por separado.
+- **Variación por semilla:** la desviación entre las 3 semillas dentro de una misma partición.
+
+No es la misma cifra que la **dispersión del modelo final entre particiones** de la tabla de
+resultados (0,09-0,14): allí se puntúa el modelo final, que promedia las probabilidades de las 3
+semillas antes de decidir, y ese modelo combinado cambia más de una partición a otra que la media
+de las cifras de sus semillas.
+
+**Qué se ve.** La variación por partición pesa más que la variación por semilla en todas las redes
+(0,07-0,10 frente a 0,03-0,09), como dicen Bouthillier et al. (2021): por eso se usan 25
+particiones y no más semillas. Pero en las CNN y el híbrido la semilla también pesa mucho (0,06-0,09): con estos datos,
 entrenar dos veces la misma red puede dar cifras bastante distintas.
 
 ### 9. Elección de configuración
@@ -643,11 +673,11 @@ git y Docker.
 
 No hace falta instalar Python ni ninguna librería: todo se ejecuta dentro del contenedor, con
 Python 3.11.17 y versiones fijadas de cada librería. Lo que tengas instalado en tu ordenador no
-se usa, así que no necesitas un entorno virtual ni preocuparte por las versiones (D-021).
+se usa, así que no necesitas un entorno virtual ni preocuparte por las versiones.
 
 ### Instalación
 
-1. Clona el repositorio (es privado; necesitas que David te dé acceso):
+1. Clona el repositorio:
 
    ```bash
    git clone https://github.com/davidmorgadocarames/sonar_investigacion.git
@@ -772,15 +802,23 @@ docker compose run --rm pipeline features
 ```
 
 - `qc` revisa los 63 WAV (formato, duración, offset DC, saturación...) en unos segundos y escribe
-  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero. Es normal que marque `flag_dc` en
-  casi todas las grabaciones: todas tienen un offset DC, y `features` lo corrige (D-009).
+  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero. El **offset DC** es que la señal no
+  está centrada en 0, sino desplazada un valor constante por la cadena de grabación; `qc` marca
+  `flag_dc` cuando ese desplazamiento supera el 10 % de la amplitud típica de la señal (su
+  desviación típica). Lo marca en **las 63 grabaciones**, y es normal: `features` lo corrige
+  restando a cada grabación su media.
 - `features` tarda menos de un minuto. Comprueba que cada WAV es idéntico al de la versión
   fijada (SHA-256 de `datasets/manifests/vessels.csv`), quita el offset DC de cada grabación, la
   corta en segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación
   de la cavitación, 0 a 100 Hz) de cada segmento. Debe decir `63 recordings, 1889 segments` y
-  escribir en `datasets/processed/` unos 82 MB: los segmentos repartidos en tres ficheros
-  `features_*.npz` (la validación cruzada los junta), `index.csv` (una fila por segmento) y `features_meta.json` (parámetros
-  usados). Esa carpeta no se sube a git.
+  mostrar cuántos segmentos tiene cada clase. Escribe en `datasets/processed/` unos 82 MB: los
+  segmentos, `index.csv` (una fila por segmento) y `features_meta.json` (parámetros usados). Esa
+  carpeta no se sube a git.
+- Los segmentos se guardan en **tres ficheros** (`features_train.npz`, `features_val.npz` y
+  `features_test.npz`) **solo por cómo se almacenan**: no son una partición de la evaluación. La
+  evaluación los junta y usa las **25 particiones** de `datasets/manifests/cv_splits.csv` (5
+  repeticiones × 5 vueltas), explicadas en
+  [Protocolo de evaluación](#protocolo-de-evaluación-validación-cruzada-5--5).
 
 Figuras de ejemplo (en `outputs/figures/`, que no se sube a git):
 
@@ -804,7 +842,9 @@ publicadas:
 docker compose run --rm pipeline evaluate --round 3 --check
 ```
 
-Tarda unos segundos. Usa los 7 modelos representativos versionados (uno por modelo, de la
+`--round 3` es el nombre que tiene en el código esta evaluación (la validación cruzada de los 7
+modelos); también aparece en los nombres de algunas carpetas y ficheros (`round3`). Tarda unos
+segundos. Usa los 7 modelos representativos versionados (uno por modelo, de la
 primera partición y la semilla 0), puntúa el test de esa partición y lo compara con lo guardado
 en `docs/results/round3.json`. No entrena ni elige nada. Debe decir `Reproduces the round 3
 results`. Los modelos se entrenaron en GPU, así que en CPU algún segmento puede cambiar de clase:
@@ -823,8 +863,6 @@ docker compose run --rm pipeline report
 Tarda menos de un minuto. Con `git status` puedes comprobar que no cambia ningún fichero.
 
 ### Reproducir los resultados (opcional, solo GPU)
-
-Los comandos llevan `--round 3`: es el nombre que tiene esta evaluación en el código.
 
 > ⏱️ **Tiempo: ~1 h 40 min con GPU (RTX 4060); del orden de 10 a 30 h solo con CPU.**
 
@@ -879,16 +917,18 @@ inspeccionar la arquitectura sin entrenar.
 
 Explicadas en el [informe](docs/report.md). En resumen:
 
-- **Clase y época coinciden** (DT-005): Cargo y Tug se grabaron en 2017, y Passengership y
+- **Clase y época coinciden** (limitación conocida de estos datos): Cargo y Tug se grabaron en
+  2017, y Passengership y
   Tanker en 2016. El resultado de 4 clases no distingue el tipo de buque de las condiciones de
   grabación; solo las comparaciones dentro de una época están libres de ese efecto.
 - **Pocos buques:** 43 en total, y Tug solo 3. Cada Tug cae en test 8 o 9 veces, y el
   solapamiento entre particiones en esa clase es mayor del que corrige la prueba de Nadeau y
   Bengio.
-- **El resultado depende mucho de la partición:** las redes varían ~0,09-0,14 de F1 entre
-  particiones, y las semillas de una misma partición ~0,03-0,09.
-- **La ROC es de clasificación**, no de detección: DeepShip no tiene grabaciones sin buque
-  (DT-007).
+- **El resultado depende mucho de la partición:** la dispersión del modelo final entre
+  particiones es de 0,09-0,14 de F1 en las redes, y la variación por semilla dentro de una
+  partición, de 0,03-0,09 (gráfica 8).
+- **La ROC es de clasificación**, no de detección: DeepShip no tiene grabaciones sin buque, así
+  que no se pueden medir falsas alarmas ante mar vacío (ver [Los datos](#los-datos)).
 - **Las figuras conjuntas** (matrices, ROC, calibración) juntan predicciones de 25 modelos
   distintos: las cifras por partición son las de referencia.
 
@@ -925,7 +965,7 @@ Todos los tiempos y resultados de este README se midieron en:
 
 El código y la documentación están bajo la licencia MIT ([LICENSE](LICENSE)), © 2026 David
 Morgado Carames. No cubre los datos de DeepShip (no se distribuyen aquí) ni los pesos de
-`models/`, que derivan de DeepShip y siguen su mismo supuesto de uso académico (D-022).
+`models/`, que derivan de DeepShip y siguen su mismo supuesto de uso académico.
 
 ## Cita
 
