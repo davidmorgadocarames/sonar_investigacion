@@ -72,7 +72,7 @@ modelo podría reconocer *ese barco concreto* en vez de su tipo, y el resultado 
 
 **Cómo se lee.** Cada barra son los minutos de audio de una clase, con sus buques y sus
 grabaciones encima. En total, 95 minutos de 63 grabaciones de 43 buques. Destacan el
-desequilibrio (Cargo tiene casi el doble de audio que Passengership, y cuatro veces el de Tug) y
+desequilibrio (Cargo tiene algo más del doble de audio que Passengership, y cuatro veces el de Tug) y
 que **Tug solo tiene 3 buques**, una sola grabación de cada uno.
 
 ### Qué son LOFAR y DEMON
@@ -332,8 +332,7 @@ token de clase ─────────────────────�
   las activaciones desde la primera época, y no tiene *softmax* internos. Las CNN se entrenan
   bien sin calentamiento, y es lo habitual.
 - Además, la configuración A de la CNN es la CNN de partida, diseñada antes de esta evaluación,
-  que no tenía
-  calentamiento: si se lo hubiéramos añadido, no sabríamos si un cambio en el resultado venía de
+  que no tenía calentamiento: si se lo hubiéramos añadido, no sabríamos si un cambio en el resultado venía de
   la red o del calentamiento.
 
 Referencias:
@@ -348,7 +347,7 @@ Referencias:
 ## Por qué cada configuración
 
 Cada red prueba 4 configuraciones, fijadas antes de entrenar. Cada una responde a una pregunta
-concreta: **¿qué falla, la capacidad o la regularización?** En las pruebas previas, la CNN memorizaba
+concreta: **¿qué falla, la capacidad o la regularización?** En las pruebas previas (evaluaciones exploratorias anteriores, ver [Procedencia](#procedencia)), la CNN memorizaba
 (entrenamiento casi perfecto, validación pobre). La primera configuración es siempre la más
 simple, y en caso de empate gana ella. La versión sin aumento y la versión con aumento eligen por
 separado. Abajo, el F1 medio de validación de cada configuración en las 25 particiones (en
@@ -368,7 +367,7 @@ acierta el 100 % de entrenamiento y es el modelo peor calibrado (ECE 0,45; el EC
 calibration error*, mide cuánto se aleja la confianza del modelo de su acierto real: 0 es
 perfecto).
 
-**CNN** (lr 1e-3, `wd` 1e-2 y dropout 0,3 salvo que se diga otra cosa):
+**CNN** (lr 1e-3, `wd` (*weight decay*) 1e-2 y dropout 0,3 salvo que se diga otra cosa):
 
 | Config. | Qué cambia | Hipótesis que prueba | CNN | CNN + aum. |
 |---|---|---|---|---|
@@ -738,7 +737,7 @@ se usa, así que no necesitas un entorno virtual ni preocuparte por las versione
 docker compose run --rm --entrypoint python pipeline -m pytest -rs
 ```
 
-Tarda entre uno y dos minutos (~1 min 40 s con los datos descargados). Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
+Tarda entre uno y dos minutos (~1 min 20 s en el equipo de referencia). Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
 lista los tests saltados y por qué: sin los datos descargados se saltan los que los necesitan
 (dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
 features first`). En la opción A se saltan los de determinismo en CUDA (dicen `no CUDA here`) y
@@ -845,13 +844,17 @@ docker compose run --rm pipeline evaluate --round 3 --check
 ```
 
 `--round 3` es el nombre que tiene en el código esta evaluación (la validación cruzada de los 7
-modelos); también aparece en los nombres de algunas carpetas y ficheros (`round3`). Tarda unos
+modelos; las evaluaciones anteriores fueron las exploratorias de [Procedencia](#procedencia));
+también aparece en los nombres de algunas carpetas y ficheros (`round3`). Tarda unos
 segundos. Usa los 7 modelos representativos versionados (uno por modelo, de la
 primera partición y la semilla 0), puntúa el test de esa partición y lo compara con lo guardado
 en `docs/results/round3.json`. No entrena ni elige nada. Debe decir `Reproduces the round 3
 results`. Los modelos se entrenaron en GPU, así que en CPU algún segmento puede cambiar de clase:
 se admiten diferencias de hasta ±0,01 de F1 (2 o 3 segmentos). En el equipo de referencia sale
-idéntico en 6 modelos y +0,0045 en el híbrido con aumento.
+idéntico en 6 modelos y +0,0045 en el híbrido con aumento. Las cifras que imprime son de **una sola
+partición y una sola semilla**, así que no se parecen a las medias de la tabla de resultados (por
+ejemplo, la CNN da 0,198 en esa partición frente a 0,316 de media): lo que importa es que coincidan
+con su referencia.
 
 ### Regenerar el informe
 

@@ -17,6 +17,27 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · Proyecto cerrado: F5 y F6 completas, etiqueta `v0.2`
+- **Qué se hizo:** F6-T02 (cierre): arreglados los hallazgos del reviewer final (procedencia de
+  figuras e informe con el código de `9d72af5`, restos de `docs/results/README.md`, ECE 0,27,
+  explicación de por qué difieren las dos cifras de variación, duración de los tests,
+  `evaluate --check`/`--details` sin `--round 3` dan error con test, textos de ayuda). Friend-tester
+  final en limpio, en CPU, sobre `9778de9`: sin atascos; tests 349/11 sin datos y 356/4 con datos
+  como dice la tabla; `--check` reproduce (idéntico en 6 modelos, +0,0045 en el híbrido con
+  aumento); `report` idéntico byte a byte, PNG incluidos; 59 enlaces e imágenes y todas las anclas
+  correctas. Aplicados sus retoques de texto (cifras de `--check` de una sola partición, `wd`,
+  "pruebas previas", duración de los tests, "algo más del doble"). F5-T09 y F6 cerradas; etiqueta
+  `v0.2` en el estado final (David: cierre de todo el proyecto). David acepta su nombre en el ©
+  de la licencia y en la URL de clonado.
+- **Qué quedó a medias:** nada. Fuera de alcance, apuntado para un futuro proyecto: ROC de
+  detección con un dataset con grabaciones sin barco (DT-007), más buques y clases grabadas en
+  las mismas condiciones, y las opciones de velocidad comentadas con David (varios entrenamientos
+  a la vez en la GPU y sacar del bucle el trabajo de CPU).
+- **Ficheros tocados:** `README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `git tag` (`v0.2`); `docker compose run --rm --entrypoint python pipeline
+  -m pytest -rs`; `docker compose run --rm pipeline evaluate --round 3 --check`.
+- **Siguiente paso exacto:** ninguno; si se retoma, abrir una fase nueva con David.
+
 ## 2026-10-12 · F5-T11 y F6-T01 cerradas: README limpio para terceros
 - **Qué se hizo:** F5-T11 (`9d72af5`): README reescrito sin cronología ni rondas anteriores
   (resumen, datos y señal, protocolo con sus 9 referencias, modelos con las 3 del calentamiento,
@@ -122,28 +143,3 @@ Plantilla:
   no cambia `docs/report.md`.
 - **Siguiente paso exacto:** F5-T09: reviewer, friend-tester con el README nuevo, cierre de F5
   y etiqueta `v0.2`.
-
-## 2026-10-12 · F5-T07 cerrada: interpretabilidad de la ronda 3
-- **Qué se hizo:** `src/sonar_pipeline/interpret_cv.py` y `evaluate --round 3
-  --interpretability --results-dir docs/results` (9,5 min en la RTX 4060, solo inferencia, solo
-  validación de cada partición). Por modelo y partición, con la configuración elegida y sus
-  semillas finales (media de semillas dentro de la partición; media y desviación sobre las 25):
-  línea base, importancia por permutación; redes, oclusión por banda y saliencia por banda y
-  clase; transformer e híbrido, atención del token de clase a DEMON y a cada banda (posiciones
-  del híbrido llevadas a bandas de 40 Hz por su frecuencia central). Comprobación de época de
-  F3-T10 con todos los buques. Resultado en `docs/results/round3_interpretability.json`.
-  **Lo principal:** todas las redes dependen sobre todo de 0-40 Hz (y el híbrido y el
-  transformer también de 40-80 Hz), donde dominan el ruido del mar y de la plataforma; la línea
-  base, de 1240-1320 Hz, y 3 de sus 5 bandas principales están entre las 5 que más difieren entre
-  épocas (las redes, 1 de 5). No hay líneas fijas de época. La atención del token de clase al
-  DEMON va del 11 % (transformer) al 19 % (híbrido con aumento). Correlaciones con la diferencia
-  entre épocas pequeñas (ρ de −0,12 a +0,39) y sus p no son fiables (bandas vecinas
-  correlacionadas, muchos modelos sin corrección).
-- **Qué quedó a medias:** nada de F5-T07. Interpretación con David en F5-T08.
-- **Ficheros tocados:** `src/sonar_pipeline/interpret_cv.py`, `src/sonar_pipeline/__main__.py`,
-  `tests/test_interpret_cv.py`, `docs/results/round3_interpretability.json`, `PLAN.md`,
-  `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm
-  --entrypoint python pipeline -m pytest -rs` (343 pasan, 1 saltado).
-- **Siguiente paso exacto:** F5-T08: gráficas, informe y README por etapas, con la sección de
-  arquitecturas y la justificación de cada configuración.
