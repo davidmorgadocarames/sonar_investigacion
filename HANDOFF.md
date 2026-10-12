@@ -17,6 +17,24 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T03 en curso: plan para hacer T03, T04 y T05 seguidos
+- **Qué se hizo:** David pidió hacer F5-T03 (motor de validación cruzada), F5-T04 (transformer)
+  y F5-T05 (híbrido) seguidos, y que **todas las preguntas sobre la ronda 3 se le hagan antes**,
+  para que después la ronda 3 corra con un solo comando sin acciones suyas (quiere dejarla
+  entrenando de noche). Diseño en D-024 y su ajuste 1; particiones en
+  `datasets/manifests/cv_splits.csv`.
+- **Qué quedó a medias:** F5-T03 recién empezada (sin código aún). Preguntas a David pendientes
+  de respuesta: autorización para lanzar la ronda 3 sin esperarle si los tests pasan y la
+  estimación medida es ≤ 4 h de GPU; qué hacer si un bloque falla; commit y push automáticos de
+  los resultados.
+- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** PLAN.md (F5-T03 en `[~]`).
+- **Siguiente paso exacto:** escribir el motor de F5-T03 (`src/sonar_pipeline/cv.py`: entrena
+  cualquier modelo en las 25 particiones, elige con media de validación y semilla 0, final con
+  semillas 0-2 promediadas, JSON por entrenamiento con MLOps, MFLOPs, tokens/s, tiempos, curvas,
+  calibración, predicciones; reanudable; prueba de Nadeau y Bengio con Holm) y sus tests
+  sintéticos; luego F5-T04 y F5-T05; un comando único `train --round 3`.
+
 ## 2026-10-12 · F5-T02 cerrada: particiones 5 × 5 por buque
 - **Qué se hizo:** `data-engineer` creó `tools/make_cv_splits.py` y
   `datasets/manifests/cv_splits.csv` (1575 filas, md5 `3558f6ff…`): 25 particiones (5
@@ -94,19 +112,3 @@ Plantilla:
   `tools/check_reproduction.py`.
 - **Siguiente paso exacto:** ninguno obligatorio. Si David quiere seguir, detallar F5 con el
   procedimiento de inicio de fase.
-
-## 2026-10-11 · F4-T06 cerrada: el friend-tester reproduce la evaluación 2
-- **Qué se hizo:** con el visto bueno de David, el friend-tester clonó `b581d0c` en una carpeta
-  temporal (ya borrada) y siguió solo el README por la opción A (CPU), sin entrenar: build
-  1 min 14 s (con caché), tests sin datos 237 passed y 8 skipped, descarga de DeepShip ~1 min,
-  `qc` 4 s, `features` 17 s, tests con datos 244 passed y 1 skipped, **`evaluate` 30 s con cifras
-  idénticas a la tabla del README y a `docs/results/eval2.json`** (F1, intervalos y
-  `weights_sha256` de los tres modelos), `report` 2 s con `git status` vacío (informe idéntico).
-  Espacio: clon 21 MB, DeepShip 1,2 GB, rasgos 82 MB. Su `code_sha256` (`5abdb24b…`) corresponde a
-  `b581d0c`. Con la aprobación de David: README con el tercer motivo de tests saltados, `flag_dc`
-  esperables y aviso de que el `code_sha256` difiere; tabla de procedencia con la reproducción y
-  el "no comprobado" de los hilos pasado a comprobado (cifras idénticas con 4 hilos).
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `README.md`, `docs/results/README.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** repetir los pasos del README en un clon limpio.
-- **Siguiente paso exacto:** F4-T07: reviewer, cierre de F4 y etiqueta `v0.1`.
