@@ -247,6 +247,19 @@ def build_parser() -> argparse.ArgumentParser:
         "models (F3-T10) and add it to metrics.json.",
     )
     evaluate.add_argument(
+        "--round",
+        type=int,
+        choices=(3,),
+        help="3 with --interpretability: interpretability of the round 3 final models on the "
+        "val of every partition (F5-T07); test is not used.",
+    )
+    evaluate.add_argument(
+        "--splits",
+        type=Path,
+        default=Path("datasets/manifests/cv_splits.csv"),
+        help="--round 3: the 25 partitions (default: %(default)s).",
+    )
+    evaluate.add_argument(
         "--bootstrap",
         type=int,
         default=2000,
@@ -555,7 +568,53 @@ def cmd_interpretability(args: argparse.Namespace) -> int:
     return 0
 
 
+def interpretability_round3(args: argparse.Namespace) -> int:
+    from sonar_pipeline.cv import Round3
+    from sonar_pipeline.interpret_cv import (
+        load_round3_summary,
+        run_round3_interpretability,
+    )
+
+    summary_path = args.results_dir / "round3.json"
+    engine = Round3(
+        args.processed_dir,
+        args.splits,
+        args.models_dir / "round3",
+        Path("outputs/round3"),
+        device_name=args.device,
+    )
+    output = args.results_dir / "round3_interpretability.json"
+    report = run_round3_interpretability(
+        engine,
+        load_round3_summary(summary_path),
+        output,
+        log=lambda line: print(line, flush=True),
+    )
+    print("Interpretability on val of the 25 partitions (test not used):")
+    for name, entry in report["models"].items():
+        top = ", ".join(
+            f"{b['lo_hz']:g}-{b['hi_hz']:g}" for b in entry["top_lofar_bands"]
+        )
+        print(f"  {name:<16} top LOFAR bands (Hz): {top}")
+    for name, m in report["era_check"]["models"].items():
+        print(
+            f"  {name}: Spearman with the era difference {m['spearman_rho']:+.2f}, "
+            f"top-5 overlap {m['top_overlap']}/5"
+        )
+    print(f"Written to {output}")
+    return 0
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
+    if args.round == 3:
+        if not args.interpretability:
+            print(
+                "--round 3 is only for --interpretability (test is scored by "
+                "train --round 3).",
+                file=sys.stderr,
+            )
+            return 1
+        return interpretability_round3(args)
     if args.interpretability:
         return cmd_interpretability(args)
     if args.refresh:

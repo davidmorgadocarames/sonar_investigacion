@@ -17,6 +17,31 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T07 cerrada: interpretabilidad de la ronda 3
+- **Qué se hizo:** `src/sonar_pipeline/interpret_cv.py` y `evaluate --round 3
+  --interpretability --results-dir docs/results` (9,5 min en la RTX 4060, solo inferencia, solo
+  validación de cada partición). Por modelo y partición, con la configuración elegida y sus
+  semillas finales (media de semillas dentro de la partición; media y desviación sobre las 25):
+  línea base, importancia por permutación; redes, oclusión por banda y saliencia por banda y
+  clase; transformer e híbrido, atención del token de clase a DEMON y a cada banda (posiciones
+  del híbrido llevadas a bandas de 40 Hz por su frecuencia central). Comprobación de época de
+  F3-T10 con todos los buques. Resultado en `docs/results/round3_interpretability.json`.
+  **Lo principal:** todas las redes dependen sobre todo de 0-40 Hz (y el híbrido y el
+  transformer también de 40-80 Hz), donde dominan el ruido del mar y de la plataforma; la línea
+  base, de 1240-1320 Hz, y 3 de sus 5 bandas principales están entre las 5 que más difieren entre
+  épocas (las redes, 1 de 5). No hay líneas fijas de época. La atención del token de clase al
+  DEMON va del 11 % (transformer) al 19 % (híbrido con aumento). Correlaciones con la diferencia
+  entre épocas pequeñas (ρ de −0,12 a +0,39) y sus p no son fiables (bandas vecinas
+  correlacionadas, muchos modelos sin corrección).
+- **Qué quedó a medias:** nada de F5-T07. Interpretación con David en F5-T08.
+- **Ficheros tocados:** `src/sonar_pipeline/interpret_cv.py`, `src/sonar_pipeline/__main__.py`,
+  `tests/test_interpret_cv.py`, `docs/results/round3_interpretability.json`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm
+  --entrypoint python pipeline -m pytest -rs` (343 pasan, 1 saltado).
+- **Siguiente paso exacto:** F5-T08: gráficas, informe y README por etapas, con la sección de
+  arquitecturas y la justificación de cada configuración.
+
 ## 2026-10-12 · F5-T06 cerrada: ronda 3 completa (7 modelos, 5 × 5)
 - **Qué se hizo:** ronda 3 en la RTX 4060, en tres bloques seguidos (04:51-06:33, unas
   1 h 40 min), sin fallos, con commit y push tras cada bloque (autorizado por David). F1 macro
@@ -108,18 +133,3 @@ Plantilla:
 - **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline
   tools/make_cv_splits.py --summary` y `git status` sin cambios.
 - **Siguiente paso exacto:** F5-T03: motor de validación cruzada y JSON por entrenamiento.
-
-## 2026-10-12 · F5 empezada; F5-T01 cerrada: protocolo de la ronda 3 (D-024)
-- **Qué se hizo:** David aprobó F5 (9 tareas, sin ARM ni preentrenados) y D-024: validación
-  cruzada repetida 5 × 5 por buque (60/20/20, rotando entrenamiento, validación y test; cada buque
-  en test 5 veces), 7 modelos (línea base; CNN, transformer puro e híbrido, sin y con aumento),
-  4 configuraciones A-D por tipo de red elegidas con la media de validación y 1 semilla, modelo
-  final con 3 semillas promediadas, técnicas (AdamW, calentamiento, RMSNorm, RoPE, SwiGLU, GQA),
-  prueba de Nadeau y Bengio con Holm, JSON por entrenamiento (MLOps, MFLOPs, tokens/s...), pesos
-  de F5 sin versionar, reproducción por el amigo opcional y solo GPU. README: sección "Ronda 3
-  (F5, en curso): protocolo de evaluación" con 9 referencias verificadas; "En gráficas" titulada
-  como rondas 1 y 2. La reorganización completa por etapas del README va en F5-T08.
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `DECISIONS.md`, `README.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** leer D-024 y la sección del protocolo en el README.
-- **Siguiente paso exacto:** F5-T02: particiones 5 × 5 con el subagente data-engineer.
