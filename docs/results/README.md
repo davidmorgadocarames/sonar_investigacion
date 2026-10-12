@@ -1,4 +1,23 @@
-# Resultados de F3 · dos rondas de entrenamiento y evaluación
+# Resultados versionados · rondas 1, 2 (F3) y 3 (F5)
+
+**La evaluación principal es la ronda 3** (validación cruzada 5 × 5 por buque, F5). Las rondas 1 y
+2 (una partición fija, F3) se conservan como histórico: sus cifras no son directamente
+comparables con las de la ronda 3.
+
+## Ronda 3 (F5)
+
+| Fichero | Qué contiene | Cómo se generó |
+|---|---|---|
+| [round3.json](round3.json) | Los 7 modelos: elección de configuración (validación de cada configuración en las 25 particiones), F1 de test por partición y semilla, dentro de cada época, matrices conjuntas, coste, tiempos y las 13 comparaciones con Nadeau y Bengio y Holm. | `train --round 3` (escrito al terminar cada bloque) |
+| [round3_interpretability.json](round3_interpretability.json) | Oclusión, saliencia, permutación y atención por banda sobre validación, y la comprobación de época (DT-005). | `evaluate --round 3 --interpretability` |
+| [round3_details.json](round3_details.json) | Lo que necesitan las gráficas y no está en los anteriores: velocidad, curvas de aprendizaje, F1 de entrenamiento y validación, acierto por buque, acuerdo entre modelos, calibración y ROC. | `evaluate --round 3 --details` (sin entrenar; test se lee de lo guardado por la ronda) |
+
+Los JSON de cada entrenamiento (unos 1000) quedan en `outputs/round3/` y los pesos en
+`models/round3/`, sin versionar (ajuste 2 de D-024); se versiona un modelo representativo por red
+en `models/round3/representative/`. El informe y las 15 gráficas de `docs/figures/round3/` se
+regeneran desde estos tres ficheros con `report`.
+
+## Rondas 1 y 2 (F3)
 
 Resúmenes versionados de las dos rondas de F3 (D-020). Los resultados completos están en
 `outputs/results/` (segunda ronda) y `outputs/results/eval1/` (primera), que no se versionan;
@@ -68,7 +87,10 @@ toca el cálculo de rasgos, modelos ni métricas, así que no afecta a ninguna c
 | Figuras de la ronda 2 (`docs/figures/eval2/`) | `5d8d820` (`--plot-only`) | `aade7670…` | Redibujadas desde `metrics.json` con el arreglo B5, sin puntuar test | No |
 | Figuras de la ronda 1 (`docs/figures/eval1/`) | `b23c8ac` (resultados) y `d544a71` (interpretabilidad) | `96168c20…` y `19490ca8…` | Copiadas tal cual: azar dibujado en 0,25 y 0,5; Pd a Pfa = 1 % interpolada con < 100 negativos; modelos de la ronda 1 | Sí en esas marcas; no en F1 ni en las matrices |
 | Figuras de señal (`docs/figures/signal/`) | `9f1f99b` (`features --figures` y tests de figuras, F2-T10) | `c867b025…` | Mismo LOFAR y DEMON que el código final (después solo cambiaron los modelos y la evaluación) | No |
-| Figura de datos e informe (`docs/figures/data_minutes.png`, `docs/report.md`) | commit de F4-T07 (etiqueta `v0.1`) | `b4b6638e…` | Es el código de v0.1; `report` los regenera desde lo versionado con los mismos bytes (lo comprueba un test) | — |
+| Figura de datos e informe (`docs/figures/data_minutes.png`, `docs/report.md`) hasta `v0.1.1` | commit de F4-T07 (etiqueta `v0.1`) | `b4b6638e…` | Es el código de v0.1; `report` los regenera desde lo versionado con los mismos bytes (lo comprueba un test) | — |
+| Ronda 3 · entrenamiento, test y comparaciones (`round3.json`, `models/round3/representative/`) | `c96865f` | `50fb6ba4…` | Después solo se añadieron módulos nuevos (interpretabilidad, detalles, figuras, informe) y opciones de la línea de comandos; `cv.py`, `cnn.py` y `transformer.py` no cambiaron | No |
+| Ronda 3 · interpretabilidad (`round3_interpretability.json`) | `8558273` | `b9420ed3…` | Ninguna que le afecte | No |
+| Ronda 3 · detalles, 15 figuras e informe (`round3_details.json`, `docs/figures/round3/`, `docs/report.md`) | commit de F5-T08 | el que registra `round3_details.json` | Es el código final de F5-T08 | — |
 
 Los pesos de cada ronda están en git: ronda 1 en `6a08569` (línea base), `43cfb1e` (CNN) y
 `ed9db91` (CNN con aumento); ronda 2 en `b43315c`.

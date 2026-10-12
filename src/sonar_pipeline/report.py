@@ -1,7 +1,10 @@
-"""Report (F4-T03, D-021): docs/report.md built only from versioned files.
+"""Report (F4-T03, D-021; round 3 added in F5-T08): docs/report.md built only from versioned
+files.
 
 Inputs: docs/results/eval1.json and eval2.json (summaries of the two F3 rounds, D-020), the
-manifests in datasets/manifests/ and the figures in docs/figures/. Nothing is trained and test is
+round 3 summaries docs/results/round3.json, round3_details.json and round3_interpretability.json
+(F5, when present; their 15 figures are drawn into docs/figures/round3/), the manifests in
+datasets/manifests/ and the figures in docs/figures/. Nothing is trained and test is
 not scored, so anyone can rebuild the report after cloning, without audio.
 
 `collect_figures` copies once the figures from outputs/figures/ (not versioned) into
@@ -425,8 +428,46 @@ def limitation_lines(eval2: dict) -> list[str]:
     return lines
 
 
-def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
+def build_report(
+    eval1: dict, eval2: dict, data_lines: list[str], round3: tuple | None = None
+) -> str:
+    """round3: (round3.json, round3_details.json, round3_interpretability.json) or None."""
+    from sonar_pipeline import report_round3
+
     final = eval2["models"]
+    if round3 is not None:
+        summary3, details3, interpretability3 = round3
+        top = [
+            "### Ronda 3 (F5): evaluación principal",
+            "",
+            *report_round3.summary_lines(summary3),
+            "",
+            "### Rondas 1 y 2 (F3): partición fija, histórico",
+            "",
+        ]
+        round3_lines = report_round3.round3_section(
+            summary3, details3, interpretability3, "round3"
+        )
+        round3_models = [
+            (
+                "- **Ronda 3 (F5):** además, un **transformer** (bandas de 40 Hz del LOFAR, un "
+                "token del DEMON y uno de clase; RMSNorm, RoPE, GQA y SwiGLU) y un **híbrido** "
+                "(dos bloques de la CNN como tokens y bloques transformer), cada red sin y con "
+                "aumento, con 4 configuraciones cada una y validación cruzada 5 × 5 por buque "
+                "(D-024). Arquitecturas y justificación de cada configuración en el README."
+            ),
+        ]
+        numbers = ("5", "6", "7")
+        historic_title = "## 5. Rondas 1 y 2 (F3): partición fija · histórico"
+        historic_note = (
+            "**Etapa anterior, no comparable directamente con la ronda 3:** una sola partición "
+            "fija (12 buques en test), mirada dos veces. "
+        )
+    else:
+        top, round3_lines, round3_models = [], [], []
+        numbers = ("4", "5", "6")
+        historic_title = "## 4. Resultados"
+        historic_note = ""
     lines = [
         "# Informe de resultados · sonar_investigacion",
         "",
@@ -437,6 +478,7 @@ def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
         "",
         "## Resumen",
         "",
+        *top,
         *summary_lines(eval2),
         "",
         *data_lines,
@@ -459,11 +501,14 @@ def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
             "- Todo se decide con val; test se usa solo para la evaluación final de cada ronda. La "
             "decisión por grabación es la media de las probabilidades de sus segmentos (D-018)."
         ),
+        *round3_models,
         "",
-        "## 4. Resultados",
+        *round3_lines,
+        historic_title,
         "",
         (
-            "F1 macro con intervalos del 95 % (bootstrap remuestreando grabaciones dentro de cada "
+            historic_note
+            + "F1 macro con intervalos del 95 % (bootstrap remuestreando grabaciones dentro de cada "
             "clase). Hubo **dos rondas**: la segunda tras arreglar los fallos de implementación y de "
             "medida que encontró la revisión de F3, sin cambiar nada para mejorar la cifra; test se "
             "había mirado ya en la primera. Detalle y procedencia en "
@@ -484,11 +529,12 @@ def build_report(eval1: dict, eval2: dict, data_lines: list[str]) -> str:
             "se suponía 0,25 y 0,5, y la Pd a Pfa = 1 % de sus ROC está interpolada con menos de "
             "100 negativos).",
         ),
-        "## 5. Limitaciones",
+        f"## {numbers[1]}. Limitaciones",
         "",
         *limitation_lines(eval2),
+        *(report_round3.limitation_lines(round3[0]) if round3 is not None else []),
         "",
-        "## 6. Procedencia y reproducibilidad",
+        f"## {numbers[2]}. Procedencia y reproducibilidad",
         "",
         (
             "- Qué código produjo cada resultado: tabla de procedencia en "
@@ -517,7 +563,16 @@ def run_report(
         collect_figures(collect_from, figures_dir)
     eval1 = json.loads((results_dir / "eval1.json").read_text(encoding="utf-8"))
     eval2 = json.loads((results_dir / "eval2.json").read_text(encoding="utf-8"))
-    text = build_report(eval1, eval2, data_section(manifests_dir, figures_dir))
+    round3 = None
+    if (results_dir / "round3.json").is_file():
+        from sonar_pipeline.figures_round3 import plot_round3
+
+        round3 = tuple(
+            json.loads((results_dir / f"{name}.json").read_text(encoding="utf-8"))
+            for name in ("round3", "round3_details", "round3_interpretability")
+        )
+        plot_round3(*round3, figures_dir / "round3")
+    text = build_report(eval1, eval2, data_section(manifests_dir, figures_dir), round3)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text, encoding="utf-8", newline="\n")
     return output

@@ -247,6 +247,19 @@ def build_parser() -> argparse.ArgumentParser:
         "models (F3-T10) and add it to metrics.json.",
     )
     evaluate.add_argument(
+        "--outputs-dir",
+        type=Path,
+        default=Path("outputs/round3"),
+        help="--round 3: the per-training JSON written by train --round 3 "
+        "(default: %(default)s).",
+    )
+    evaluate.add_argument(
+        "--details",
+        action="store_true",
+        help="--round 3: collect speed, curves, train and val F1, per-vessel results, "
+        "calibration and ROC into round3_details.json for the report (no training).",
+    )
+    evaluate.add_argument(
         "--round",
         type=int,
         choices=(3,),
@@ -580,7 +593,7 @@ def interpretability_round3(args: argparse.Namespace) -> int:
         args.processed_dir,
         args.splits,
         args.models_dir / "round3",
-        Path("outputs/round3"),
+        args.outputs_dir,
         device_name=args.device,
     )
     output = args.results_dir / "round3_interpretability.json"
@@ -605,11 +618,47 @@ def interpretability_round3(args: argparse.Namespace) -> int:
     return 0
 
 
+def details_round3(args: argparse.Namespace) -> int:
+    import numpy as np
+
+    from sonar_pipeline.cv import Round3
+    from sonar_pipeline.interpret_cv import load_round3_summary
+    from sonar_pipeline.round3_details import collect_details
+
+    engine = Round3(
+        args.processed_dir,
+        args.splits,
+        args.models_dir / "round3",
+        args.outputs_dir,
+        device_name=args.device,
+    )
+    output = args.results_dir / "round3_details.json"
+    report = collect_details(
+        engine,
+        load_round3_summary(args.results_dir / "round3.json"),
+        output,
+        log=lambda line: print(line, flush=True),
+    )
+    print("Round 3 details (no training; test not rescored):")
+    for name, entry in report["models"].items():
+        gap = entry["generalisation"]
+        train = np.mean([g["train_f1_macro"] for g in gap])
+        test = np.mean([g["test_f1_macro"] for g in gap])
+        print(
+            f"  {name:<16} train F1 {train:.3f}  test F1 {test:.3f}  "
+            f"ECE {entry['calibration']['ece']:.3f}"
+        )
+    print(f"Written to {output}")
+    return 0
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
     if args.round == 3:
+        if args.details:
+            return details_round3(args)
         if not args.interpretability:
             print(
-                "--round 3 is only for --interpretability (test is scored by "
+                "--round 3 is only for --interpretability or --details (test is scored by "
                 "train --round 3).",
                 file=sys.stderr,
             )

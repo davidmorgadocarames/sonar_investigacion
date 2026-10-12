@@ -17,6 +17,34 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T08 cerrada: gráficas, informe y README de la ronda 3
+- **Qué se hizo:** `evaluate --round 3 --details` (`round3_details.py`, 1 min en GPU, sin
+  entrenar) reúne en `docs/results/round3_details.json` lo que las gráficas necesitaban y solo
+  estaba en `outputs/`: velocidad, curvas, F1 de entrenamiento y validación por inferencia,
+  variación por partición y por semilla, acierto por buque, acuerdo entre modelos, calibración
+  (ECE, Brier, log loss) y ROC. `figures_round3.py` dibuja las 15 gráficas acordadas en
+  `docs/figures/round3/`, y `report_round3.py` añade al informe el capítulo de la ronda 3
+  (cifras leídas de los JSON) y las rondas 1 y 2 como histórico. README reorganizado por etapas:
+  resumen con el resultado de la ronda 3, cronología, índice, uso común, cómo reproducir la ronda
+  3, datos y señal, ronda 3 (protocolo con literatura, **arquitecturas explicadas**: CNN,
+  transformer e híbrido con BatchNorm, LeakyReLU, RMSNorm, RoPE, GQA, SwiGLU, AdamW, *weight
+  decay*, calentamiento, decaimiento del lr, parada temprana y aumento; **justificación de cada
+  configuración** con la hipótesis que prueba y su F1 de validación; las 5 gráficas principales
+  explicadas, con "4. Resultados en test" como diagrama de caja), rondas 1 y 2 como histórico
+  no comparable, limitaciones y procedencia. `evaluate` admite `--outputs-dir`. Nuevo dato: la
+  línea base acierta el 100 % de entrenamiento y es la peor calibrada (ECE 0,45). No se
+  guardaron la norma del gradiente ni los tiempos de carga de datos que se mencionaron al
+  planificar: no se pueden recuperar sin reentrenar.
+- **Qué quedó a medias:** nada de F5-T08.
+- **Ficheros tocados:** `src/sonar_pipeline/{round3_details,figures_round3,report_round3,report,__main__}.py`,
+  `tests/test_report_round3.py`, `docs/results/round3_details.json`, `docs/results/README.md`,
+  `docs/figures/round3/`, `docs/report.md`, `README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (347 pasan y 4 se saltan en CPU; 350 y 1 en GPU); `docker compose run --rm pipeline report`
+  no cambia `docs/report.md`.
+- **Siguiente paso exacto:** F5-T09: reviewer, friend-tester con el README nuevo, cierre de F5
+  y etiqueta `v0.2`.
+
 ## 2026-10-12 · F5-T07 cerrada: interpretabilidad de la ronda 3
 - **Qué se hizo:** `src/sonar_pipeline/interpret_cv.py` y `evaluate --round 3
   --interpretability --results-dir docs/results` (9,5 min en la RTX 4060, solo inferencia, solo
@@ -112,24 +140,3 @@ Plantilla:
   semillas 0-2 promediadas, JSON por entrenamiento con MLOps, MFLOPs, tokens/s, tiempos, curvas,
   calibración, predicciones; reanudable; prueba de Nadeau y Bengio con Holm) y sus tests
   sintéticos; luego F5-T04 y F5-T05; un comando único `train --round 3`.
-
-## 2026-10-12 · F5-T02 cerrada: particiones 5 × 5 por buque
-- **Qué se hizo:** `data-engineer` creó `tools/make_cv_splits.py` y
-  `datasets/manifests/cv_splits.csv` (1575 filas, md5 `3558f6ff…`): 25 particiones (5
-  repeticiones × 5 vueltas). Clases con 5 o más buques: 5 folds por repetición con minutos
-  equilibrados (tolerancia sobre el mejor reparto), vuelta k con test = fold k y validación =
-  fold k + 1; cada buque una vez en test y una en validación por repetición. Tras una primera
-  versión en la que Tug faltaba de test en 10 particiones y de validación en otras 10, David
-  aprobó que las clases con menos de 5 buques vayan 1/1/resto: Tug 1/1/1 en las 25 (test 9/8/8,
-  validación 8/9/8) y la métrica simplificada (F1 macro de 4 clases por partición). Ajuste 1 de
-  D-024 con estas reglas, el algoritmo con tolerancia, el desequilibrio de minutos (Cargo 25 %,
-  Passengership 42 %, Tanker 10,5 %) y la dependencia del generador de numpy. Sin fugas en
-  ninguna partición; 4 clases en los tres papeles en todas; regeneración idéntica. 41 tests
-  nuevos (288 en total).
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `tools/make_cv_splits.py`, `datasets/manifests/cv_splits.csv`,
-  `tests/test_make_cv_splits.py`, `tests/test_cv_splits_data.py`, `datasets/README.md`,
-  `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline
-  tools/make_cv_splits.py --summary` y `git status` sin cambios.
-- **Siguiente paso exacto:** F5-T03: motor de validación cruzada y JSON por entrenamiento.
