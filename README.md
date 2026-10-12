@@ -535,8 +535,10 @@ Simon, y por eso la cifra que se da es la de test.
 
 No es la misma cifra que la **dispersión del modelo final entre particiones** de la tabla de
 resultados (0,09-0,14): allí se puntúa el modelo final, que promedia las probabilidades de las 3
-semillas antes de decidir, y ese modelo combinado cambia más de una partición a otra que la media
-de las cifras de sus semillas.
+semillas antes de decidir. Promediar los F1 de 3 semillas suaviza los fallos propios de cada una;
+el modelo combinado, en cambio, decide una sola vez por segmento y refuerza lo que las 3 semillas
+tienen en común en esa partición (por ejemplo, predecir mucho Tanker), así que su resultado cambia
+más de una partición a otra.
 
 **Qué se ve.** La variación por partición pesa más que la variación por semilla en todas las redes
 (0,07-0,10 frente a 0,03-0,09), como dicen Bouthillier et al. (2021): por eso se usan 25
@@ -606,7 +608,7 @@ cuanto más bajos, mejor.
 
 **Qué se ve.** Todos están **demasiado seguros**: sus curvas quedan por debajo de la diagonal. La
 línea base es la peor calibrada (ECE 0,45; dice estar muy segura y acierta poco); las redes
-quedan entre 0,20 y 0,28. Ninguna probabilidad de estos modelos debería leerse como una
+quedan entre 0,20 y 0,27. Ninguna probabilidad de estos modelos debería leerse como una
 confianza real.
 
 ### 14. Qué frecuencias usa cada modelo
@@ -736,7 +738,7 @@ se usa, así que no necesitas un entorno virtual ni preocuparte por las versione
 docker compose run --rm --entrypoint python pipeline -m pytest -rs
 ```
 
-Tarda alrededor de un minuto. Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
+Tarda entre uno y dos minutos (~1 min 40 s con los datos descargados). Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
 lista los tests saltados y por qué: sin los datos descargados se saltan los que los necesitan
 (dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
 features first`). En la opción A se saltan los de determinismo en CUDA (dicen `no CUDA here`) y

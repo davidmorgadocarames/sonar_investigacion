@@ -83,7 +83,7 @@ después de verlas.
 
 ## Cómo reproducir las rondas 1 y 2
 
-Instrucciones que estaban en el README principal hasta `v0.1.1`. Necesitan los datos y los
+Instrucciones que estaban en el README principal hasta el commit `839876b` (F5-T10). Necesitan los datos y los
 rasgos (README principal, Puesta en marcha). Las rutas de los comandos son relativas a la
 carpeta raíz del repositorio.
 
@@ -92,7 +92,7 @@ carpeta raíz del repositorio.
 Evalúa **solo los 3 modelos de las rondas 1 y 2** (línea base, CNN y CNN con aumento), con sus
 pesos ya versionados y sin entrenar nada. Puntúa la partición fija de esas rondas con los pesos
 de `models/` (en total menos de 1 MB). Con los rasgos ya
-calculados (`features`, sección anterior):
+calculados (`features`, en la Puesta en marcha del README principal):
 
 ```bash
 docker compose run --rm pipeline evaluate
@@ -142,7 +142,7 @@ Son los tres modelos de las rondas 1 y 2. Reentrenar **sobrescribe los pesos de 
 | `docker compose run --rm pipeline train --model cnn-aug` | CNN con aumento de datos (necesita `cnn` antes) | ~1-2 min (estimado) | ~30 s (15 s de entrenamiento) |
 | `docker compose run --rm pipeline train --model baseline --permutation-test 200` | Test de permutación de la línea base | ~18 min | (usa CPU) |
 
-- Los tiempos son los del equipo de referencia (abajo) e incluyen arrancar el contenedor; los de
+- Los tiempos son los del equipo de referencia (README principal) e incluyen arrancar el contenedor; los de
   las CNN en CPU son una estimación a partir del tiempo por época medido.
 - La línea base y la comprobación de duración dan exactamente los mismos resultados en x86-64;
   en otros procesadores puede variar la última cifra.
@@ -181,12 +181,13 @@ toca el cálculo de rasgos, modelos ni métricas, así que no afecta a ninguna c
 | Ronda 3 inicial · interpretabilidad (`round3_initial/round3_interpretability.json`) | `8558273` | `b9420ed3…` | Usó los modelos iniciales | Sí (otros modelos) |
 | Ronda 3 inicial · detalles (`round3_initial/round3_details.json`) | `1359477` | `cc71b4fe…` | Usó los modelos iniciales | Sí (otros modelos) |
 | **Ronda 3 reentrenada** · entrenamiento, test, comparaciones, interpretabilidad y detalles (`round3.json`, `round3_interpretability.json`, `round3_details.json`, `models/round3/representative/`) | `7df7a96` (F5-T10) | `07c78f25…` | Es el código final de F5 | — |
-| Ronda 3 · 15 figuras e informe (`docs/figures/round3/`, `docs/report.md`) | `839876b` (cierre de F5-T10; después, F5-T11) | `07c78f25…` | `report` los regenera desde lo versionado con los mismos bytes | — |
+| Ronda 3 · 15 figuras e informe con la ronda reentrenada (`docs/figures/round3/`, `docs/report.md`) | `839876b` (cierre de F5-T10) | `07c78f25…` | Sustituidos en `9d72af5` (fila siguiente) | — |
+| 15 figuras sin la ronda en el título, figuras de datos nuevas (`data_classes.png`, `data_partitions.png`) e informe | `9d72af5` (F5-T11) | `0c09493c…` | El código posterior (F6) solo cambia textos de ayuda y comprobaciones de la línea de comandos: `report` los regenera con los mismos bytes | No |
 
 Los pesos de cada ronda están en git: ronda 1 en `6a08569` (línea base), `43cfb1e` (CNN) y
 `ed9db91` (CNN con aumento); ronda 2 en `b43315c`.
 
-## Hechos que el informe de F4 debe recoger
+## Hechos de las rondas 1 y 2 que recoge el informe (F4)
 
 - Tug tiene 3 buques (una sola grabación en test): su resultado no es fiable, y las demás clases
   también tienen pocos buques.

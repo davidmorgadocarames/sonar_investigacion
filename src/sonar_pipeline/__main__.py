@@ -169,7 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument(
         "--device",
         default="auto",
-        help="cnn models: auto (CUDA if available, else CPU), cpu or cuda (default: auto).",
+        help="Network models: auto (CUDA if available, else CPU), cpu or cuda (default: auto).",
     )
     train.add_argument(
         "--max-epochs",
@@ -277,8 +277,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--round",
         type=int,
         choices=(3,),
-        help="3 with --interpretability: interpretability of the round 3 final models on the "
-        "val of every partition; test is not used.",
+        help="3: the cross-validation of the 7 models. With --check, rescore the 7 "
+        "representative models; with --interpretability, interpretability on the val of every "
+        "partition (test not used); with --details, the summaries for the report.",
     )
     evaluate.add_argument(
         "--splits",
@@ -700,6 +701,10 @@ def check_round3_cmd(args: argparse.Namespace) -> int:
 
 
 def cmd_evaluate(args: argparse.Namespace) -> int:
+    if (args.check or args.details) and args.round != 3:
+        # Without --round 3 the command would score the test split of the earlier evaluation.
+        print("--check and --details need --round 3.", file=sys.stderr)
+        return 1
     if args.results_dir is None:
         args.results_dir = Path(
             "docs/results" if args.round == 3 else "outputs/results"

@@ -1,4 +1,4 @@
-"""Quick check of an installation against the round 3 results (F5-T11), on CPU in about a minute.
+"""Quick check of an installation against the round 3 results (F5-T11), on CPU in a few seconds.
 
 The 7 representative models versioned in models/round3/representative/ (partition rep0_fold0,
 seed 0, chosen configuration) score the test segments of that partition, and their macro F1 is

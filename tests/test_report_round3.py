@@ -211,3 +211,10 @@ def test_cli_quick_check(tmp_path, capsys):
     argv += ["--models-dir", str(tmp_path / "m"), "--results-dir", str(tmp_path / "r")]
     assert main(argv) == 0
     assert "Reproduces the round 3 results" in capsys.readouterr().out
+
+
+def test_check_and_details_need_round_3(capsys):
+    """Without --round 3 they would rescore the test split of the earlier evaluation."""
+    assert main(["evaluate", "--check"]) == 1
+    assert main(["evaluate", "--details"]) == 1
+    assert "need --round 3" in capsys.readouterr().err
