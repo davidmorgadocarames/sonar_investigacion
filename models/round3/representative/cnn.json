@@ -1,0 +1,24 @@
+{
+  "code_sha256": "50fb6ba435865ee38a84f3f9a9019ad44763478a8d3a68f32e1dd20df1d3f7f2",
+  "config": "C",
+  "cv_splits_sha256": "7a5b1da0e46286b2cbf1103c37d3d9febfa98b18fc6bae67439961aa19850bb2",
+  "hyperparameters": {
+    "demon_channels": [
+      16,
+      32
+    ],
+    "dropout": 0.5,
+    "lofar_channels": [
+      16,
+      32,
+      64
+    ],
+    "lr": 0.001,
+    "weight_decay": 0.05
+  },
+  "model": "cnn",
+  "partition": "rep0_fold0",
+  "schema": 1,
+  "seed": 0,
+  "weights_sha256": "62b105b92713236ec2756cc7bce0c91837d0c53dd487db6e255f9a43df2b2723"
+}

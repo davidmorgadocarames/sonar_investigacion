@@ -1,0 +1,13 @@
+{
+  "code_sha256": "50fb6ba435865ee38a84f3f9a9019ad44763478a8d3a68f32e1dd20df1d3f7f2",
+  "config": "E",
+  "cv_splits_sha256": "7a5b1da0e46286b2cbf1103c37d3d9febfa98b18fc6bae67439961aa19850bb2",
+  "hyperparameters": {
+    "c": 10.0
+  },
+  "model": "baseline",
+  "partition": "rep0_fold0",
+  "schema": 1,
+  "seed": 0,
+  "weights_sha256": "5db3b912255d654f784fc81f589907e216f9fe8ff1cb43b7a46e2c203cf5de59"
+}
