@@ -173,6 +173,9 @@ quedan a alto nivel.
     FLOPs de entrenamiento, segmentos/s, tokens/s, latencia, memoria de GPU, tiempos por fase),
     curva de aprendizaje, resultados (con calibración y predicciones por grabación), datos de la
     partición e interpretabilidad.
+  - **Pesos (David, 2026-10-12):** todos guardados en disco, cada modelo en su directorio
+    (`models/round3/<modelo>/rep{r}_fold{k}/seed{s}.pt` y `selection/`), ignorados en git;
+    en git solo un modelo representativo por red (repetición 0, vuelta 0, semilla 0).
   - Diseño fijado por escrito (D-024) antes de ver resultados; las rondas 1 y 2 se conservan
     aparte, declarando que sus buques de test ya se habían mirado.
   - **Avisar a David con el tiempo medido y esperar su visto bueno antes de cada entrenamiento.**
@@ -193,7 +196,7 @@ quedan a alto nivel.
 - [ ] F5-T05 · Híbrido CNN + transformer · orquestador · bloques CNN sobre el LOFARgram → secuencia en frecuencia → bloques transformer como en F5-T04; tests equivalentes
 - [ ] F5-T06 · Ronda 3: los 7 modelos · orquestador · tiempo por época medido y visto bueno de David antes de lanzar; por bloques (línea base y CNN, híbrido, transformer) con commit entre bloques; `docs/results/round3.json` y procedencia
 - [ ] F5-T07 · Interpretabilidad · orquestador · saliencia, oclusión y atención de las configuraciones finales sobre validación; comparación con las bandas de época (DT-005)
-- [ ] F5-T08 · Gráficas, informe y README · orquestador · las 15 gráficas y análisis acordados en el informe; en el README, diagrama de caja del F1 de test, comparación por parejas o efecto del aumento, precisión frente a coste, matrices conjuntas e interpretabilidad, cada una explicada; README e informe organizados por etapas; tabla de procedencia actualizada
+- [ ] F5-T08 · Gráficas, informe y README · orquestador · las 15 gráficas y análisis acordados en el informe; en el README, diagrama de caja del F1 de test, comparación por parejas o efecto del aumento, precisión frente a coste, matrices conjuntas e interpretabilidad, cada una explicada; README e informe organizados por etapas; **sección de arquitecturas** (David, 2026-10-12) que explica cómo funciona la CNN sola, el transformer solo y el híbrido, y cada componente usado: BatchNorm, LeakyReLU, RMSNorm, RoPE, GQA, SwiGLU, AdamW, weight decay, calentamiento y decaimiento del lr, tokens y parada temprana; tabla de procedencia actualizada
 - [ ] F5-T09 · Reviewer, cierre de F5 y etiqueta `v0.2` · reviewer + orquestador · sin hallazgos críticos ni altos abiertos; etiqueta publicada
 
 - **Contexto previo (F3 y F4):** en F3 las dos CNN alcanzan su mejor val en las épocas 3-10
