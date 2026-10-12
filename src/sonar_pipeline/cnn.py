@@ -96,22 +96,33 @@ def pool_to(x: torch.Tensor, bins: int) -> torch.Tensor:
 
 
 class SonarCNN(nn.Module):
-    def __init__(self, n_classes: int = len(CLASSES)):
+    """lofar_channels and demon_channels: filters of every block of each branch (D-018:
+    16-32-64 and 16-32; round 3 configuration B halves them, D-024)."""
+
+    def __init__(
+        self,
+        n_classes: int = len(CLASSES),
+        lofar_channels: tuple[int, int, int] = (16, 32, 64),
+        demon_channels: tuple[int, int] = (16, 32),
+        dropout: float = DROPOUT,
+    ):
         super().__init__()
+        l1, l2, l3 = lofar_channels
+        d1, d2 = demon_channels
         self.lofar = nn.Sequential(
-            conv_block_2d(1, 16, (3, 7), 4),
-            conv_block_2d(16, 32, (3, 5), 4),
-            conv_block_2d(32, 64, (3, 3), 2),
+            conv_block_2d(1, l1, (3, 7), 4),
+            conv_block_2d(l1, l2, (3, 5), 4),
+            conv_block_2d(l2, l3, (3, 3), 2),
         )
         self.demon = nn.Sequential(
-            conv_block_1d(1, 16, 7, 4),
-            conv_block_1d(16, 32, 5, 4),
+            conv_block_1d(1, d1, 7, 4),
+            conv_block_1d(d1, d2, 5, 4),
         )
         self.head = nn.Sequential(
-            nn.Dropout(DROPOUT),
-            nn.Linear(64 * POOLED_BINS + 32 * POOLED_BINS, 64),
+            nn.Dropout(dropout),
+            nn.Linear(l3 * POOLED_BINS + d2 * POOLED_BINS, 64),
             nn.LeakyReLU(LEAKY_SLOPE),
-            nn.Dropout(DROPOUT),
+            nn.Dropout(dropout),
             nn.Linear(64, n_classes),
         )
         # Input normalisation (scalars per branch), set from train and saved with the weights.

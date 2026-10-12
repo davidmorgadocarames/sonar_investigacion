@@ -8,12 +8,22 @@ from sonar_pipeline import __version__
 
 # Models of `train` (D-018); duration is the DT-005 check.
 TRAIN_MODELS = ("duration", "baseline", "cnn", "cnn-aug")
+# Models of round 3 (F5, D-024); kept here so --help does not import torch.
+ROUND3_MODELS = (
+    "baseline",
+    "cnn",
+    "cnn_aug",
+    "hybrid",
+    "hybrid_aug",
+    "transformer",
+    "transformer_aug",
+)
 
 # Subcommand -> (help text, phase that implements it).
 COMMANDS = {
     "qc": ("Run quality control on raw WAV files.", "F1"),
     "features": ("Preprocess audio and compute LOFAR and DEMON features.", "F2"),
-    "train": ("Train the baseline and CNN classifiers.", "F3"),
+    "train": ("Train the classifiers (F3) or run round 3 (F5, --round 3).", "F3"),
     "evaluate": ("Evaluate trained models on the test split.", "F3"),
     "report": ("Build the results report with figures.", "F4"),
 }
@@ -90,9 +100,52 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument(
         "--model",
         choices=TRAIN_MODELS,
-        required=True,
         help="duration: DT-005 check (recording duration only, scored on val); "
-        "baseline, cnn, cnn-aug: the models of D-018.",
+        "baseline, cnn, cnn-aug: the models of D-018. Not with --round.",
+    )
+    train.add_argument(
+        "--round",
+        type=int,
+        choices=(3,),
+        help="3: the 7 models of round 3 under 5 x 5 cross-validation by vessel (D-024), "
+        "one after another; resumes finished trainings. Not with --model.",
+    )
+    train.add_argument(
+        "--only",
+        nargs="+",
+        choices=ROUND3_MODELS,
+        metavar="MODEL",
+        help=f"--round 3: run only these models ({', '.join(ROUND3_MODELS)}).",
+    )
+    train.add_argument(
+        "--measure",
+        action="store_true",
+        help="--round 3: only measure the epoch time and GPU memory of every network "
+        "configuration on the first partition (2 epochs each, nothing saved).",
+    )
+    train.add_argument(
+        "--splits",
+        type=Path,
+        default=Path("datasets/manifests/cv_splits.csv"),
+        help="--round 3: the 25 partitions (default: %(default)s).",
+    )
+    train.add_argument(
+        "--outputs-dir",
+        type=Path,
+        default=Path("outputs/round3"),
+        help="--round 3: one JSON per training and per model (default: %(default)s).",
+    )
+    train.add_argument(
+        "--summary",
+        type=Path,
+        default=Path("docs/results/round3.json"),
+        help="--round 3: versioned summary with the comparisons (default: %(default)s).",
+    )
+    train.add_argument(
+        "--patience",
+        type=int,
+        default=10,
+        help="Network models: early-stopping patience in epochs (default: %(default)s).",
     )
     train.add_argument(
         "--processed-dir",
@@ -120,9 +173,10 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument(
         "--bootstrap",
         type=int,
-        default=2000,
+        default=None,
         metavar="N",
-        help="Bootstrap resamples of recordings for the intervals (default: %(default)s).",
+        help="Bootstrap resamples of recordings for the intervals (default: 2000; 200 per "
+        "partition with --round 3).",
     )
     train.add_argument(
         "--models-dir",
@@ -400,7 +454,66 @@ def train_cnn_model(args: argparse.Namespace) -> int:
     return 0
 
 
+def train_round3(args: argparse.Namespace) -> int:
+    from sonar_pipeline.cv import MODELS, PARTITION_BOOTSTRAP, Round3
+
+    log_path = args.outputs_dir / "run.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def log(line: str) -> None:
+        print(line, flush=True)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
+    engine = Round3(
+        args.processed_dir,
+        args.splits,
+        args.models_dir / "round3",
+        args.outputs_dir,
+        device_name=args.device,
+        max_epochs=args.max_epochs,
+        patience=args.patience,
+        n_bootstrap=args.bootstrap or PARTITION_BOOTSTRAP,
+        log=log,
+    )
+    log(f"Round 3 on {engine.device}: {len(engine.partitions)} partitions")
+    if args.measure:
+        import json
+
+        result = engine.measure()
+        path = args.outputs_dir / "measure.json"
+        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        log(f"Written to {path}")
+        return 0
+    summary = engine.run(tuple(args.only or MODELS), args.summary)
+    for name, entry in summary["models"].items():
+        f1 = entry["test"]["f1_macro_segment"]
+        log(
+            f"  {name:<16} config {entry['chosen_config']}  test F1 (segment) "
+            f"{f1['mean']:.3f} +- {f1['std']:.3f}"
+        )
+    for c in summary["comparisons"]:
+        log(
+            f"  {c['model']} vs {c['against']}: {c['mean_difference']:+.3f}, "
+            f"p {c['p']:.3f}, Holm {c['p_holm']:.3f}"
+        )
+    for name, error in summary["failures"].items():
+        log(f"  {name} FAILED: {error}")
+    log(f"Written to {args.summary}")
+    return 1 if summary["failures"] else 0
+
+
 def cmd_train(args: argparse.Namespace) -> int:
+    if (args.model is None) == (args.round is None):
+        print("Give either --model or --round.", file=sys.stderr)
+        return 1
+    if args.round == 3:
+        return train_round3(args)
+    if args.only or args.measure:
+        print("--only and --measure are only for --round 3.", file=sys.stderr)
+        return 1
+    if args.bootstrap is None:
+        args.bootstrap = 2000
     if args.permutation_test and args.model != "baseline":
         print("--permutation-test is only for --model baseline.", file=sys.stderr)
         return 1

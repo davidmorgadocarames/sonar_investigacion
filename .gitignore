@@ -23,3 +23,7 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+
+# Ronda 3 (D-024, ajuste 2): todos los pesos en disco; en git solo un modelo representativo por red
+models/round3/*
+!models/round3/representative/

@@ -541,6 +541,14 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   - **Reproducibilidad:** el reparto depende del generador de numpy (PCG64), que no garantiza el
     mismo flujo entre versiones; el CSV versionado es la referencia, numpy está fijado y el test de
     regeneración detectaría un cambio (2.3.5 y 2.4.6 dan los mismos bytes).
+- **Ajuste 2 (2026-10-12, F5-T03, aprobado por David antes de entrenar): pesos.** Sustituye el
+  punto "Pesos". Todos los pesos de la ronda 3 se guardan en disco, cada modelo en su directorio
+  (`models/round3/<modelo>/selection/<config>/rep{r}_fold{k}.pt` y
+  `models/round3/<modelo>/final/rep{r}_fold{k}/seed{s}.pt`), fuera de git. Además se versiona un
+  modelo representativo por red (repetición 0, vuelta 0, semilla 0, configuración elegida;
+  `models/round3/representative/<modelo>.pt`, menos de 1 MB cada uno), para inspeccionar la
+  arquitectura sin entrenar. Los JSON por entrenamiento quedan en `outputs/round3/`; se
+  versionan `docs/results/round3.json` y la procedencia.
 
 ## Deuda técnica
 

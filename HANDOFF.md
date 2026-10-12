@@ -17,6 +17,36 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T03, T04 y T05 cerradas; ronda 3 lanzada (F5-T06)
+- **Qué se hizo:** motor de la ronda 3 (`src/sonar_pipeline/cv.py`) y comando único
+  `train --round 3` (`--only`, `--measure`); transformer e híbrido
+  (`src/sonar_pipeline/transformer.py`: RMSNorm, RoPE en frecuencia sin rotar DEMON ni clase,
+  GQA con `expand` determinista, SwiGLU con oculta 8/3 redondeada a múltiplo de 8,
+  calentamiento lineal de 5 épocas, mapas de atención); la CNN admite filtros y dropout
+  configurables (configuración A idéntica a D-018). JSON por entrenamiento en `outputs/round3/`
+  (MLOps, coste con MFLOPs, FLOPs de entrenamiento, segmentos/s, tokens/s, latencia, memoria
+  de GPU, curvas, calibración, predicciones por grabación); resumen por modelo y
+  `docs/results/round3.json` acumulativo con Nadeau y Bengio + Holm. Pesos según el ajuste 2 de
+  D-024 (a + b, aprobado por David): todos en `models/round3/` (ignorados) y uno representativo
+  por red versionado. Es reanudable y, si un modelo falla, sigue con los demás. **Detalles de
+  implementación que conviene saber:** la semilla 0 del modelo final reutiliza el entrenamiento
+  de selección (es el mismo entrenamiento bit a bit; test lo comprueba), así que son 900
+  entrenamientos de redes y no 1050; las 13 comparaciones son: cada red frente a la línea base
+  (6), con aumento frente a sin aumento (3), y transformer e híbrido frente a CNN, tanto sin
+  aumento como con aumento (4). 49 tests nuevos; en la imagen GPU 336 pasan y 1 se salta.
+  **Medida previa (partición 0, 2 épocas, RTX 4060):** 0,10 a 0,40 s por época y pico de
+  memoria de GPU entre 242 y 568 MiB en las 24 configuraciones: sin riesgo de memoria.
+- **Qué quedó a medias:** F5-T06 en marcha por bloques (línea base y CNN; híbrido;
+  transformer), con commit y push de `docs/results/round3.json`, los pesos representativos y
+  HANDOFF tras cada bloque, autorizado por David.
+- **Ficheros tocados:** `src/sonar_pipeline/cv.py`, `src/sonar_pipeline/transformer.py`,
+  `src/sonar_pipeline/cnn.py`, `src/sonar_pipeline/__main__.py`, `tests/test_cv.py`,
+  `tests/test_transformer.py`, `.gitignore`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm
+  --entrypoint python pipeline -m pytest`; `outputs/round3/run.log` durante la ronda.
+- **Siguiente paso exacto:** al terminar los tres bloques, revisar `docs/results/round3.json` y
+  pasar a F5-T07 (interpretabilidad) con David.
+
 ## 2026-10-12 · F5-T03 en curso: plan para hacer T03, T04 y T05 seguidos
 - **Qué se hizo:** David pidió hacer F5-T03 (motor de validación cruzada), F5-T04 (transformer)
   y F5-T05 (híbrido) seguidos, y que **todas las preguntas sobre la ronda 3 se le hagan antes**,
@@ -88,30 +118,3 @@ Plantilla:
 - **Ficheros tocados:** `README.md`, `PLAN.md`, `HANDOFF.md`.
 - **Cómo verificarlo:** ver el README en GitHub en la etiqueta `v0.1.1`.
 - **Siguiente paso exacto:** ninguno obligatorio; F5 (opcional) si David la pide.
-
-## 2026-10-11 · F4 Entrega cerrada (F4-T07) y etiqueta `v0.1`
-- **Qué se hizo:** pasada del reviewer sobre F4: sin hallazgos críticos ni altos; 5 medios y 11
-  bajos, todos resueltos con la aprobación de David. Informe: conclusiones calculadas desde los
-  JSON (por encima o por debajo del azar solo si todo el intervalo lo está), p de la validación
-  cruzada separado de test, DT-005 con la cifra de la duración (0,93 / 0,80), CNN con aumento a
-  0,071 por grabación en val, Pd interpolada en la ronda 1; tests de la rama de la ronda 1 y de
-  que `docs/report.md` está al día. README: sección "En gráficas" con las figuras principales,
-  "Equipo de referencia" (i7-14700KF, RTX 4060 8 GB, driver 610.62, Windows 10 + Docker Desktop
-  WSL2), reproducción exacta comprobada en x86-64, tiempos aclarados, `.env` de Linux con
-  `printf`, Docker sin root y Podman con `HOST_UID=0` (comprobado que la imagen funciona con el
-  UID 0), `tools/check_reproduction.py` (±0,005; tu `metrics.json` lo pasa) y licencia. Tabla de
-  procedencia: código de `v0.1` con `code_sha256` `b4b6638e…`, filas de las figuras de la ronda 1
-  y del informe; lo cambiado en F4 no afecta a ninguna cifra (comprobado con git). D-022 (MIT, ©
-  2026 David Morgado Carames; no cubre datos ni pesos) y D-023 (reproducción fuera de x86-64 y
-  Docker sin root); la prueba ARM emulada queda en F5. CLAUDE.md con el volumen `docs/`, ruta
-  genérica en PLAN, código muerto quitado. 251 tests.
-- **Qué quedó a medias:** nada de F4. F5 (mejoras opcionales: atención, sobreajuste de las CNN,
-  prueba en ARM) solo si David la pide.
-- **Ficheros tocados:** `LICENSE`, `README.md`, `CLAUDE.md`, `docs/report.md`,
-  `docs/results/README.md`, `src/sonar_pipeline/{report,__main__}.py`,
-  `tools/check_reproduction.py`, `tests/test_{report,check_reproduction}.py`, `DECISIONS.md`,
-  `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `git show v0.1`; en un clon limpio, seguir el README y ejecutar
-  `tools/check_reproduction.py`.
-- **Siguiente paso exacto:** ninguno obligatorio. Si David quiere seguir, detallar F5 con el
-  procedimiento de inicio de fase.
