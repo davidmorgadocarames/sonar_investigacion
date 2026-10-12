@@ -17,6 +17,35 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T10 cerrada: ronda 3 reentrenada con el lr arreglado
+- **Qué se hizo:** código en `7df7a96`: el lr pasa al 100 % en la 6.ª época y la regla de meseta
+  empieza entonces (test que lo exige); cada época guarda la norma del gradiente (media y
+  máximo) y el tiempo de formar minibatches, y cada entrenamiento sus tiempos de carga de datos;
+  `round3.json` registra los 4 hilos reales y el inicio real de la ronda; los JSON de
+  interpretabilidad y detalles guardan dispositivo y hardware; el informe compara inicial y
+  reentrenado. Con el visto bueno de David (aviso previo de uso de GPU), reentrenados los 7
+  modelos (15:03-16:44, 1 h 41 min, RTX 4060), más interpretabilidad y detalles (~11 min).
+  **La línea base y la CNN dan los mismos pesos bit a bit** (la instrumentación no cambia el
+  entrenamiento). Las 4 redes afectadas eligen la misma configuración. Test reentrenado:
+  híbrido 0,336 (antes 0,343), híbrido + aum. 0,304 (0,340), transformer 0,239 (0,235),
+  transformer + aum. 0,249 (0,240). Ninguna de las 13 comparaciones es significativa (la más
+  cercana, transformer frente a línea base, p 0,075, Holm 0,97). Resultados iniciales en
+  `docs/results/round3_initial/` (pesos y JSON por entrenamiento iniciales en
+  `outputs/round3_initial_run/`, no versionados). README (aviso de reentrenamiento y cifras),
+  informe, 15 figuras (curvas con norma del gradiente; velocidad con el tiempo de minibatches),
+  procedencia y D-024 (ajuste 3 cumplido) actualizados. Nuevo: el aumento de datos llega al 26 %
+  del tiempo de entrenamiento del transformer; la norma del gradiente del híbrido con aumento
+  crece con las épocas.
+- **Qué quedó a medias:** F5-T09 (cierre): pasada corta del reviewer sobre F5-T10 y etiqueta
+  `v0.2`.
+- **Ficheros tocados:** `src/sonar_pipeline/{cv,round3_details,figures_round3,report,report_round3,interpret_cv,__main__}.py`,
+  tests, `docs/results/`, `docs/figures/round3/`, `docs/report.md`,
+  `models/round3/representative/`, `README.md`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** `docker compose run --rm --entrypoint python pipeline -m pytest -rs`
+  (352 pasan, 4 saltados de CUDA); `docker compose run --rm pipeline report` sin cambios.
+- **Siguiente paso exacto:** reviewer sobre F5-T10, hallazgos a David, cerrar F5 y etiquetar
+  `v0.2`.
+
 ## 2026-10-12 · F5-T09: revisión pasada; fallo del lr declarado; F5-T10 obligatoria
 - **Qué se hizo:** reviewer y friend-tester sobre `a6c9aac`. El friend-tester siguió el README en
   limpio en CPU sin atascos (cifras y reproducción idénticas; `report` sin cambios). El reviewer
@@ -115,33 +144,3 @@ Plantilla:
   y `outputs/round3/run.log`.
 - **Siguiente paso exacto:** revisar los resultados con David y empezar F5-T07
   (interpretabilidad de las configuraciones finales sobre validación).
-
-## 2026-10-12 · F5-T03, T04 y T05 cerradas; ronda 3 lanzada (F5-T06)
-- **Qué se hizo:** motor de la ronda 3 (`src/sonar_pipeline/cv.py`) y comando único
-  `train --round 3` (`--only`, `--measure`); transformer e híbrido
-  (`src/sonar_pipeline/transformer.py`: RMSNorm, RoPE en frecuencia sin rotar DEMON ni clase,
-  GQA con `expand` determinista, SwiGLU con oculta 8/3 redondeada a múltiplo de 8,
-  calentamiento lineal de 5 épocas, mapas de atención); la CNN admite filtros y dropout
-  configurables (configuración A idéntica a D-018). JSON por entrenamiento en `outputs/round3/`
-  (MLOps, coste con MFLOPs, FLOPs de entrenamiento, segmentos/s, tokens/s, latencia, memoria
-  de GPU, curvas, calibración, predicciones por grabación); resumen por modelo y
-  `docs/results/round3.json` acumulativo con Nadeau y Bengio + Holm. Pesos según el ajuste 2 de
-  D-024 (a + b, aprobado por David): todos en `models/round3/` (ignorados) y uno representativo
-  por red versionado. Es reanudable y, si un modelo falla, sigue con los demás. **Detalles de
-  implementación que conviene saber:** la semilla 0 del modelo final reutiliza el entrenamiento
-  de selección (es el mismo entrenamiento bit a bit; test lo comprueba), así que son 900
-  entrenamientos de redes y no 1050; las 13 comparaciones son: cada red frente a la línea base
-  (6), con aumento frente a sin aumento (3), y transformer e híbrido frente a CNN, tanto sin
-  aumento como con aumento (4). 49 tests nuevos; en la imagen GPU 336 pasan y 1 se salta.
-  **Medida previa (partición 0, 2 épocas, RTX 4060):** 0,10 a 0,40 s por época y pico de
-  memoria de GPU entre 242 y 568 MiB en las 24 configuraciones: sin riesgo de memoria.
-- **Qué quedó a medias:** F5-T06 en marcha por bloques (línea base y CNN; híbrido;
-  transformer), con commit y push de `docs/results/round3.json`, los pesos representativos y
-  HANDOFF tras cada bloque, autorizado por David.
-- **Ficheros tocados:** `src/sonar_pipeline/cv.py`, `src/sonar_pipeline/transformer.py`,
-  `src/sonar_pipeline/cnn.py`, `src/sonar_pipeline/__main__.py`, `tests/test_cv.py`,
-  `tests/test_transformer.py`, `.gitignore`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** `docker compose -f compose.yaml -f compose.gpu.yaml run --rm
-  --entrypoint python pipeline -m pytest`; `outputs/round3/run.log` durante la ronda.
-- **Siguiente paso exacto:** al terminar los tres bloques, revisar `docs/results/round3.json` y
-  pasar a F5-T07 (interpretabilidad) con David.

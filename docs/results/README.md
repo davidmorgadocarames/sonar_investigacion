@@ -10,7 +10,16 @@ comparables con las de la ronda 3.
 |---|---|---|
 | [round3.json](round3.json) | Los 7 modelos: elección de configuración (validación de cada configuración en las 25 particiones), F1 de test por partición y semilla, dentro de cada época, matrices conjuntas, coste, tiempos y las 13 comparaciones con Nadeau y Bengio y Holm. | `train --round 3` (escrito al terminar cada bloque) |
 | [round3_interpretability.json](round3_interpretability.json) | Oclusión, saliencia, permutación y atención por banda sobre validación, y la comprobación de época (DT-005). | `evaluate --round 3 --interpretability` |
-| [round3_details.json](round3_details.json) | Lo que necesitan las gráficas y no está en los anteriores: velocidad, curvas de aprendizaje, F1 de entrenamiento y validación, acierto por buque, acuerdo entre modelos, calibración y ROC. | `evaluate --round 3 --details` (sin entrenar; test se lee de lo guardado por la ronda) |
+| [round3_details.json](round3_details.json) | Lo que necesitan las gráficas y no está en los anteriores: velocidad, tiempos de carga de datos, curvas de aprendizaje con la norma del gradiente, F1 de entrenamiento y validación, acierto por buque, acuerdo entre modelos, calibración y ROC. | `evaluate --round 3 --details` (sin entrenar; test se lee de lo guardado por la ronda) |
+| [round3_initial/](round3_initial/) | Los mismos tres ficheros de la **ronda 3 inicial**, antes del reentrenamiento de F5-T10 (histórico). | Copiados tal cual antes de reentrenar |
+
+**Reentrenamiento (F5-T10, ajuste 3 de D-024).** En la ronda 3 inicial, el transformer y el
+híbrido (sin y con aumento) entrenaron con un lr máximo de 4,1e-4 en lugar de 5e-4: el
+calentamiento se quedaba en el 82 % al terminar. La revisión del código lo encontró; se arregló y
+se reentrenó la ronda completa **después de haber visto test**, como en la ronda 2: un arreglo de
+implementación decidido por la revisión, no por las cifras. La línea base y la CNN dan los mismos
+pesos bit a bit; las cuatro redes afectadas eligen la misma configuración, y ninguna de las 13
+comparaciones es significativa ni antes ni después. El informe compara las dos versiones.
 
 Los JSON de cada entrenamiento (unos 1000) quedan en `outputs/round3/` y los pesos en
 `models/round3/`, sin versionar (ajuste 2 de D-024); se versiona un modelo representativo por red
@@ -88,9 +97,11 @@ toca el cálculo de rasgos, modelos ni métricas, así que no afecta a ninguna c
 | Figuras de la ronda 1 (`docs/figures/eval1/`) | `b23c8ac` (resultados) y `d544a71` (interpretabilidad) | `96168c20…` y `19490ca8…` | Copiadas tal cual: azar dibujado en 0,25 y 0,5; Pd a Pfa = 1 % interpolada con < 100 negativos; modelos de la ronda 1 | Sí en esas marcas; no en F1 ni en las matrices |
 | Figuras de señal (`docs/figures/signal/`) | `9f1f99b` (`features --figures` y tests de figuras, F2-T10) | `c867b025…` | Mismo LOFAR y DEMON que el código final (después solo cambiaron los modelos y la evaluación) | No |
 | Figura de datos e informe (`docs/figures/data_minutes.png`, `docs/report.md`) hasta `v0.1.1` | commit de F4-T07 (etiqueta `v0.1`) | `b4b6638e…` | Es el código de v0.1; `report` los regenera desde lo versionado con los mismos bytes (lo comprueba un test) | — |
-| Ronda 3 · entrenamiento, test y comparaciones (`round3.json`, `models/round3/representative/`) | `c96865f` | `50fb6ba4…` | Después solo se añadieron módulos nuevos (interpretabilidad, detalles, figuras, informe) y opciones de la línea de comandos; `cv.py`, `cnn.py` y `transformer.py` no cambiaron | No |
-| Ronda 3 · interpretabilidad (`round3_interpretability.json`) | `8558273` | `b9420ed3…` | Ninguna que le afecte | No |
-| Ronda 3 · detalles, 15 figuras e informe (`round3_details.json`, `docs/figures/round3/`, `docs/report.md`) | commit de F5-T08 | el que registra `round3_details.json` | Es el código final de F5-T08 | — |
+| Ronda 3 inicial · entrenamiento, test y comparaciones (`round3_initial/round3.json`) | `c96865f` | `50fb6ba4…` | Calentamiento del lr que se quedaba en el 82 % (transformer e híbrido); sin norma del gradiente ni tiempos de carga | **Sí** en las 4 redes con calentamiento (por eso se reentrenó); no en la línea base ni la CNN |
+| Ronda 3 inicial · interpretabilidad (`round3_initial/round3_interpretability.json`) | `8558273` | `b9420ed3…` | Usó los modelos iniciales | Sí (otros modelos) |
+| Ronda 3 inicial · detalles (`round3_initial/round3_details.json`) | `1359477` | `cc71b4fe…` | Usó los modelos iniciales | Sí (otros modelos) |
+| **Ronda 3 reentrenada** · entrenamiento, test, comparaciones, interpretabilidad y detalles (`round3.json`, `round3_interpretability.json`, `round3_details.json`, `models/round3/representative/`) | `7df7a96` (F5-T10) | `07c78f25…` | Es el código final de F5 | — |
+| Ronda 3 · 15 figuras e informe (`docs/figures/round3/`, `docs/report.md`) | commit de cierre de F5-T10 | `07c78f25…` | `report` los regenera desde lo versionado con los mismos bytes | — |
 
 Los pesos de cada ronda están en git: ronda 1 en `6a08569` (línea base), `43cfb1e` (CNN) y
 `ed9db91` (CNN con aumento); ronda 2 en `b43315c`.

@@ -6,9 +6,9 @@
 
 ### Ronda 3 (F5): evaluación principal
 
-- **Ronda 3 (evaluación principal, validación cruzada 5 × 5 por buque):** F1 macro de test por segmento entre 0,235 (Transformer) y 0,343 (Híbrido), con un azar medido de 0,242.
-- **Ninguna de las 13 comparaciones fijadas de antemano es significativa** con la prueba de Nadeau y Bengio y la corrección de Holm. La más cercana: Transformer − Línea base, -0,096 (p 0,052, Holm 0,680).
-- Las redes varían más entre particiones (desviación de 0,08 a 0,14) que la línea base (0,05): su resultado depende de qué buques caen en test.
+- **Ronda 3 (evaluación principal, validación cruzada 5 × 5 por buque):** F1 macro de test por segmento entre 0,239 (Transformer) y 0,336 (Híbrido), con un azar medido de 0,242.
+- **Ninguna de las 13 comparaciones fijadas de antemano es significativa** con la prueba de Nadeau y Bengio y la corrección de Holm. La más cercana: Transformer − Línea base, -0,092 (p 0,075, Holm 0,970).
+- Las redes varían más entre particiones (desviación de 0,09 a 0,14) que la línea base (0,05): su resultado depende de qué buques caen en test.
 
 ### Rondas 1 y 2 (F3): partición fija, histórico
 
@@ -61,6 +61,18 @@ Ejemplos (la grabación de entrenamiento más larga de cada clase):
 
 ## 4. Ronda 3 (F5): validación cruzada 5 × 5 · evaluación principal
 
+**Resultados reentrenados (F5-T10).** Los resultados iniciales de la ronda 3 tenían un fallo del calentamiento del lr en el transformer y el híbrido, sin y con aumento: al terminar las 5 épocas de calentamiento el lr se quedaba en el 82 % (4,1e-4 en lugar de 5e-4; ajuste 3 de D-024). Se arregló y se reentrenó la ronda completa **después de haber visto test**: igual que la ronda 2, es un arreglo de implementación decidido por la revisión del código, no por las cifras. La CNN y la línea base no tenían calentamiento. Los resultados iniciales se conservan en `docs/results/round3_initial/`.
+
+| Modelo | Config. inicial | Config. reentrenada | Test inicial | Test reentrenado | Diferencia |
+|---|---|---|---|---|---|
+| Línea base | E | E | 0,331 ± 0,046 | 0,331 ± 0,046 | 0,000 |
+| CNN | C | C | 0,316 ± 0,135 | 0,316 ± 0,135 | 0,000 |
+| CNN + aum. | D | D | 0,299 ± 0,130 | 0,299 ± 0,130 | 0,000 |
+| Híbrido | B | B | 0,343 ± 0,126 | 0,336 ± 0,126 | -0,007 |
+| Híbrido + aum. | A | A | 0,340 ± 0,139 | 0,304 ± 0,136 | -0,036 |
+| Transformer | B | B | 0,235 ± 0,080 | 0,239 ± 0,085 | 0,004 |
+| Transformer + aum. | B | B | 0,240 ± 0,085 | 0,249 ± 0,092 | 0,008 |
+
 Protocolo fijado antes de entrenar (D-024 y sus ajustes): 25 particiones 60/20/20 por buque (5 repeticiones × 5 folds; Tug, con 3 buques, 1/1/1 en todas); la configuración de cada modelo se elige con la media de validación de las 25 particiones y la semilla 0, sin mirar test; el modelo final promedia las probabilidades de las semillas 0, 1, 2. Ningún modelo está preentrenado. Comparaciones con la prueba t corregida de Nadeau y Bengio (relación test/entrenamiento 0,375) y corrección de Holm.
 
 F1 macro de test por segmento (media ± desviación de las 25 particiones):
@@ -70,10 +82,10 @@ F1 macro de test por segmento (media ± desviación de las 25 particiones):
 | Línea base | E | 0,337 | **0,331 ± 0,046** | 0,21-0,41 | 0,392 ± 0,104 | 0,527 ± 0,093 | 0,527 ± 0,146 | 0,45 | 0,01 | 5.212 |
 | CNN | C | 0,399 | **0,316 ± 0,135** | 0,15-0,56 | 0,291 ± 0,181 | 0,562 ± 0,123 | 0,660 ± 0,231 | 0,20 | 75,33 | 79.076 |
 | CNN + aum. | D | 0,398 | **0,299 ± 0,130** | 0,10-0,51 | 0,293 ± 0,145 | 0,586 ± 0,115 | 0,627 ± 0,209 | 0,20 | 75,33 | 79.076 |
-| Híbrido | B | 0,406 | **0,343 ± 0,126** | 0,15-0,58 | 0,332 ± 0,179 | 0,513 ± 0,112 | 0,712 ± 0,244 | 0,26 | 57,32 | 76.132 |
-| Híbrido + aum. | A | 0,403 | **0,340 ± 0,139** | 0,11-0,56 | 0,323 ± 0,178 | 0,494 ± 0,131 | 0,683 ± 0,208 | 0,20 | 52,23 | 32.036 |
-| Transformer | B | 0,324 | **0,235 ± 0,080** | 0,12-0,50 | 0,210 ± 0,113 | 0,521 ± 0,082 | 0,509 ± 0,133 | 0,27 | 6,93 | 80.068 |
-| Transformer + aum. | B | 0,325 | **0,240 ± 0,085** | 0,13-0,50 | 0,201 ± 0,109 | 0,529 ± 0,094 | 0,531 ± 0,149 | 0,27 | 6,93 | 80.068 |
+| Híbrido | B | 0,410 | **0,336 ± 0,126** | 0,13-0,57 | 0,310 ± 0,161 | 0,506 ± 0,092 | 0,727 ± 0,201 | 0,27 | 57,32 | 76.132 |
+| Híbrido + aum. | A | 0,408 | **0,304 ± 0,136** | 0,11-0,55 | 0,243 ± 0,171 | 0,485 ± 0,132 | 0,645 ± 0,194 | 0,24 | 52,23 | 32.036 |
+| Transformer | B | 0,322 | **0,239 ± 0,085** | 0,12-0,53 | 0,208 ± 0,107 | 0,526 ± 0,085 | 0,499 ± 0,133 | 0,27 | 6,93 | 80.068 |
+| Transformer + aum. | B | 0,328 | **0,249 ± 0,092** | 0,14-0,53 | 0,211 ± 0,132 | 0,519 ± 0,091 | 0,539 ± 0,163 | 0,26 | 6,93 | 80.068 |
 | *Azar medido* | | | *0,242* | | | *≈ 0,5* | *≈ 0,5* | | | |
 
 Comparaciones fijadas de antemano:
@@ -82,37 +94,37 @@ Comparaciones fijadas de antemano:
 |---|---|---|---|---|---|
 | CNN − Línea base | -0,015 | -0,197 a 0,167 | 8/25 | 0,865 | 1,000 |
 | CNN + aum. − Línea base | -0,032 | -0,205 a 0,141 | 9/25 | 0,708 | 1,000 |
-| Híbrido − Línea base | 0,013 | -0,159 a 0,184 | 12/25 | 0,880 | 1,000 |
-| Híbrido + aum. − Línea base | 0,009 | -0,179 a 0,197 | 11/25 | 0,923 | 1,000 |
-| Transformer − Línea base | -0,096 | -0,193 a 0,001 | 3/25 | 0,052 | 0,680 |
-| Transformer + aum. − Línea base | -0,090 | -0,191 a 0,010 | 4/25 | 0,075 | 0,906 |
+| Híbrido − Línea base | 0,005 | -0,165 a 0,176 | 10/25 | 0,949 | 1,000 |
+| Híbrido + aum. − Línea base | -0,027 | -0,203 a 0,148 | 11/25 | 0,752 | 1,000 |
+| Transformer − Línea base | -0,092 | -0,194 a 0,010 | 4/25 | 0,075 | 0,970 |
+| Transformer + aum. − Línea base | -0,082 | -0,188 a 0,024 | 4/25 | 0,122 | 1,000 |
 | CNN + aum. − CNN | -0,017 | -0,085 a 0,052 | 8/25 | 0,622 | 1,000 |
-| Híbrido + aum. − Híbrido | -0,004 | -0,122 a 0,115 | 12/25 | 0,948 | 1,000 |
-| Transformer + aum. − Transformer | 0,006 | -0,022 a 0,033 | 15/25 | 0,682 | 1,000 |
-| Transformer − CNN | -0,081 | -0,239 a 0,077 | 7/25 | 0,301 | 1,000 |
-| Híbrido − CNN | 0,028 | -0,108 a 0,163 | 17/25 | 0,676 | 1,000 |
-| Transformer + aum. − CNN + aum. | -0,059 | -0,212 a 0,094 | 9/25 | 0,436 | 1,000 |
-| Híbrido + aum. − CNN + aum. | 0,041 | -0,049 a 0,130 | 18/25 | 0,359 | 1,000 |
+| Híbrido + aum. − Híbrido | -0,032 | -0,179 a 0,114 | 9/25 | 0,651 | 1,000 |
+| Transformer + aum. − Transformer | 0,010 | -0,039 a 0,059 | 16/25 | 0,677 | 1,000 |
+| Transformer − CNN | -0,077 | -0,239 a 0,085 | 8/25 | 0,338 | 1,000 |
+| Híbrido − CNN | 0,020 | -0,112 a 0,153 | 17/25 | 0,753 | 1,000 |
+| Transformer + aum. − CNN + aum. | -0,050 | -0,202 a 0,101 | 9/25 | 0,498 | 1,000 |
+| Híbrido + aum. − CNN + aum. | 0,005 | -0,125 a 0,135 | 13/25 | 0,942 | 1,000 |
 
 Configuraciones (F1 medio de validación; en negrita, la elegida):
 
 - Línea base: A 0,312, B 0,315, C 0,316, D 0,318, **E 0,337**.
 - CNN: A 0,396, B 0,369, **C 0,399**, D 0,380.
 - CNN + aum.: A 0,397, B 0,380, C 0,390, **D 0,398**.
-- Híbrido: A 0,400, **B 0,406**, C 0,385, D 0,357.
-- Híbrido + aum.: **A 0,403**, B 0,376, C 0,387, D 0,376.
-- Transformer: A 0,284, **B 0,324**, C 0,310, D 0,304.
-- Transformer + aum.: A 0,302, **B 0,325**, C 0,319, D 0,314.
+- Híbrido: A 0,403, **B 0,410**, C 0,387, D 0,339.
+- Híbrido + aum.: **A 0,408**, B 0,393, C 0,393, D 0,379.
+- Transformer: A 0,289, **B 0,322**, C 0,311, D 0,313.
+- Transformer + aum.: A 0,308, **B 0,328**, C 0,317, D 0,314.
 
 Interpretabilidad (sobre validación, modelos finales):
 
 - Línea base: bandas principales 1240-1280, 1280-1320, 0-40, 1320-1360, 1440-1480 Hz.
 - CNN: bandas principales 0-40, 1240-1280, 720-760, 480-520, 600-640 Hz.
 - CNN + aum.: bandas principales 0-40, 1240-1280, 160-200, 200-240, 120-160 Hz.
-- Híbrido: bandas principales 0-40, 40-80, 400-440, 80-120, 360-400 Hz; atención del token de clase al DEMON 14 %.
-- Híbrido + aum.: bandas principales 0-40, 40-80, 160-200, 120-160, 80-120 Hz; atención del token de clase al DEMON 19 %.
-- Transformer: bandas principales 0-40, 40-80, 440-480, 240-280, 840-880 Hz; atención del token de clase al DEMON 11 %.
-- Transformer + aum.: bandas principales 0-40, 40-80, 240-280, 840-880, 440-480 Hz; atención del token de clase al DEMON 14 %.
+- Híbrido: bandas principales 0-40, 40-80, 400-440, 360-400, 80-120 Hz; atención del token de clase al DEMON 13 %.
+- Híbrido + aum.: bandas principales 0-40, 40-80, 120-160, 160-200, 80-120 Hz; atención del token de clase al DEMON 20 %.
+- Transformer: bandas principales 0-40, 240-280, 40-80, 440-480, 320-360 Hz; atención del token de clase al DEMON 11 %.
+- Transformer + aum.: bandas principales 0-40, 40-80, 240-280, 320-360, 840-880 Hz; atención del token de clase al DEMON 15 %.
 - Bandas que más difieren entre épocas: 40, 1240, 1320, 1400, 1440 Hz; líneas fijas de época: ninguna.
 - Coincidencia de las 5 bandas principales con esas 5: Línea base 3/5; CNN 1/5; CNN + aum. 1/5; Híbrido 1/5; Híbrido (atención) 1/5; Híbrido + aum. 1/5; Híbrido + aum. (atención) 1/5; Transformer 1/5; Transformer (atención) 1/5; Transformer + aum. 1/5; Transformer + aum. (atención) 1/5. Las correlaciones con la diferencia entre épocas no son fiables (bandas vecinas correlacionadas, muchos modelos sin corrección).
 

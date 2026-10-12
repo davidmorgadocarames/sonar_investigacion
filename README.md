@@ -9,22 +9,24 @@ WAV → control de calidad → preprocesado → LOFAR y DEMON → clasificador �
 
 **Resultado principal (ronda 3, validación cruzada 5 × 5 por buque):** se compararon 7 modelos
 entrenados desde cero, de una regresión logística a un transformer. El mejor F1 macro de test es
-el del híbrido CNN + transformer (0,343 ± 0,126), y la línea base sacó 0,331 ± 0,046, frente a un
+el del híbrido CNN + transformer (0,336 ± 0,126), y la línea base sacó 0,331 ± 0,046, frente a un
 azar de 0,242. **Ninguna diferencia entre modelos es significativa** (prueba de Nadeau y Bengio
 con corrección de Holm). Además, la clase coincide con la época de grabación, así que con estos
 datos no se puede afirmar que algún modelo reconozca la firma del buque. Informe completo:
 [docs/report.md](docs/report.md).
 
-> ⚠️ **Resultados provisionales.** En esta versión, el transformer y el híbrido (sin y con
-> aumento) entrenaron con un *learning rate* máximo de 4,1e-4 en lugar de los 5e-4 declarados,
-> por un fallo del calentamiento que encontró la revisión del código: el lr subía bien durante
-> las 5 épocas de calentamiento, pero al terminarlas se quedaba en el 82 % en vez de pasar al
-> 100 %. La CNN y la línea base no tienen calentamiento y no se ven afectadas. No es una fuga:
-> test no intervino en nada. La ronda se reentrenará con el fallo corregido (F5-T10), y esos
-> resultados sustituirán a estos, que se conservarán como histórico. Como el reentrenamiento se
-> hace **después de haber visto test**, se declara igual que la ronda 2: es un arreglo de
-> implementación decidido por la revisión del código, no por las cifras
-> ([ajuste 3 de D-024](DECISIONS.md)).
+> ℹ️ **Resultados reentrenados (F5-T10).** En la primera versión de la ronda 3, el
+> transformer y el híbrido (sin y con aumento) entrenaron con un *learning rate* máximo de
+> 4,1e-4 en lugar de los 5e-4 declarados, por un fallo del calentamiento que encontró la
+> revisión del código: el lr subía bien durante las 5 épocas de calentamiento, pero al
+> terminarlas se quedaba en el 82 % en vez de pasar al 100 %. Se arregló y se reentrenó la
+> ronda completa: estos son los resultados reentrenados. La línea base y la CNN no tenían
+> calentamiento y dan exactamente lo mismo que antes; las cuatro redes afectadas eligen la
+> misma configuración y ninguna conclusión cambia. Como el reentrenamiento se hizo **después de
+> haber visto test**, se declara igual que la ronda 2: es un arreglo de implementación
+> decidido por la revisión del código, no por las cifras ([ajuste 3 de D-024](DECISIONS.md)).
+> Los resultados iniciales se conservan en
+> [docs/results/round3_initial/](docs/results/round3_initial/), y el informe los compara.
 
 ## Cronología
 
@@ -418,16 +420,18 @@ transformer y un híbrido CNN + transformer. **Todos se entrenan desde cero** co
 ninguno está preentrenado. El diseño completo se fijó por escrito **antes de ver ningún
 resultado** ([D-024](DECISIONS.md) y sus ajustes).
 
-> ⚠️ **Resultados provisionales.** En esta versión, el transformer y el híbrido (sin y con
-> aumento) entrenaron con un *learning rate* máximo de 4,1e-4 en lugar de los 5e-4 declarados,
-> por un fallo del calentamiento que encontró la revisión del código: el lr subía bien durante
-> las 5 épocas de calentamiento, pero al terminarlas se quedaba en el 82 % en vez de pasar al
-> 100 %. La CNN y la línea base no tienen calentamiento y no se ven afectadas. No es una fuga:
-> test no intervino en nada. La ronda se reentrenará con el fallo corregido (F5-T10), y esos
-> resultados sustituirán a estos, que se conservarán como histórico. Como el reentrenamiento se
-> hace **después de haber visto test**, se declara igual que la ronda 2: es un arreglo de
-> implementación decidido por la revisión del código, no por las cifras
-> ([ajuste 3 de D-024](DECISIONS.md)).
+> ℹ️ **Resultados reentrenados (F5-T10).** En la primera versión de la ronda 3, el
+> transformer y el híbrido (sin y con aumento) entrenaron con un *learning rate* máximo de
+> 4,1e-4 en lugar de los 5e-4 declarados, por un fallo del calentamiento que encontró la
+> revisión del código: el lr subía bien durante las 5 épocas de calentamiento, pero al
+> terminarlas se quedaba en el 82 % en vez de pasar al 100 %. Se arregló y se reentrenó la
+> ronda completa: estos son los resultados reentrenados. La línea base y la CNN no tenían
+> calentamiento y dan exactamente lo mismo que antes; las cuatro redes afectadas eligen la
+> misma configuración y ninguna conclusión cambia. Como el reentrenamiento se hizo **después de
+> haber visto test**, se declara igual que la ronda 2: es un arreglo de implementación
+> decidido por la revisión del código, no por las cifras ([ajuste 3 de D-024](DECISIONS.md)).
+> Los resultados iniciales se conservan en
+> [docs/results/round3_initial/](docs/results/round3_initial/), y el informe los compara.
 
 ### Protocolo: validación cruzada 5 × 5
 
@@ -686,14 +690,14 @@ transformers pequeños con AdamW, que necesitan más *weight decay* que una CNN)
 
 | Config. | `dim`, bloques, cabezas / grupos, dropout | Hipótesis que prueba | Transformer | Transf. + aum. | Híbrido | Híbrido + aum. |
 |---|---|---|---|---|---|---|
-| A | 32, 1, 2 / 1, 0,3 | Lo mínimo: con tan pocos datos, quizá basta | 0,284 | 0,302 | 0,400 | **0,403** |
-| B | 64, 1, 4 / 2, 0,3 | ¿Hace falta más anchura por token? | **0,324** | **0,325** | **0,406** | 0,376 |
-| C | 64, 2, 4 / 2, 0,3 | ¿Ayuda un segundo bloque, que relacione las bandas en dos pasos? | 0,310 | 0,319 | 0,385 | 0,387 |
-| D | Como C, con dropout 0,5 | Si la profundidad memoriza, ¿la compensa más dropout? | 0,304 | 0,314 | 0,357 | 0,376 |
+| A | 32, 1, 2 / 1, 0,3 | Lo mínimo: con tan pocos datos, quizá basta | 0,289 | 0,308 | 0,403 | **0,408** |
+| B | 64, 1, 4 / 2, 0,3 | ¿Hace falta más anchura por token? | **0,322** | **0,328** | **0,410** | 0,393 |
+| C | 64, 2, 4 / 2, 0,3 | ¿Ayuda un segundo bloque, que relacione las bandas en dos pasos? | 0,311 | 0,317 | 0,387 | 0,393 |
+| D | Como C, con dropout 0,5 | Si la profundidad memoriza, ¿la compensa más dropout? | 0,313 | 0,314 | 0,339 | 0,379 |
 
 El transformer prefiere más anchura (B). El segundo bloque (C) no ayuda en ninguna red, y añadirle
-dropout (D) tampoco. El híbrido se queda con un solo bloque: B sin aumento y A con aumento, a
-menos de 0,03 de distancia. Otra vez, las diferencias entre configuraciones son mucho menores
+dropout (D) no lo arregla. El híbrido se queda con un solo bloque: B sin aumento y A con
+aumento, a menos de 0,02 de distancia de la siguiente. Otra vez, las diferencias entre configuraciones son mucho menores
 que la variación entre particiones.
 
 ### Resultados de la ronda 3 en gráficas
@@ -715,12 +719,12 @@ las condiciones de grabación son las mismas.
 
 **Qué se ve.**
 
-- Con 4 clases, la línea base (0,331), la CNN (0,316) y el híbrido (0,343) quedan cerca. El
-  transformer (0,235) queda **en el azar**.
-- **La altura de las cajas es lo más importante:** las redes van de ~0,1 a ~0,58 según qué
+- Con 4 clases, la línea base (0,331), la CNN (0,316) y el híbrido (0,336) quedan cerca. El
+  transformer (0,239) queda **en el azar**.
+- **La altura de las cajas es lo más importante:** las redes van de ~0,1 a ~0,57 según qué
   buques les toquen en test. Una sola partición, como en las rondas 1 y 2, podía dar casi
   cualquier cifra; por eso se hizo el 5 × 5.
-- **Cargo frente a Tug (2017):** el híbrido (0,71) y la CNN (0,66) están por encima del 0,5 de
+- **Cargo frente a Tug (2017):** el híbrido (0,73) y la CNN (0,66) están por encima del 0,5 de
   media, pero sus cajas bajan hasta el azar en muchas particiones. Además, Tug solo tiene 3
   buques: no basta para afirmar que reconozcan la firma del buque.
 
@@ -734,10 +738,9 @@ las particiones comparten buques). Si el intervalo cruza la línea del 0, la dif
 distingue del ruido. A la derecha, el p sin corregir y con Holm.
 
 **Qué se ve.** **Ninguna de las 13 diferencias es significativa.** Todos los intervalos cruzan el
-0; el del transformer frente a la línea base lo cruza por muy poco (−0,096, de −0,193 a +0,001,
-p = 0,052), y tras Holm
-nada se acerca (p ≥ 0,68). El aumento de datos tampoco cambia nada en ninguna arquitectura
-(diferencias de −0,017 a +0,006).
+0; el más cercano a no cruzarlo es el del transformer frente a la línea base (−0,092, de −0,194
+a +0,010, p = 0,075), y tras Holm nada se acerca (p ≥ 0,97). El aumento de datos tampoco cambia
+nada en ninguna arquitectura (diferencias de −0,032 a +0,010).
 
 #### Precisión frente a coste
 
@@ -759,8 +762,8 @@ barato de las redes (6,9 MFLOPs) y el peor.
 cuenta 5 veces, una por repetición. Las filas son la clase real y las columnas la predicha; la
 diagonal son los aciertos.
 
-**Qué se ve.** Todas las redes predicen mucho **Tanker** (de 0,41 a 0,49 de los Cargo acaban ahí)
-y confunden Passengership con Cargo y Tanker. El híbrido es el que más acierta Tug (0,47). La
+**Qué se ve.** Todas las redes predicen mucho **Tanker** (de 0,40 a 0,48 de los Cargo acaban ahí)
+y confunden Passengership con Cargo y Tanker. El híbrido es el que más acierta Tug (0,45). La
 línea base acierta sobre todo Cargo y Tanker, pero manda casi la mitad de los Tug a Cargo, la otra clase
 de 2017: encaja con aprender la época más que el buque.
 
@@ -796,7 +799,7 @@ complejos.
 **Etapa anterior, no comparable directamente con la ronda 3.** Usaron una sola partición fija
 (12 buques en test) y test se miró dos veces. Con una sola partición, la cifra depende mucho de
 qué buques tocaron en test: la ronda 3 muestra que, según la partición, las mismas redes van
-de ~0,1 a ~0,58. Se conservan como histórico; el detalle de las dos rondas y de qué código
+de ~0,1 a ~0,57. Se conservan como histórico; el detalle de las dos rondas y de qué código
 produjo cada cifra está en [docs/results/README.md](docs/results/README.md).
 
 ### Resultados en test (ronda 2)
@@ -884,8 +887,8 @@ Explicadas en el informe ([docs/report.md](docs/report.md), sección 6). En resu
 - **Pocos buques:** 43 en total, y Tug solo 3. En la ronda 3, cada Tug cae en test 8 o 9 veces,
   y el solapamiento entre particiones en esa clase es mayor del que corrige la prueba de Nadeau y
   Bengio.
-- **El resultado depende mucho de la partición:** en la ronda 3 las redes varían ~0,08-0,14 de
-  F1 entre particiones, y las semillas de una misma partición ~0,04-0,10.
+- **El resultado depende mucho de la partición:** en la ronda 3 las redes varían ~0,09-0,14 de
+  F1 entre particiones, y las semillas de una misma partición ~0,03-0,09.
 - **La ROC es de clasificación**, no de detección: DeepShip no tiene grabaciones sin buque
   (DT-007).
 - **Rondas 1 y 2:** test se evaluó dos veces (la segunda, tras arreglar los fallos de la primera
@@ -894,8 +897,8 @@ Explicadas en el informe ([docs/report.md](docs/report.md), sección 6). En resu
 ## Procedencia
 
 Qué código produjo cada resultado, con su `code_sha256` y su commit:
-[docs/results/README.md](docs/results/README.md). La ronda 3 se entrenó con el código del commit
-`c96865f`, y su interpretabilidad con el de `8558273`.
+[docs/results/README.md](docs/results/README.md). La ronda 3 reentrenada, su interpretabilidad y
+sus detalles salen del código del commit `7df7a96`; la ronda 3 inicial, del de `c96865f`.
 
 ## Equipo de referencia
 

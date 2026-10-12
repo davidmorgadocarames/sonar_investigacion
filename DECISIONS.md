@@ -566,6 +566,11 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
     3, y los actuales se conservarán como histórico. Como el reentrenamiento se hace **después
     de haber visto test**, se declara igual que la ronda 2: es un arreglo de implementación
     decidido por la revisión del código, no por las cifras.
+  - **Cumplido (2026-10-12, F5-T10):** arreglado (el lr pasa al 100 % en la 6.ª época y la
+    regla de meseta empieza entonces) y ronda reentrenada con el código de `7df7a96`. La línea
+    base y la CNN dan los mismos pesos bit a bit; las 4 redes afectadas eligen la misma
+    configuración; ninguna comparación es significativa ni antes ni después. Iniciales en
+    `docs/results/round3_initial/`.
 
 ## Deuda técnica
 
