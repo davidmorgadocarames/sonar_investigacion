@@ -17,6 +17,32 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T09: revisión pasada; fallo del lr declarado; F5-T10 obligatoria
+- **Qué se hizo:** reviewer y friend-tester sobre `a6c9aac`. El friend-tester siguió el README en
+  limpio en CPU sin atascos (cifras y reproducción idénticas; `report` sin cambios). El reviewer
+  no encontró fugas, secretos ni audio, pero sí un **fallo alto**: el calentamiento del lr del
+  transformer y del híbrido (sin y con aumento) se quedaba en el 82 % (4,1e-4 en lugar de 5e-4)
+  tras la época 5 (`cv.py`, bucle de `fit_network`); la CNN y la línea base no se ven afectadas.
+  Con David: se declara ya (ajuste 3 de D-024, aprobado, que recoge además las 13 comparaciones,
+  la semilla 0 reutilizada y la semántica de ReduceLROnPlateau) y un aviso de resultados
+  provisionales en el README; **F5-T10 pasa a obligatoria**: arreglar el lr, guardar la norma del
+  gradiente y el tiempo de carga de datos, y reentrenar; los resultados reentrenados serán los de
+  la ronda 3 y los actuales, histórico; el reentrenamiento se declara como la ronda 2. **`v0.2`
+  se etiqueta después de F5-T10.** README ampliado: aviso, por qué hay calentamiento solo en
+  transformer e híbrido (Liu et al. 2020, Vaswani et al. 2017, Ioffe y Szegedy 2015), qué
+  modelos intervienen en cada sección, tabla de tests saltados, tiempo CPU frente a GPU, y las
+  propuestas del friend-tester (rutas largas en Windows, qué regenera `report`, MFLOPs, ECE) y
+  los arreglos de documentación del reviewer. **David pide aviso antes de cualquier uso de la
+  GPU** para no usar el PC (memoria actualizada).
+- **Qué quedó a medias:** 3 cambios de código ya revisados con David, sin commit, para F5-T10:
+  ayuda de `--measure` (`__main__.py`), dispositivo, hardware y etiqueta `split` en
+  `interpret_cv.py` y dispositivo y hardware en `round3_details.py`. El aviso de reentrenamiento
+  en el informe va en F5-T10 (el informe se genera desde el código).
+- **Ficheros tocados:** `README.md`, `DECISIONS.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer el ajuste 3 de D-024 y el aviso al principio del README.
+- **Siguiente paso exacto:** F5-T10 según el plan aprobado (B1-B13): código y tests sin GPU;
+  después avisar a David con el tiempo medido antes de usar la GPU.
+
 ## 2026-10-12 · F5-T08 cerrada: gráficas, informe y README de la ronda 3
 - **Qué se hizo:** `evaluate --round 3 --details` (`round3_details.py`, 1 min en GPU, sin
   entrenar) reúne en `docs/results/round3_details.json` lo que las gráficas necesitaban y solo
@@ -119,24 +145,3 @@ Plantilla:
   --entrypoint python pipeline -m pytest`; `outputs/round3/run.log` durante la ronda.
 - **Siguiente paso exacto:** al terminar los tres bloques, revisar `docs/results/round3.json` y
   pasar a F5-T07 (interpretabilidad) con David.
-
-## 2026-10-12 · F5-T03 en curso: plan para hacer T03, T04 y T05 seguidos
-- **Qué se hizo:** David pidió hacer F5-T03 (motor de validación cruzada), F5-T04 (transformer)
-  y F5-T05 (híbrido) seguidos, y que **todas las preguntas sobre la ronda 3 se le hagan antes**,
-  para que después la ronda 3 corra con un solo comando sin acciones suyas (quiere dejarla
-  entrenando de noche). Diseño en D-024 y su ajuste 1; particiones en
-  `datasets/manifests/cv_splits.csv`.
-- **Qué quedó a medias:** F5-T03 recién empezada. **Respuestas de David (2026-10-12):**
-  autoriza lanzar la ronda 3 sin esperarle si todos los tests pasan (sin límite de horas dado);
-  ejecutar los entrenamientos **en serie**; **medir antes la memoria de GPU** de cada red; si un
-  bloque falla, **seguir con los demás** y anotarlo; al terminar, **commit y push automáticos**
-  de `docs/results/round3.json` y de la entrada de HANDOFF. Deja el PC encendido con Docker y la
-  sesión abiertos. **Pesos:** quiere todos los pesos guardados, cada modelo en su propio
-  directorio (p. ej. `models/round3/<modelo>/...`); pendiente de confirmar si se versionan en git.
-- **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** PLAN.md (F5-T03 en `[~]`).
-- **Siguiente paso exacto:** escribir el motor de F5-T03 (`src/sonar_pipeline/cv.py`: entrena
-  cualquier modelo en las 25 particiones, elige con media de validación y semilla 0, final con
-  semillas 0-2 promediadas, JSON por entrenamiento con MLOps, MFLOPs, tokens/s, tiempos, curvas,
-  calibración, predicciones; reanudable; prueba de Nadeau y Bengio con Holm) y sus tests
-  sintéticos; luego F5-T04 y F5-T05; un comando único `train --round 3`.

@@ -549,6 +549,23 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
   `models/round3/representative/<modelo>.pt`, menos de 1 MB cada uno), para inspeccionar la
   arquitectura sin entrenar. Los JSON por entrenamiento quedan en `outputs/round3/`; se
   versionan `docs/results/round3.json` y la procedencia.
+- **Ajuste 3 (2026-10-12, F5-T09, aprobado por David): el protocolo tal como se ejecutó.**
+  - **Comparaciones:** 13, no 11. "Transformer frente a CNN e híbrido frente a CNN" se aplicó
+    sin y con aumento: 4 comparaciones en vez de 2, decididas antes de ver resultados. Holm es
+    más exigente con 13.
+  - **Semilla 0 del modelo final:** reutiliza el entrenamiento de elección, que es idéntico bit
+    a bit (lo comprueba un test). Son 900 entrenamientos de redes en lugar de 1050, con el
+    mismo resultado.
+  - **ReduceLROnPlateau:** con paciencia 3, el lr se divide entre 2 en la 4.ª época seguida sin
+    mejora (comportamiento de PyTorch; igual que en F3).
+  - **Fallo del calentamiento (encontrado por el reviewer):** en el transformer y el híbrido,
+    sin y con aumento, el lr subía bien durante las 5 épocas de calentamiento pero se quedaba en
+    el 82 % al terminarlas. El lr máximo real fue **4,1e-4 en lugar de 5e-4**. La CNN y la línea
+    base no tienen calentamiento y no les afecta. No es una fuga: test no intervino. Se arregla
+    en F5-T10 reentrenando la ronda; los resultados reentrenados pasarán a ser los de la ronda
+    3, y los actuales se conservarán como histórico. Como el reentrenamiento se hace **después
+    de haber visto test**, se declara igual que la ronda 2: es un arreglo de implementación
+    decidido por la revisión del código, no por las cifras.
 
 ## Deuda técnica
 

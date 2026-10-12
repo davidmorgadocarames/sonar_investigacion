@@ -15,6 +15,17 @@ con corrección de Holm). Además, la clase coincide con la época de grabación
 datos no se puede afirmar que algún modelo reconozca la firma del buque. Informe completo:
 [docs/report.md](docs/report.md).
 
+> ⚠️ **Resultados provisionales.** En esta versión, el transformer y el híbrido (sin y con
+> aumento) entrenaron con un *learning rate* máximo de 4,1e-4 en lugar de los 5e-4 declarados,
+> por un fallo del calentamiento que encontró la revisión del código: el lr subía bien durante
+> las 5 épocas de calentamiento, pero al terminarlas se quedaba en el 82 % en vez de pasar al
+> 100 %. La CNN y la línea base no tienen calentamiento y no se ven afectadas. No es una fuga:
+> test no intervino en nada. La ronda se reentrenará con el fallo corregido (F5-T10), y esos
+> resultados sustituirán a estos, que se conservarán como histórico. Como el reentrenamiento se
+> hace **después de haber visto test**, se declara igual que la ronda 2: es un arreglo de
+> implementación decidido por la revisión del código, no por las cifras
+> ([ajuste 3 de D-024](DECISIONS.md)).
+
 ## Cronología
 
 El proyecto se hizo por etapas. Cada ronda de resultados se mide de una forma distinta, así que
@@ -122,13 +133,28 @@ lista los tests saltados y por qué: sin los datos descargados se saltan los que
 (dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
 features first`). En la opción A se saltan los de determinismo en CUDA (dicen `no CUDA here`) y
 en la opción B el que comprueba el error sin GPU (dice `this machine has CUDA`). Saltarse no es
-un error.
+un error. Cuando hayas descargado los datos y calculado los rasgos (`features`, más abajo),
+vuelve a lanzarlo: solo deben saltarse los de CUDA (4 en la opción A, 1 en la B).
+
+| Cuándo lo lanzas | Opción A (CPU) | Opción B (GPU) |
+|---|---|---|
+| Recién instalado, sin datos | Se saltan 11: 7 necesitan los audios o los rasgos, y 4 son de determinismo en CUDA | Se saltan 8: los 7 de los datos y el que comprueba el error sin GPU |
+| Con los datos y los rasgos | Se saltan 4 (CUDA) | Se salta 1 (error sin GPU) |
+
+Los tests cubren todas las partes: control de calidad, LOFAR y DEMON con señales sintéticas,
+particiones y fugas, los modelos de las rondas 1 y 2, el motor de la ronda 3 (transformer,
+híbrido, elección sin test, comparaciones), la interpretabilidad, las figuras y el informe.
+Todos usan datos sintéticos pequeños salvo los que comprueban los datos reales.
 
 ## Datos
 
 Los audios **no están en este repositorio**. Se descargan del repositorio público de los
 autores de DeepShip, fijado en una versión concreta para que todos usemos exactamente los mismos
 ficheros. Licencia, contenido y detalles: [datasets/README.md](datasets/README.md).
+
+Los mismos datos sirven para todas las rondas y todos los modelos. **No hacen falta para leer
+los resultados ni para regenerar el informe**: solo para evaluar (rondas 1 y 2), reentrenar o
+reproducir la ronda 3.
 
 Necesitas unos **1,2 GB** libres: unos 700 MB de audio y unos 500 MB del historial de git de
 DeepShip (la carpeta `.git`), que es lo que permite comprobar que los ficheros están íntegros.
@@ -139,6 +165,10 @@ comandos (el primero tarda alrededor de un minuto, según tu conexión):
 git clone -c core.autocrlf=false https://github.com/irfankamboh/DeepShip.git datasets/raw/DeepShip
 git -C datasets/raw/DeepShip checkout 77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6
 ```
+
+**En Windows**, si el repositorio está en una carpeta con una ruta muy larga, el primer comando
+puede fallar con `Filename too long`. Clónalo en una ruta corta (por ejemplo `C:\proyectos`) o
+activa las rutas largas una vez con `git config --global core.longpaths true`.
 
 El segundo comando muestra un aviso de *detached HEAD*. Es normal: significa que estás en esa
 versión fija.
@@ -191,7 +221,9 @@ docker compose run --rm --entrypoint python pipeline -m pytest tests/test_figure
 
 ## Evaluar con los pesos entrenados (rondas 1 y 2)
 
-Puntúa la partición fija de las rondas 1 y 2 con sus tres modelos, versionados en `models/` (en total menos de 1 MB). Con los rasgos ya
+Evalúa **solo los 3 modelos de las rondas 1 y 2** (línea base, CNN y CNN con aumento), con sus
+pesos ya versionados y sin entrenar nada. Puntúa la partición fija de esas rondas con los pesos
+de `models/` (en total menos de 1 MB). Con los rasgos ya
 calculados (`features`, sección anterior):
 
 ```bash
@@ -230,8 +262,10 @@ Otras opciones de `evaluate`:
 - `--interpretability`: qué bandas de frecuencia usa cada modelo (sobre val, unos 30 s).
 - Para la ronda 3, ver la sección siguiente.
 
-Para regenerar el informe y las gráficas de todas las rondas desde los resultados versionados
-(no hace falta haber descargado los datos ni entrenar):
+Para regenerar el informe (`docs/report.md`, que cubre todas las rondas), la figura de datos y
+las 15 gráficas de la ronda 3 (`docs/figures/round3/`) desde los resultados versionados (no hace
+falta haber descargado los datos ni entrenar; las figuras de las rondas 1 y 2 y las de señal son
+fijas):
 
 ```bash
 docker compose run --rm pipeline report
@@ -239,21 +273,31 @@ docker compose run --rm pipeline report
 
 ## Reproducir la ronda 3 (opcional, solo GPU)
 
+> ⏱️ **Tiempo: ~1 h 40 min con GPU (RTX 4060); del orden de 10 a 30 h solo con CPU.**
+
+**Modelos que se entrenan (7, en este orden):** línea base, CNN, CNN con aumento, híbrido,
+híbrido con aumento, transformer y transformer con aumento. Cada red prueba 4
+configuraciones (la línea base, 5 valores de C) en las 25 particiones, y la elegida se entrena
+con 3 semillas.
+
 No hace falta para leer los resultados: el informe y sus 15 gráficas se regeneran desde los
 resúmenes versionados (`docker compose run --rm pipeline report`). Reproducir la ronda 3 entrena
-**900 redes y 125 líneas base**, así que solo tiene sentido con la opción B (GPU). Necesitas los
+**900 redes y 125 líneas base**, así que solo tiene sentido con la opción B (GPU): en CPU, el paso
+1 tarda ~1 min 20 s y mide unos 2-2,6 s por época en la CNN y el híbrido, lo que da del orden de
+10 a 30 horas para la ronda completa. Necesitas los
 rasgos (`features`) y unos 400 MB libres para los pesos.
 
 | Paso | Comando | Tiempo (RTX 4060) |
 |---|---|---|
 | 1. Medir antes (opcional) | `docker compose run --rm pipeline train --round 3 --measure` | ~1 min |
 | 2. Entrenar los 7 modelos | `docker compose run --rm pipeline train --round 3` | ~1 h 40 min |
-| 3. Interpretabilidad | `docker compose run --rm pipeline evaluate --round 3 --interpretability --results-dir docs/results` | ~10 min |
-| 4. Datos de las gráficas | `docker compose run --rm pipeline evaluate --round 3 --details --results-dir docs/results` | ~1 min |
+| 3. Interpretabilidad | `docker compose run --rm pipeline evaluate --round 3 --interpretability --results-dir docs/results --device cuda` | ~10 min |
+| 4. Datos de las gráficas | `docker compose run --rm pipeline evaluate --round 3 --details --results-dir docs/results --device cuda` | ~1 min |
 | 5. Informe y gráficas | `docker compose run --rm pipeline report` | ~1 min |
 
 - **Paso 1:** entrena 2 épocas de cada configuración en la primera partición y muestra el tiempo
-  por época y la memoria de GPU. No guarda nada salvo `outputs/round3/measure.json`.
+  por época y la memoria de GPU. Solo escribe `outputs/round3/measure.json` y añade líneas a
+  `outputs/round3/run.log`.
 - **Paso 2:** entrena los modelos uno detrás de otro: línea base, CNN, CNN con aumento, híbrido,
   híbrido con aumento, transformer y transformer con aumento. **Si se interrumpe, al relanzarlo
   continúa** donde lo dejó: no repite los entrenamientos terminados con el mismo código. Si un
@@ -266,7 +310,12 @@ rasgos (`features`) y unos 400 MB libres para los pesos.
     memoria de GPU), la curva de aprendizaje, los resultados y las predicciones por grabación.
   - `docs/results/round3.json` y `models/round3/representative/`: **sobrescribe los versionados**.
     Compara con `git diff`, y vuelve a ellos con `git checkout -- docs/results models/round3`.
-- **Pasos 3 y 4:** no entrenan nada, y test solo se lee de lo que guardó el paso 2.
+- **Paso 3:** mide los 7 modelos finales sobre validación (oclusión, saliencia o permutación
+  por banda); la atención, solo en el transformer y el híbrido.
+- **Paso 4:** resume los 7 modelos (velocidad, curvas, calibración, acierto por buque...).
+- **Pasos 3 y 4:** no entrenan nada, y test solo se lee de lo que guardó el paso 2. Sin
+  `--device cuda` corren en CPU (más despacio, y las cifras pueden variar en la última
+  cifra); el dispositivo queda registrado en cada JSON.
 - Las redes son deterministas en el mismo tipo de GPU. En otra GPU, o en CPU, las cifras
   cambian algo.
 
@@ -369,14 +418,25 @@ transformer y un híbrido CNN + transformer. **Todos se entrenan desde cero** co
 ninguno está preentrenado. El diseño completo se fijó por escrito **antes de ver ningún
 resultado** ([D-024](DECISIONS.md) y sus ajustes).
 
+> ⚠️ **Resultados provisionales.** En esta versión, el transformer y el híbrido (sin y con
+> aumento) entrenaron con un *learning rate* máximo de 4,1e-4 en lugar de los 5e-4 declarados,
+> por un fallo del calentamiento que encontró la revisión del código: el lr subía bien durante
+> las 5 épocas de calentamiento, pero al terminarlas se quedaba en el 82 % en vez de pasar al
+> 100 %. La CNN y la línea base no tienen calentamiento y no se ven afectadas. No es una fuga:
+> test no intervino en nada. La ronda se reentrenará con el fallo corregido (F5-T10), y esos
+> resultados sustituirán a estos, que se conservarán como histórico. Como el reentrenamiento se
+> hace **después de haber visto test**, se declara igual que la ronda 2: es un arreglo de
+> implementación decidido por la revisión del código, no por las cifras
+> ([ajuste 3 de D-024](DECISIONS.md)).
+
 ### Protocolo: validación cruzada 5 × 5
 
 Los 43 buques se reparten al azar en 5 grupos por clase, con buques enteros y minutos
 equilibrados. En cada vuelta, un grupo es test, otro validación y los otros tres entrenamiento
 (60/20/20), y se rota hasta que cada buque ha estado una vez en test. Se repite 5 veces con
-repartos distintos: **25 particiones**, y cada buque cae en test 5 veces. Tug solo tiene 3 buques,
-así que en todas las particiones va 1 a test, 1 a validación y 1 a entrenamiento (ajuste 1 de
-D-024).
+repartos distintos: **25 particiones**, y cada buque de Cargo, Passengership y Tanker cae en test
+5 veces. Tug solo tiene 3 buques, así que en todas las particiones va 1 a test, 1 a validación y
+1 a entrenamiento, y cada Tug cae en test 8 o 9 veces (ajuste 1 de D-024).
 
 - **Elección:** cada modelo prueba sus configuraciones con la semilla 0 en las 25 particiones y
   se queda con la de mejor F1 medio de **validación**. Test no interviene en ninguna elección.
@@ -467,7 +527,8 @@ DEMON 301 ───────────► 2 bloques 1D ──────�
 - **Cabeza:** une las dos ramas (768 números) → *dropout* → capa lineal de 64 → LeakyReLU →
   *dropout* → 4 clases. El **dropout** apaga al azar una fracción de las neuronas en cada paso de
   entrenamiento, para que la red no dependa de ninguna en concreto.
-- Tamaño: 79 076 parámetros y 75,3 MFLOPs por segmento.
+- Tamaño: 79 076 parámetros y 75,3 MFLOPs por segmento (millones de operaciones de coma flotante
+  para clasificar un segmento: mide el coste de cálculo).
 
 #### Transformer: bandas de frecuencia como palabras
 
@@ -552,11 +613,36 @@ token de clase ─────────────────────�
 | ***Weight decay*** | Empuja los pesos hacia 0 en cada paso, para que no crezcan solo para memorizar | Según la configuración; nunca en sesgos, normalizaciones ni el token de clase |
 | **Minibatches** | Cada paso usa 32 segmentos barajados (con un generador fijo: mismo orden con y sin aumento) | 32 |
 | **Pérdida con pesos por clase** | Entropía cruzada que pesa más las clases con menos segmentos | Pesos de la partición de entrenamiento |
-| **Calentamiento del lr** (solo transformer e híbrido) | El *learning rate* sube en línea recta desde el 10 % durante las primeras épocas. La atención es inestable al principio con pasos grandes | 5 épocas |
-| **Decaimiento del lr** (*ReduceLROnPlateau*) | Si el F1 de validación no mejora en 3 épocas, divide el lr por 2 (en transformer e híbrido, tras el calentamiento) | × 0,5 |
+| **Calentamiento del lr** (solo transformer e híbrido) | El *learning rate* sube en línea recta desde el 10 % durante las primeras épocas (ver abajo por qué solo en estas dos redes) | 5 épocas |
+| **Decaimiento del lr** (*ReduceLROnPlateau*) | Si el F1 de validación pasa 3 épocas sin mejorar, en la siguiente divide el lr por 2 (en transformer e híbrido, tras el calentamiento) | × 0,5 |
 | **Parada temprana** | Para si el F1 de validación no mejora en 10 épocas y se queda con los pesos de la mejor época | Hasta 60 épocas |
 | **Aumento de datos** (versiones "+ aum.") | Solo en entrenamiento, cada cosa con probabilidad 0,5: tapar 1-2 bandas del LOFAR (hasta 100 Hz), tapar 1-2 instantes, desplazar 1-2 instantes en círculo y tapar una banda del DEMON (hasta 3,3 Hz). Se tapa con la media de entrenamiento | Generador propio |
 | **Determinismo** | Semillas fijas, algoritmos deterministas y 4 hilos de CPU: el mismo entrenamiento da los mismos pesos bit a bit en el mismo tipo de dispositivo | — |
+
+**Por qué el transformer y el híbrido tienen calentamiento y la CNN no:**
+
+- Al empezar, los pesos son aleatorios y AdamW todavía no tiene una buena estimación de cuánto
+  varía cada gradiente: sus primeros pasos son grandes y poco fiables (Liu et al., 2020, el
+  artículo de RAdam).
+- En un transformer eso es especialmente peligroso, porque la atención usa un *softmax*: un
+  paso grande al principio puede hacer que cada token se fije solo en otro y se quede
+  "atascado". Por eso el transformer original (Vaswani et al., 2017) y casi todos los
+  posteriores usan calentamiento. El híbrido lo lleva por su parte de transformer.
+- La CNN tiene BatchNorm después de cada convolución (Ioffe y Szegedy, 2015), que estabiliza
+  las activaciones desde la primera época, y no tiene *softmax* internos. Las CNN se entrenan
+  bien sin calentamiento, y es lo habitual.
+- Además, la CNN de la ronda 3 (configuración A) tenía que ser la misma que la de las rondas 1
+  y 2, que no tenía calentamiento: si se lo hubiéramos añadido, no sabríamos si un cambio en el
+  resultado venía del 5 × 5 o del calentamiento.
+
+Referencias:
+
+- Vaswani, A. et al. (2017). Attention is all you need. *NeurIPS*.
+  [arXiv](https://arxiv.org/abs/1706.03762)
+- Liu, L. et al. (2020). On the variance of the adaptive learning rate and beyond. *ICLR*.
+  [arXiv](https://arxiv.org/abs/1908.03265)
+- Ioffe, S. y Szegedy, C. (2015). Batch normalization: Accelerating deep network training by
+  reducing internal covariate shift. *ICML*. [arXiv](https://arxiv.org/abs/1502.03167)
 
 ### Por qué cada configuración
 
@@ -565,7 +651,8 @@ concreta: **¿qué falla, la capacidad o la regularización?** En F3 las CNN mem
 (entrenamiento casi perfecto, validación pobre). La primera configuración es siempre la más
 simple, y en caso de empate gana ella. La versión sin aumento y la versión con aumento eligen por
 separado. Abajo, el F1 medio de validación de cada configuración en las 25 particiones (en
-negrita, la elegida); la figura de elección está en el informe.
+negrita, la elegida); la figura de elección es
+[docs/figures/round3/round3_selection.png](docs/figures/round3/round3_selection.png).
 
 **Línea base: C ∈ {0,001; 0,01; 0,1; 1; 10}** (A a E). Es la rejilla clásica de 5 órdenes de
 magnitud, de muy regularizado a casi libre. La de F3 eligió C = 10.
@@ -576,7 +663,9 @@ magnitud, de muy regularizado a casi libre. La de F3 eligió C = 10.
 
 Ganó E, el borde de la rejilla, como en F3. Pero todas están dentro de ±0,09 de desviación entre
 particiones, así que la regularización apenas cambia el resultado. Con C = 10 la línea base
-acierta el 100 % de entrenamiento y es el modelo peor calibrado (ECE 0,45).
+acierta el 100 % de entrenamiento y es el modelo peor calibrado (ECE 0,45; el ECE, *expected
+calibration error*, mide cuánto se aleja la confianza del modelo de su acierto real: 0 es
+perfecto).
 
 **CNN** (lr 1e-3, `wd` 1e-2 y dropout 0,3 salvo que se diga otra cosa):
 
@@ -645,7 +734,8 @@ las particiones comparten buques). Si el intervalo cruza la línea del 0, la dif
 distingue del ruido. A la derecha, el p sin corregir y con Holm.
 
 **Qué se ve.** **Ninguna de las 13 diferencias es significativa.** Todos los intervalos cruzan el
-0, salvo el del transformer frente a la línea base, que lo roza (−0,096, p = 0,052), y tras Holm
+0; el del transformer frente a la línea base lo cruza por muy poco (−0,096, de −0,193 a +0,001,
+p = 0,052), y tras Holm
 nada se acerca (p ≥ 0,68). El aumento de datos tampoco cambia nada en ninguna arquitectura
 (diferencias de −0,017 a +0,006).
 
