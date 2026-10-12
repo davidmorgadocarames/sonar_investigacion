@@ -346,6 +346,14 @@ def plot_speed(details: dict, path: Path) -> Path:
         ("Segmentos/s en entrenamiento", lambda s: s["training_segments_per_second"]),
         ("Tokens/s en entrenamiento", lambda s: s["training_tokens_per_second"]),
         (
+            "Formar minibatches (% del entrenamiento)",
+            lambda s: (
+                100 * s["minibatch_share_of_training"]
+                if s.get("minibatch_share_of_training") is not None
+                else None
+            ),
+        ),
+        (
             "Memoria máxima de GPU (MiB)",
             lambda s: (
                 s["gpu_peak_allocated_bytes_max"] / 2**20
@@ -354,7 +362,7 @@ def plot_speed(details: dict, path: Path) -> Path:
             ),
         ),
     ]
-    fig, axes = plt.subplots(1, 4, figsize=(15, 4))
+    fig, axes = plt.subplots(1, len(panels), figsize=(3.8 * len(panels), 4))
     for ax, (label, getter) in zip(axes, panels, strict=True):
         for i, m in enumerate(models):
             value = getter(speed[m])
@@ -387,12 +395,16 @@ def plot_curves(details: dict, path: Path, min_share: float = 0.1) -> Path:
     models = [
         m for m in ORDER if m in details["models"] and details["models"][m]["curves"]
     ]
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4.2))
     keys = [
         ("train_loss", "Pérdida de entrenamiento"),
         ("val_loss", "Pérdida de validación"),
         ("val_f1_macro", "F1 macro de validación"),
     ]
+    if models and all(
+        "grad_norm_mean" in details["models"][m]["curves"] for m in models
+    ):
+        keys.append(("grad_norm_mean", "Norma del gradiente (media por época)"))
+    fig, axes = plt.subplots(1, len(keys), figsize=(4.7 * len(keys), 4.2))
     for ax, (key, label) in zip(axes, keys, strict=True):
         for m in models:
             c = details["models"][m]["curves"]
@@ -411,6 +423,8 @@ def plot_curves(details: dict, path: Path, min_share: float = 0.1) -> Path:
         _ygrid(ax)
         _style(ax)
     axes[2].legend(fontsize=7, frameon=False)
+    if len(keys) == 4:
+        axes[3].set_yscale("log")
     _title(
         fig,
         f"curvas de aprendizaje medias de los entrenamientos finales "

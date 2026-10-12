@@ -1,6 +1,7 @@
 """Round 3 engine tests (F5-T03) on toy data, on CPU. No real training here."""
 
 import csv
+import itertools
 import json
 
 import numpy as np
@@ -226,7 +227,36 @@ def test_the_transformer_warms_up_then_keeps_the_lr(tmp_path):
     )
     lrs = [h["lr"] for h in run.history]
     assert lrs[:5] == pytest.approx([warmup_lr(config["lr"], k) for k in range(1, 6)])
-    assert lrs[5] <= config["lr"]
+    # After warmup the lr is the configured one (F5-T10: it used to stay at 82 %).
+    assert lrs[5] == config["lr"]
+
+
+def test_after_warmup_the_lr_only_changes_by_the_plateau_rule(tmp_path):
+    e, data = toy_data(tmp_path)
+    config = {**CONFIGS["transformer"]["A"], "lr": 1e-3}
+    _, run = fit_network(
+        "transformer", config, data, 0, e.device, max_epochs=20, patience=20
+    )
+    after = [h["lr"] for h in run.history[WARMUP_EPOCHS:]]
+    assert after[0] == config["lr"]
+    for previous, current in itertools.pairwise(after):
+        assert current in (previous, pytest.approx(previous * 0.5))
+
+
+def test_every_epoch_records_gradient_norm_and_data_time(tmp_path):
+    e, data = toy_data(tmp_path)
+    _, run = fit_network(
+        "cnn_aug",
+        CONFIGS["cnn"]["A"],
+        data,
+        0,
+        e.device,
+        e.augment_for("cnn_aug", e.partitions[0]),
+        max_epochs=2,
+    )
+    for h in run.history:
+        assert h["grad_norm_max"] >= h["grad_norm_mean"] > 0
+        assert 0 <= h["data_seconds"] <= h["train_seconds"]
 
 
 def test_the_cnn_has_no_warmup(tmp_path):
@@ -280,6 +310,26 @@ def test_round_trains_selects_ensembles_and_compares(tmp_path):
     assert (root / "cnn" / "final" / "rep0_fold0" / "seed1.pt").is_file()
     assert (root / "representative" / "cnn.pt").is_file()
     assert (root / "representative" / "baseline.npz").is_file()
+
+
+def test_training_json_records_data_loading_and_threads(tmp_path):
+    e = engine(tmp_path, seeds=(0,))
+    summary = e.run(("baseline", "cnn"))
+    out = tmp_path / "outputs"
+    net = json.loads(
+        (out / "cnn" / "selection" / "A" / "rep0_fold0.json").read_text("utf-8")
+    )
+    loading = net["training"]["data_loading"]
+    assert loading["features_from_disk_seconds_per_run"] > 0
+    assert loading["partition_seconds"] >= 0
+    assert loading["minibatch_seconds_total"] >= 0
+    base = json.loads(
+        (out / "baseline" / "selection" / "A" / "rep0_fold0.json").read_text("utf-8")
+    )
+    assert base["training"]["data_loading"]["partition_seconds"] > 0
+    assert summary["hardware"]["torch_threads"] == 4
+    starts = [m["started"] for m in summary["models"].values()]
+    assert summary["started"] == min(starts)
 
 
 def test_per_training_json_has_the_agreed_data(tmp_path):

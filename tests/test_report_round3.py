@@ -10,7 +10,7 @@ from sonar_pipeline.__main__ import main
 from sonar_pipeline.cv import MODELS
 from sonar_pipeline.figures_round3 import FIGURES, corrected_interval, plot_round3
 from sonar_pipeline.interpret_cv import run_round3_interpretability
-from sonar_pipeline.report_round3 import round3_section, summary_lines
+from sonar_pipeline.report_round3 import retrain_lines, round3_section, summary_lines
 from sonar_pipeline.round3_details import collect_details, curves, variance
 
 
@@ -148,3 +148,26 @@ def test_cli_details(tmp_path, capsys):
         (tmp_path / "r" / "round3_details.json").read_text(encoding="utf-8")
     )
     assert set(saved["models"]) == {"baseline", "cnn"}
+
+
+def test_details_include_gradient_norm_and_data_time(round3):
+    _, _, _, details, _ = round3
+    cnn = details["models"]["cnn"]
+    assert cnn["curves"]["grad_norm_mean"]["mean"][0] > 0
+    assert 0 <= cnn["speed"]["minibatch_share_of_training"] <= 1
+    assert cnn["speed"]["features_from_disk_seconds"] > 0
+    assert details["models"]["baseline"]["speed"]["minibatch_share_of_training"] is None
+
+
+def test_report_shows_the_retraining_against_the_initial_results(round3):
+    _, _, summary, details, interp = round3
+    text = "\n".join(
+        round3_section(summary, details, interp, "round3", initial=summary)
+    )
+    assert "Resultados reentrenados (F5-T10)" in text
+    assert "docs/results/round3_initial/" in text
+    rows = [row for row in retrain_lines(summary, summary) if row.startswith("| ")][1:]
+    assert len(rows) == len(summary["models"])
+    assert all(row.endswith("| 0,000 |") for row in rows)  # same results: no difference
+    plain = "\n".join(round3_section(summary, details, interp, "round3"))
+    assert "Resultados reentrenados" not in plain

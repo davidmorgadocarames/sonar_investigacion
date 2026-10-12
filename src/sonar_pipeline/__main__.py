@@ -121,7 +121,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--measure",
         action="store_true",
         help="--round 3: only measure the epoch time and GPU memory of every network "
-        "configuration on the first partition (2 epochs each, nothing saved).",
+        "configuration on the first partition (2 epochs each; writes only measure.json and run.log).",
     )
     train.add_argument(
         "--splits",

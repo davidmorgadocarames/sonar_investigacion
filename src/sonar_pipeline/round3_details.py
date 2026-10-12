@@ -63,6 +63,15 @@ def speed(records: list[dict], weights_path: Path) -> dict:
 
     gpu = [r["training"].get("gpu_peak_allocated_bytes") for r in records]
     gpu = [g for g in gpu if g]
+    # Data loading (F5-T10; absent in trainings recorded before it).
+    loading = [r["training"].get("data_loading") for r in records]
+    loading = [x for x in loading if x]
+    shares = [
+        x["minibatch_seconds_total"]
+        / sum(h["train_seconds"] for h in r["training"]["history"])
+        for x, r in zip(loading, records, strict=False)
+        if x.get("minibatch_seconds_total") is not None
+    ]
     return {
         "trainings": len(records),
         "training_seconds_mean": mean("training", "seconds"),
@@ -75,6 +84,15 @@ def speed(records: list[dict], weights_path: Path) -> dict:
         "inference_segments_per_second": mean("inference", "segments_per_second"),
         "gpu_peak_allocated_bytes_max": max(gpu) if gpu else None,
         "weights_bytes": weights_path.stat().st_size,
+        "features_from_disk_seconds": loading[0]["features_from_disk_seconds_per_run"]
+        if loading
+        else None,
+        "partition_seconds_mean": float(
+            np.mean([x["partition_seconds"] for x in loading])
+        )
+        if loading
+        else None,
+        "minibatch_share_of_training": float(np.mean(shares)) if shares else None,
     }
 
 
@@ -86,7 +104,10 @@ def curves(records: list[dict]) -> dict | None:
         return None
     longest = max(len(h) for h in histories)
     out = {"epoch": list(range(1, longest + 1)), "runs": []}
-    for key in ("train_loss", "val_loss", "val_f1_macro", "lr"):
+    keys = ["train_loss", "val_loss", "val_f1_macro", "lr"]
+    if all("grad_norm_mean" in h[0] for h in histories):  # F5-T10 onwards
+        keys += ["grad_norm_mean", "grad_norm_max"]
+    for key in keys:
         means, stds = [], []
         for epoch in range(longest):
             values = [h[epoch][key] for h in histories if len(h) > epoch]
@@ -273,6 +294,8 @@ def collect_details(engine: Round3, summary: dict, output: Path, log=print) -> d
         "probabilities come from the round (not rescored)",
         "models": models,
         "agreement_recording_level": agreement,
+        "device": str(engine.device),
+        "hardware": engine.hardware,
         "code_sha256": engine.code,
         "round3_code_sha256": summary["code_sha256"],
         "cv_splits_sha256": engine.splits_sha256,

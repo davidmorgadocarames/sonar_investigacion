@@ -341,7 +341,9 @@ def run_round3_interpretability(
     )
     report = {
         "round": 3,
-        "split": "val of every partition (test not used)",
+        "split": "val of every partition (test not used); the era check describes the mean spectra of every vessel, without any model",
+        "device": str(engine.device),
+        "hardware": engine.hardware,
         "classes": list(CLASSES),
         "lofar_bands": [{"lo_hz": b["lo"], "hi_hz": b["hi"]} for b in lofar_bands],
         "demon_bands": [{"lo_hz": b["lo"], "hi_hz": b["hi"]} for b in demon_bands],

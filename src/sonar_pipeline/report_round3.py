@@ -294,12 +294,50 @@ def selection_table(summary: dict) -> list[str]:
     return lines
 
 
+def retrain_lines(initial: dict, summary: dict) -> list[str]:
+    """Notice of the F5-T10 retraining and the initial results next to the retrained ones."""
+    lines = [
+        (
+            "**Resultados reentrenados (F5-T10).** Los resultados iniciales de la ronda 3 tenían un "
+            "fallo del calentamiento del lr en el transformer y el híbrido, sin y con aumento: al "
+            "terminar las 5 épocas de calentamiento el lr se quedaba en el 82 % (4,1e-4 en lugar de "
+            "5e-4; ajuste 3 de D-024). Se arregló y se reentrenó la ronda completa **después de "
+            "haber visto test**: igual que la ronda 2, es un arreglo de implementación decidido "
+            "por la revisión del código, no por las cifras. La CNN y la línea base no tenían "
+            "calentamiento. Los resultados iniciales se conservan en "
+            "`docs/results/round3_initial/`."
+        ),
+        "",
+        (
+            "| Modelo | Config. inicial | Config. reentrenada | Test inicial | Test reentrenado | "
+            "Diferencia |"
+        ),
+        "|---|---|---|---|---|---|",
+    ]
+    for m in models_of(summary):
+        if m not in initial["models"]:
+            continue
+        old, new = initial["models"][m], summary["models"][m]
+        f_old = old["test"]["f1_macro_segment"]
+        f_new = new["test"]["f1_macro_segment"]
+        lines.append(
+            f"| {NAMES[m]} | {old['chosen_config']} | {new['chosen_config']} | "
+            f"{mean_std(f_old)} | {mean_std(f_new)} | {num(f_new['mean'] - f_old['mean'])} |"
+        )
+    return lines
+
+
 def round3_section(
-    summary: dict, details: dict, interpretability: dict, folder: str
+    summary: dict,
+    details: dict,
+    interpretability: dict,
+    folder: str,
+    initial: dict | None = None,
 ) -> list[str]:
     lines = [
         "## 4. Ronda 3 (F5): validación cruzada 5 × 5 · evaluación principal",
         "",
+        *(retrain_lines(initial, summary) + [""] if initial is not None else []),
         (
             f"Protocolo fijado antes de entrenar (D-024 y sus ajustes): {summary['partitions']} "
             "particiones 60/20/20 por buque (5 repeticiones × 5 folds; Tug, con 3 buques, 1/1/1 en "

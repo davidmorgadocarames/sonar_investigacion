@@ -310,7 +310,9 @@ def uses_warmup(model: str) -> bool:
 
 
 def warmup_lr(base: float, epoch: int) -> float:
-    """lr of a warmup epoch (1-based): linear from WARMUP_START * base, base after warmup."""
+    """lr of an epoch (1-based) at the start of training: linear from WARMUP_START * base during
+    the WARMUP_EPOCHS warmup epochs, then base (set once in the first epoch after warmup; from
+    then on the plateau rule may lower it)."""
     if epoch > WARMUP_EPOCHS:
         return base
     return base * (WARMUP_START + (1 - WARMUP_START) * (epoch - 1) / WARMUP_EPOCHS)
@@ -378,28 +380,44 @@ def fit_network(
     y_train = torch.as_tensor(data["train_labels"], device=device)
     n = len(y_train)
     run = NetRun()
+    parameters = [p for p in model.parameters() if p.requires_grad]
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
     start = time.perf_counter()
     for epoch in range(1, max_epochs + 1):
         epoch_start = time.perf_counter()
-        if warmup and epoch <= WARMUP_EPOCHS:
+        # Warmup epochs, and the first epoch after them, which sets the lr back to the base value
+        # (F5-T10: before, the lr stayed at the last warmup value, D-024 adjustment 3).
+        if warmup and epoch <= WARMUP_EPOCHS + 1:
             for group in optimizer.param_groups:
                 group["lr"] = warmup_lr(lr, epoch)
         model.train()
         order = torch.randperm(n, generator=generator).to(device)
-        total = 0.0
+        total, data_seconds, norms = 0.0, 0.0, []
         for first in range(0, n, BATCH_SIZE):
+            synchronize(device)
+            batch_start = time.perf_counter()
             rows = order[first : first + BATCH_SIZE]
             lofar, demon = data["train_lofar"][rows], data["train_demon"][rows]
             if augment is not None:
                 lofar, demon = augment(lofar, demon, augment_generator)
+            synchronize(device)
+            data_seconds += (
+                time.perf_counter() - batch_start
+            )  # minibatch and augmentation
             optimizer.zero_grad()
             loss = loss_fn(model(lofar, demon), y_train[rows])
             loss.backward()
+            # L2 norm of all the gradients before the step (read only: training is unchanged).
+            norms.append(
+                torch.linalg.vector_norm(
+                    torch.stack([torch.linalg.vector_norm(p.grad) for p in parameters])
+                )
+            )
             optimizer.step()
             total += loss.item() * len(rows)
         train_seconds = time.perf_counter() - epoch_start
+        norms = torch.stack(norms).double().cpu()
         probs = predict_proba(model, data["val_lofar"], data["val_demon"])
         val_f1, val_loss = val_scores(probs, data["val_labels"])
         synchronize(device)
@@ -410,13 +428,16 @@ def fit_network(
                 "val_loss": val_loss,
                 "val_f1_macro": val_f1,
                 "lr": optimizer.param_groups[0]["lr"],
+                "grad_norm_mean": float(norms.mean()),
+                "grad_norm_max": float(norms.max()),
                 "train_seconds": train_seconds,
+                "data_seconds": data_seconds,
                 "seconds": time.perf_counter() - epoch_start,
             }
         )
         run.segments_seen += n
         run.epochs_run = epoch
-        if not warmup or epoch >= WARMUP_EPOCHS:  # the plateau rule starts after warmup
+        if not warmup or epoch > WARMUP_EPOCHS:  # the plateau rule starts after warmup
             scheduler.step(val_f1)
         if val_f1 > run.best_val_f1:
             run.best_val_f1, run.best_epoch = val_f1, epoch
@@ -581,24 +602,48 @@ class Round3:
         self.configs = configs or CONFIGS
         self.seeds = seeds
         self.log = log
+        load_start = time.perf_counter()
         self.pool = load_pool(processed_dir)
+        self.load_seconds = time.perf_counter() - load_start  # features from disk, once
         self.partitions = read_partitions(splits_path)
         self.rows = {p.name: partition_rows(self.pool, p) for p in self.partitions}
         self.code = code_sha256()
         self.trace = traceability(processed_dir)
         self.splits_sha256 = file_sha256(splits_path)
+        torch.set_num_threads(
+            TORCH_THREADS
+        )  # so the hardware record shows the threads used
         self.hardware = hardware(str(self.device))
         self._device_pool = None
+        self.upload_seconds = None
         self._cost_cache: dict = {}
 
     # ---- helpers
 
+    def data_loading(self, partition_seconds: float, epoch_seconds=None) -> dict:
+        """Data loading times of one training (F5-T10): the features read from disk and sent to
+        the device once per run (shared by every training), this partition's tensors, and the
+        minibatches (indexing and augmentation) of every epoch."""
+        return {
+            "features_from_disk_seconds_per_run": self.load_seconds,
+            "pool_to_device_seconds_per_run": self.upload_seconds,
+            "partition_seconds": partition_seconds,
+            "minibatch_seconds_total": None
+            if epoch_seconds is None
+            else sum(epoch_seconds),
+        }
+
     def device_pool(self) -> dict:
         if self._device_pool is None:
+            start = time.perf_counter()
             self._device_pool = {
                 "lofar": torch.as_tensor(self.pool.lofar, device=self.device),
                 "demon": torch.as_tensor(self.pool.demon, device=self.device),
             }
+            synchronize(self.device)
+            self.upload_seconds = (
+                time.perf_counter() - start
+            )  # pool to the device, once
         return self._device_pool
 
     def net_data(self, partition: Partition) -> dict:
@@ -748,8 +793,10 @@ class Round3:
 
     def _train_baseline(self, config, partition, weights_path) -> dict:
         rows = self.rows[partition.name]
+        data_start = time.perf_counter()
         x = {r: baseline_features(_view(self.pool, rows[r])) for r in ("train", "val")}
         y = {r: self.pool.labels[rows[r]] for r in ("train", "val")}
+        data_seconds = time.perf_counter() - data_start
         start = time.perf_counter()
         fitted = linear.make_model(config["c"]).fit(x["train"], y["train"])
         seconds = time.perf_counter() - start
@@ -762,6 +809,7 @@ class Round3:
                 "device": "cpu",
                 "segments": len(y["train"]),
                 "segments_per_second": len(y["train"]) / seconds,
+                "data_loading": self.data_loading(data_seconds),
                 "note": "deterministic: one fit, the seed does not change it",
             },
             "result": {
@@ -774,7 +822,11 @@ class Round3:
         }
 
     def _train_network(self, model, config, config_name, partition, seed, weights_path):
+        self.device_pool()  # uploaded once per run, timed apart
+        data_start = time.perf_counter()
         data = self.net_data(partition)
+        synchronize(self.device)
+        data_seconds = time.perf_counter() - data_start
         net, run = fit_network(
             model,
             config,
@@ -809,6 +861,9 @@ class Round3:
                 * run.segments_seen,
                 "gpu_peak_allocated_bytes": run.gpu_peak_bytes,
                 "gpu_peak_reserved_bytes": run.gpu_reserved_bytes,
+                "data_loading": self.data_loading(
+                    data_seconds, [h["data_seconds"] for h in run.history]
+                ),
                 "history": run.history,
             },
             "inference": latency(
@@ -1142,9 +1197,11 @@ class Round3:
             compact[name]["test"] = {
                 k: v for k, v in r["test"].items() if k != "joint_calibration"
             } | {"joint_ece": r["test"]["joint_calibration"]["ece"]}
+        if results:  # models of earlier blocks started before this run
+            started = min([started] + [r["started"] for r in results.values()])
         return {
             "round": 3,
-            "protocol": "D-024 (5 x 5 repeated cross-validation by vessel)",
+            "protocol": "D-024 (5 x 5 repeated cross-validation by vessel) with adjustments 1-3",
             "started": started,
             "finished": now(),
             "partitions": len(self.partitions),

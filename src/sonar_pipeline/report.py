@@ -431,12 +431,13 @@ def limitation_lines(eval2: dict) -> list[str]:
 def build_report(
     eval1: dict, eval2: dict, data_lines: list[str], round3: tuple | None = None
 ) -> str:
-    """round3: (round3.json, round3_details.json, round3_interpretability.json) or None."""
+    """round3: (round3.json, round3_details.json, round3_interpretability.json), plus the
+    initial round3.json (before the F5-T10 retraining) when it exists, or None."""
     from sonar_pipeline import report_round3
 
     final = eval2["models"]
     if round3 is not None:
-        summary3, details3, interpretability3 = round3
+        summary3, details3, interpretability3 = round3[:3]
         top = [
             "### Ronda 3 (F5): evaluación principal",
             "",
@@ -446,7 +447,7 @@ def build_report(
             "",
         ]
         round3_lines = report_round3.round3_section(
-            summary3, details3, interpretability3, "round3"
+            summary3, details3, interpretability3, "round3", *round3[3:]
         )
         round3_models = [
             (
@@ -572,6 +573,9 @@ def run_report(
             for name in ("round3", "round3_details", "round3_interpretability")
         )
         plot_round3(*round3, figures_dir / "round3")
+        initial = results_dir / "round3_initial" / "round3.json"
+        if initial.is_file():  # results before the F5-T10 retraining
+            round3 += (json.loads(initial.read_text(encoding="utf-8")),)
     text = build_report(eval1, eval2, data_section(manifests_dir, figures_dir), round3)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(text, encoding="utf-8", newline="\n")
