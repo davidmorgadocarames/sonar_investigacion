@@ -570,7 +570,11 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
     regla de meseta empieza entonces) y ronda reentrenada con el código de `7df7a96`. La línea
     base y la CNN dan los mismos pesos bit a bit; las 4 redes afectadas eligen la misma
     configuración; ninguna comparación es significativa ni antes ni después. Iniciales en
-    `docs/results/round3_initial/`.
+    `docs/results/round3_initial/`. Los entrenamientos cuya mejor época cae dentro del
+    calentamiento (épocas 1-5, idénticas antes y después) dan los mismos pesos que en la
+    ronda inicial: el 42 % de los del transformer, el 40 % del transformer con aumento, el 18 %
+    del híbrido y el 17 % del híbrido con aumento; entre ellos, 3 de los modelos
+    representativos (transformer, transformer con aumento e híbrido), que por eso no cambian.
 
 ## Deuda técnica
 

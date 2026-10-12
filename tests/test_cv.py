@@ -513,3 +513,30 @@ def test_the_summary_collects_models_of_earlier_blocks(tmp_path):
     # A summary from other code is not mixed in.
     e.code = "other"
     assert list(e.run(("transformer",))["models"]) == ["transformer"]
+
+
+def test_the_plateau_rule_waits_for_the_end_of_warmup(tmp_path, monkeypatch):
+    """ReduceLROnPlateau only sees the epochs after warmup (F5-T10, reviewer)."""
+    calls = []
+    original = torch.optim.lr_scheduler.ReduceLROnPlateau.step
+
+    def step(self, metrics, *args, **kwargs):
+        calls.append(metrics)
+        return original(self, metrics, *args, **kwargs)
+
+    monkeypatch.setattr(torch.optim.lr_scheduler.ReduceLROnPlateau, "step", step)
+    e, data = toy_data(tmp_path)
+    _, run = fit_network(
+        "transformer",
+        CONFIGS["transformer"]["A"],
+        data,
+        0,
+        e.device,
+        max_epochs=7,
+        patience=7,
+    )
+    assert len(calls) == run.epochs_run - WARMUP_EPOCHS == 2
+    assert calls == [h["val_f1_macro"] for h in run.history[WARMUP_EPOCHS:]]
+    calls.clear()
+    fit_network("cnn", CONFIGS["cnn"]["A"], data, 0, e.device, max_epochs=3, patience=3)
+    assert len(calls) == 3  # no warmup: from the first epoch

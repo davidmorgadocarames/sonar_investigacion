@@ -21,6 +21,17 @@ implementación decidido por la revisión, no por las cifras. La línea base y l
 pesos bit a bit; las cuatro redes afectadas eligen la misma configuración, y ninguna de las 13
 comparaciones es significativa ni antes ni después. El informe compara las dos versiones.
 
+- **Entrenamientos que no cambian:** si la mejor época cae dentro del calentamiento (épocas 1-5,
+  idénticas antes y después), los pesos son los mismos que en la ronda inicial. Pasa en el 42 %
+  de los entrenamientos del transformer, el 40 % del transformer con aumento, el 18 % del
+  híbrido y el 17 % del híbrido con aumento, y en 3 de los modelos representativos
+  (transformer, transformer con aumento e híbrido): por eso sus ficheros no cambian.
+- **Tiempos:** la ronda reentrenada mide la norma del gradiente y sincroniza la GPU para medir
+  el tiempo de cada minibatch; sus tiempos son algo mayores y no se comparan con los iniciales.
+- **Dónde están los ficheros iniciales sin versionar:** los JSON por entrenamiento y los pesos
+  de la ronda inicial se guardaron en `outputs/round3_initial_run/` (en el equipo de
+  referencia; no están en git).
+
 Los JSON de cada entrenamiento (unos 1000) quedan en `outputs/round3/` y los pesos en
 `models/round3/`, sin versionar (ajuste 2 de D-024); se versiona un modelo representativo por red
 en `models/round3/representative/`. El informe y las 15 gráficas de `docs/figures/round3/` se
@@ -70,6 +81,75 @@ después de verlas.
   permutación (real 0,370 frente a media nula 0,272).
 - En la ronda 1 el azar se tomaba como 0,25 (4 clases) y 0,5 (dentro de época).
 
+## Cómo reproducir las rondas 1 y 2
+
+Instrucciones que estaban en el README principal hasta `v0.1.1`. Necesitan los datos y los
+rasgos (README principal, Puesta en marcha). Las rutas de los comandos son relativas a la
+carpeta raíz del repositorio.
+
+### Evaluar con los pesos de la ronda 2
+
+Evalúa **solo los 3 modelos de las rondas 1 y 2** (línea base, CNN y CNN con aumento), con sus
+pesos ya versionados y sin entrenar nada. Puntúa la partición fija de esas rondas con los pesos
+de `models/` (en total menos de 1 MB). Con los rasgos ya
+calculados (`features`, sección anterior):
+
+```bash
+docker compose run --rm pipeline evaluate
+```
+
+Tarda unos 30 segundos en CPU. Puntúa la partición de test con los tres modelos y escribe
+`outputs/results/metrics.json` y las figuras `outputs/figures/results_*.png`. Debe mostrar estas
+cifras de F1 macro por segmento, idénticas a las del informe (`docs/results/eval2.json`). La
+reproducción exacta está comprobada en x86-64 (ver "Equipo de referencia" en el README principal); en otros
+procesadores, sobre todo ARM (Apple Silicon), puede variar la última cifra:
+
+| Modelo | Debe salir |
+|---|---|
+| `baseline` | `segment F1 0.374 (0.27-0.47)` |
+| `cnn` | `segment F1 0.115 (0.07-0.16)` |
+| `cnn_aug` | `segment F1 0.252 (0.17-0.34)` |
+
+Para comprobarlo de una vez (mismos pesos y todas las cifras de test dentro de ±0,005, que
+admite variaciones de la última cifra en otros procesadores):
+
+```bash
+docker compose run --rm --entrypoint python pipeline tools/check_reproduction.py
+```
+
+Debe decir `Reproduces the reference evaluation`.
+
+Si comparas tu `metrics.json` con `docs/results/eval2.json`, el `code_sha256` será distinto: el
+código cambió después de la evaluación 2 sin afectar a las cifras (detalle en la tabla de
+procedencia de abajo). Las métricas y los `weights_sha256` deben
+coincidir.
+
+Otras opciones de `evaluate`:
+
+- `--plot-only`: redibuja las figuras desde `metrics.json` sin volver a puntuar.
+- `--interpretability`: qué bandas de frecuencia usa cada modelo (sobre val, unos 30 s).
+
+### Reentrenar los modelos de las rondas 1 y 2
+
+Son los tres modelos de las rondas 1 y 2. Reentrenar **sobrescribe los pesos de `models/`**. Para volver a los versionados:
+`git checkout -- models/`.
+
+| Comando | Qué hace | CPU | GPU (opción B) |
+|---|---|---|---|
+| `docker compose run --rm pipeline train --model duration` | Comprobación de DT-005: clasificador que solo ve la duración de la grabación | segundos | — |
+| `docker compose run --rm pipeline train --model baseline` | Línea base (regresión logística) | ~30 s | (usa CPU) |
+| `docker compose run --rm pipeline train --model cnn` | CNN: 4 configuraciones y 3 semillas | ~2-3 min (estimado) | ~40 s (23 s de entrenamiento) |
+| `docker compose run --rm pipeline train --model cnn-aug` | CNN con aumento de datos (necesita `cnn` antes) | ~1-2 min (estimado) | ~30 s (15 s de entrenamiento) |
+| `docker compose run --rm pipeline train --model baseline --permutation-test 200` | Test de permutación de la línea base | ~18 min | (usa CPU) |
+
+- Los tiempos son los del equipo de referencia (abajo) e incluyen arrancar el contenedor; los de
+  las CNN en CPU son una estimación a partir del tiempo por época medido.
+- La línea base y la comprobación de duración dan exactamente los mismos resultados en x86-64;
+  en otros procesadores puede variar la última cifra.
+- Las CNN son deterministas en el mismo tipo de dispositivo, pero los pesos versionados se
+  entrenaron en GPU (una RTX 4060): reentrenar en CPU, o en otra GPU, da pesos y cifras algo
+  distintos.
+
 ## Procedencia: qué código produjo cada resultado
 
 Regla (D-020): todo resultado que se conserva registra el código que lo produjo; si el código
@@ -101,7 +181,7 @@ toca el cálculo de rasgos, modelos ni métricas, así que no afecta a ninguna c
 | Ronda 3 inicial · interpretabilidad (`round3_initial/round3_interpretability.json`) | `8558273` | `b9420ed3…` | Usó los modelos iniciales | Sí (otros modelos) |
 | Ronda 3 inicial · detalles (`round3_initial/round3_details.json`) | `1359477` | `cc71b4fe…` | Usó los modelos iniciales | Sí (otros modelos) |
 | **Ronda 3 reentrenada** · entrenamiento, test, comparaciones, interpretabilidad y detalles (`round3.json`, `round3_interpretability.json`, `round3_details.json`, `models/round3/representative/`) | `7df7a96` (F5-T10) | `07c78f25…` | Es el código final de F5 | — |
-| Ronda 3 · 15 figuras e informe (`docs/figures/round3/`, `docs/report.md`) | commit de cierre de F5-T10 | `07c78f25…` | `report` los regenera desde lo versionado con los mismos bytes | — |
+| Ronda 3 · 15 figuras e informe (`docs/figures/round3/`, `docs/report.md`) | `839876b` (cierre de F5-T10; después, F5-T11) | `07c78f25…` | `report` los regenera desde lo versionado con los mismos bytes | — |
 
 Los pesos de cada ronda están en git: ronda 1 en `6a08569` (línea base), `43cfb1e` (CNN) y
 `ed9db91` (CNN con aumento); ronda 2 en `b43315c`.

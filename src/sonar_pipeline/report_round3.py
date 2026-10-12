@@ -166,7 +166,9 @@ FIGURE_TEXT = {
         "Velocidad y memoria",
         (
             "Medidas en la RTX 4060 (la línea base, en CPU). Los tokens por segundo solo existen en "
-            "el transformer y el híbrido."
+            "el transformer y el híbrido. 'Formar minibatches' es la parte del tiempo de "
+            "entrenamiento que se va en preparar cada lote: casi toda es el aumento de datos, así "
+            "que solo pesa en las versiones con aumento."
         ),
     ),
     "curves": (
@@ -174,7 +176,9 @@ FIGURE_TEXT = {
         (
             "Media (y banda de ± 1 desviación) de los entrenamientos finales, época a época. Si la "
             "pérdida de entrenamiento baja mientras la de validación sube, el modelo está "
-            "memorizando: es el sobreajuste."
+            "memorizando: es el sobreajuste. El último panel es la norma del gradiente (media por "
+            "época, en escala logarítmica): si crece, los pasos del entrenamiento se hacen más "
+            "grandes y menos estables."
         ),
     ),
     "generalisation": (
@@ -370,7 +374,7 @@ def round3_section(
         lines += [
             f"### {title}",
             "",
-            f"![Ronda 3 · {title}](figures/{folder}/{FIGURES[key]})",
+            f"![{title}](figures/{folder}/{FIGURES[key]})",
             "",
             text,
             "",

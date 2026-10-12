@@ -19,18 +19,18 @@
 
 ## 1. Datos
 
-Subconjunto público de DeepShip (63 grabaciones, 43 buques, 95,4 minutos de audio; 4 clases). La partición es **por buque**: ningún buque aparece en dos particiones (D-007, D-013).
+Subconjunto público de DeepShip (63 grabaciones, 43 buques, 95,4 minutos de audio; 4 clases). Toda partición es **por buque**: ningún buque aparece en dos papeles a la vez (D-007, D-013, D-024).
 
-| Clase | Entrenamiento | Validación | Test |
+| Clase | Minutos | Buques | Grabaciones |
 |---|---|---|---|
-| Cargo | 22,9 min · 6 b · 7 g | 6,5 min · 2 b · 2 g | 9,3 min · 3 b · 3 g |
-| Passengership | 11,4 min · 6 b · 12 g | 3,9 min · 2 b · 4 g | 3,8 min · 2 b · 4 g |
-| Tanker | 16,6 min · 8 b · 16 g | 5,5 min · 5 b · 6 g | 5,5 min · 6 b · 6 g |
-| Tug | 3,4 min · 1 b · 1 g | 3,3 min · 1 b · 1 g | 3,2 min · 1 b · 1 g |
+| Cargo | 38,7 | 11 | 12 |
+| Passengership | 19,1 | 10 | 20 |
+| Tanker | 27,7 | 19 | 28 |
+| Tug | 9,9 | 3 | 3 |
 
-b = buques, g = grabaciones.
+![Datos por clase](figures/data_classes.png)
 
-![Minutos por clase y partición](figures/data_minutes.png)
+![Las 25 particiones](figures/data_partitions.png)
 
 ## 2. Señal
 
@@ -130,91 +130,91 @@ Interpretabilidad (sobre validación, modelos finales):
 
 ### F1 de test de cada partición
 
-![Ronda 3 · F1 de test de cada partición](figures/round3/round3_box.png)
+![F1 de test de cada partición](figures/round3/round3_box.png)
 
 Cada punto es una de las 25 particiones; la caja va del primer al tercer cuartil, la raya es la mediana y el rombo la media. La línea discontinua es el azar (medido con 4 clases; 0,5 aproximado dentro de cada época, donde solo hay 2 clases). Lo importante es lo **alta** que es cada caja: dice cuánto cambia el resultado según qué buques le tocan al modelo en test.
 
 ### Comparaciones fijadas de antemano
 
-![Ronda 3 · Comparaciones fijadas de antemano](figures/round3/round3_pairs.png)
+![Comparaciones fijadas de antemano](figures/round3/round3_pairs.png)
 
 Diferencia media de F1 entre dos modelos en las mismas 25 particiones, con su intervalo del 95 % corregido por Nadeau y Bengio (que tiene en cuenta que las particiones comparten buques). Si el intervalo cruza el 0, la diferencia no se distingue del ruido. A la derecha, el p sin corregir y con Holm (13 comparaciones a la vez).
 
 ### Efecto del aumento de datos
 
-![Ronda 3 · Efecto del aumento de datos](figures/round3/round3_augmentation.png)
+![Efecto del aumento de datos](figures/round3/round3_augmentation.png)
 
 Para cada partición, F1 con aumento menos F1 sin aumento de la misma arquitectura. Por encima de 0, el aumento ayudó en esa partición.
 
 ### Precisión frente a coste
 
-![Ronda 3 · Precisión frente a coste](figures/round3/round3_cost.png)
+![Precisión frente a coste](figures/round3/round3_cost.png)
 
 F1 medio (± desviación) frente al coste de inferencia, al tamaño y al tiempo de entrenamiento, en escala logarítmica. Un modelo compensa si está más arriba sin irse mucho a la derecha.
 
 ### Velocidad y memoria
 
-![Ronda 3 · Velocidad y memoria](figures/round3/round3_speed.png)
+![Velocidad y memoria](figures/round3/round3_speed.png)
 
-Medidas en la RTX 4060 (la línea base, en CPU). Los tokens por segundo solo existen en el transformer y el híbrido.
+Medidas en la RTX 4060 (la línea base, en CPU). Los tokens por segundo solo existen en el transformer y el híbrido. 'Formar minibatches' es la parte del tiempo de entrenamiento que se va en preparar cada lote: casi toda es el aumento de datos, así que solo pesa en las versiones con aumento.
 
 ### Curvas de aprendizaje
 
-![Ronda 3 · Curvas de aprendizaje](figures/round3/round3_curves.png)
+![Curvas de aprendizaje](figures/round3/round3_curves.png)
 
-Media (y banda de ± 1 desviación) de los entrenamientos finales, época a época. Si la pérdida de entrenamiento baja mientras la de validación sube, el modelo está memorizando: es el sobreajuste.
+Media (y banda de ± 1 desviación) de los entrenamientos finales, época a época. Si la pérdida de entrenamiento baja mientras la de validación sube, el modelo está memorizando: es el sobreajuste. El último panel es la norma del gradiente (media por época, en escala logarítmica): si crece, los pasos del entrenamiento se hacen más grandes y menos estables.
 
 ### Brecha de generalización
 
-![Ronda 3 · Brecha de generalización](figures/round3/round3_generalisation.png)
+![Brecha de generalización](figures/round3/round3_generalisation.png)
 
 F1 del modelo final (media de sus semillas) en entrenamiento, validación y test. La distancia entre el círculo y el rombo es lo que el modelo memoriza y no generaliza.
 
 ### De dónde viene la variación
 
-![Ronda 3 · De dónde viene la variación](figures/round3/round3_variance.png)
+![De dónde viene la variación](figures/round3/round3_variance.png)
 
 Desviación del F1 de test entre particiones (con la media de semillas) y entre semillas dentro de una misma partición. Es el análisis de Bouthillier et al. (2021): justifica usar muchas particiones antes que muchas semillas.
 
 ### Elección de configuración
 
-![Ronda 3 · Elección de configuración](figures/round3/round3_selection.png)
+![Elección de configuración](figures/round3/round3_selection.png)
 
 F1 de validación (media ± desviación de las 25 particiones) de cada configuración; la rellena es la elegida y el rombo su F1 de test. Si las barras se solapan mucho, la elección es casi un empate.
 
 ### Matrices de confusión conjuntas
 
-![Ronda 3 · Matrices de confusión conjuntas](figures/round3/round3_confusion.png)
+![Matrices de confusión conjuntas](figures/round3/round3_confusion.png)
 
 Todas las predicciones de test de las 25 particiones juntas (cada segmento cuenta 5 veces, una por repetición). Filas: clase real; columnas: clase predicha.
 
 ### Acierto por buque
 
-![Ronda 3 · Acierto por buque](figures/round3/round3_vessels.png)
+![Acierto por buque](figures/round3/round3_vessels.png)
 
 Fracción de las veces que cada buque estuvo en test en que sus grabaciones se clasificaron bien. Muestra los buques que todos los modelos fallan.
 
 ### Acuerdo entre modelos
 
-![Ronda 3 · Acuerdo entre modelos](figures/round3/round3_agreement.png)
+![Acuerdo entre modelos](figures/round3/round3_agreement.png)
 
 Para cada pareja de modelos, en qué fracción de las grabaciones de test predicen lo mismo y en qué fracción fallan los dos. Si dos modelos fallan en sitios distintos, combinarlos podría ayudar.
 
 ### Calibración
 
-![Ronda 3 · Calibración](figures/round3/round3_calibration.png)
+![Calibración](figures/round3/round3_calibration.png)
 
 Si el modelo dice "80 % seguro", ¿acierta el 80 % de las veces? La diagonal es la calibración perfecta; por debajo, el modelo está demasiado seguro. ECE y Brier: cuanto más bajos, mejor.
 
 ### Qué frecuencias usa cada modelo
 
-![Ronda 3 · Qué frecuencias usa cada modelo](figures/round3/round3_interpretability.png)
+![Qué frecuencias usa cada modelo](figures/round3/round3_interpretability.png)
 
 Arriba, cuánto depende cada modelo de cada banda de 40 Hz (normalizado por fila), y en la última fila cuánto difiere esa banda entre las grabaciones de 2016 y 2017. Si un modelo usa las bandas que delatan la época, puede estar aprendiendo la época y no el buque. Abajo, a qué bandas atiende el token de clase del transformer y del híbrido.
 
 ### ROC de clasificación
 
-![Ronda 3 · ROC de clasificación](figures/round3/round3_roc.png)
+![ROC de clasificación](figures/round3/round3_roc.png)
 
 Una clase frente al resto, con los segmentos de test de las 25 particiones juntos. Es una ROC de clasificación, no de detección (DT-007). Al juntar particiones se mezclan 25 modelos distintos, así que el AUC es orientativo.
 

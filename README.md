@@ -1,358 +1,42 @@
 # sonar_investigacion
 
-Pipeline de procesado de señal sonar pasivo sobre el dataset DeepShip (4 clases: Cargo,
-Passengership, Tanker, Tug):
+**Resumen.** Clasificamos el tipo de buque (Cargo, Passengership, Tanker, Tug) a partir del
+ruido que radia, en el subconjunto público de DeepShip (63 grabaciones, 43 buques). De cada
+segmento de 3 s se extraen el LOFAR (líneas tonales) y el DEMON (ritmo de la hélice), y se
+comparan 7 modelos entrenados desde cero: una regresión logística, una CNN, un transformer y un
+híbrido CNN + transformer, estos tres sin y con aumento de datos. La evaluación es una validación
+cruzada repetida 5 × 5 por buque, con la configuración elegida sin mirar test y comparaciones con
+la prueba de Nadeau y Bengio. Ningún modelo es significativamente mejor que la regresión
+logística (F1 macro 0,331 frente a un azar de 0,242). Y como la clase coincide con la época de
+grabación, no se puede afirmar que ningún modelo reconozca la firma del buque.
 
 ```
-WAV → control de calidad → preprocesado → LOFAR y DEMON → clasificador → evaluación → informe
+WAV → control de calidad → preprocesado → LOFAR y DEMON → 7 modelos → validación cruzada 5 × 5 → informe
 ```
 
-**Resultado principal (ronda 3, validación cruzada 5 × 5 por buque):** se compararon 7 modelos
-entrenados desde cero, de una regresión logística a un transformer. El mejor F1 macro de test es
-el del híbrido CNN + transformer (0,336 ± 0,126), y la línea base sacó 0,331 ± 0,046, frente a un
-azar de 0,242. **Ninguna diferencia entre modelos es significativa** (prueba de Nadeau y Bengio
-con corrección de Holm). Además, la clase coincide con la época de grabación, así que con estos
-datos no se puede afirmar que algún modelo reconozca la firma del buque. Informe completo:
-[docs/report.md](docs/report.md).
-
-> ℹ️ **Resultados reentrenados (F5-T10).** En la primera versión de la ronda 3, el
-> transformer y el híbrido (sin y con aumento) entrenaron con un *learning rate* máximo de
-> 4,1e-4 en lugar de los 5e-4 declarados, por un fallo del calentamiento que encontró la
-> revisión del código: el lr subía bien durante las 5 épocas de calentamiento, pero al
-> terminarlas se quedaba en el 82 % en vez de pasar al 100 %. Se arregló y se reentrenó la
-> ronda completa: estos son los resultados reentrenados. La línea base y la CNN no tenían
-> calentamiento y dan exactamente lo mismo que antes; las cuatro redes afectadas eligen la
-> misma configuración y ninguna conclusión cambia. Como el reentrenamiento se hizo **después de
-> haber visto test**, se declara igual que la ronda 2: es un arreglo de implementación
-> decidido por la revisión del código, no por las cifras ([ajuste 3 de D-024](DECISIONS.md)).
-> Los resultados iniciales se conservan en
-> [docs/results/round3_initial/](docs/results/round3_initial/), y el informe los compara.
-
-## Cronología
-
-El proyecto se hizo por etapas. Cada ronda de resultados se mide de una forma distinta, así que
-**sus cifras no son directamente comparables**: la de referencia es la ronda 3.
-
-| Etapa | Fase | Qué se hizo | Evaluación | Versión |
-|---|---|---|---|---|
-| Datos y señal | F1-F2 | DeepShip, partición por buque, LOFAR y DEMON | Tests con señales sintéticas | — |
-| Ronda 1 | F3 | Línea base, CNN sin aumento y CNN con aumento | Una partición fija (12 buques en test) | — |
-| Ronda 2 | F3 | Los mismos modelos, tras arreglar los fallos de la revisión | La misma partición, segunda y última vez | `v0.1` |
-| Entrega | F4 | README, informe y reproducción comprobada por un tercero | — | `v0.1.1` |
-| **Ronda 3** | F5 | **7 modelos**: se añaden un transformer y un híbrido, y cada red se prueba sin y con aumento | **Validación cruzada 5 × 5 por buque (25 particiones)** | `v0.2` |
+Informe completo, con todas las cifras: [docs/report.md](docs/report.md).
 
 ## Contenido
 
-- **Cómo usarlo** (común a todas las rondas): [Requisitos](#requisitos) ·
-  [Puesta en marcha](#puesta-en-marcha) · [Comprobar la instalación](#comprobar-la-instalación) ·
-  [Datos](#datos) · [Control de calidad y rasgos](#control-de-calidad-y-rasgos) ·
-  [Evaluar con los pesos entrenados](#evaluar-con-los-pesos-entrenados-rondas-1-y-2) ·
-  [Reproducir la ronda 3](#reproducir-la-ronda-3-opcional-solo-gpu) ·
-  [Reentrenar los modelos de F3](#reentrenar-los-modelos-de-f3-opcional)
-- **Datos y señal en gráficas** (común): [Datos](#1-datos) · [LOFAR y DEMON](#2-señal-qué-son-lofar-y-demon) ·
-  [Un buque real](#3-un-buque-real)
-- **Ronda 3 (F5), la evaluación principal:** [Protocolo](#protocolo-validación-cruzada-5--5) ·
-  [Los modelos por dentro](#los-modelos-por-dentro) ·
-  [Por qué cada configuración](#por-qué-cada-configuración) ·
-  [Resultados en gráficas](#resultados-de-la-ronda-3-en-gráficas)
-- **Rondas 1 y 2 (F3), histórico:** [Resultados](#rondas-1-y-2-f3-partición-fija--histórico)
+- [Datos y señal](#datos-y-señal): [los datos](#los-datos) · [LOFAR y DEMON](#qué-son-lofar-y-demon) ·
+  [un buque real](#un-buque-real)
+- [Protocolo de evaluación](#protocolo-de-evaluación-validación-cruzada-5--5)
+- [Los modelos por dentro](#los-modelos-por-dentro) · [Por qué cada configuración](#por-qué-cada-configuración)
+- [Resultados](#resultados): [resumen](#resumen-de-resultados) y las 15 gráficas explicadas
+- [Conclusiones](#conclusiones)
+- [Puesta en marcha](#puesta-en-marcha): [requisitos](#requisitos) · [instalación](#instalación) ·
+  [comprobar la instalación](#comprobar-la-instalación) · [datos](#descargar-los-datos) ·
+  [rasgos](#control-de-calidad-y-rasgos) · [comprobación rápida](#comprobación-rápida-de-los-resultados) ·
+  [informe](#regenerar-el-informe) · [reproducir todo](#reproducir-los-resultados-opcional-solo-gpu)
 - [Limitaciones](#limitaciones) · [Procedencia](#procedencia) ·
   [Equipo de referencia](#equipo-de-referencia) · [Carpetas](#carpetas) · [Licencia](#licencia) ·
   [Cita](#cita)
 
-## Requisitos
+## Datos y señal
 
-- git
-- Docker con Docker Compose v2 (en Windows y macOS, Docker Desktop)
+### Los datos
 
-No hace falta instalar Python ni ninguna librería: todo se ejecuta dentro del contenedor, con
-Python 3.11.17 y versiones fijadas de cada librería. Lo que tengas instalado en tu ordenador no
-se usa, así que no necesitas un entorno virtual ni preocuparte por las versiones (D-021).
-
-## Puesta en marcha
-
-1. Clona el repositorio (es privado; necesitas que David te dé acceso):
-
-   ```bash
-   git clone https://github.com/davidmorgadocarames/sonar_investigacion.git
-   cd sonar_investigacion
-   ```
-
-2. Elige una opción **una sola vez**:
-
-   - **Opción A · CPU (por defecto).** No hagas nada: funciona en cualquier ordenador. Es todo lo
-     que necesitas para evaluar con los pesos entrenados.
-   - **Opción B · GPU NVIDIA (solo para reentrenar más rápido).** Necesitas una GPU NVIDIA de la
-     serie RTX 20 / GTX 16 o posterior, con el driver 580 o más nuevo, y Docker Desktop con WSL2
-     en Windows (o el NVIDIA Container Toolkit en Linux). Crea en la carpeta
-     `sonar_investigacion` un fichero llamado `.env` con estas dos líneas:
-
-     ```
-     COMPOSE_PATH_SEPARATOR=:
-     COMPOSE_FILE=compose.yaml:compose.gpu.yaml
-     ```
-
-     A partir de ahí, todos los comandos de este README son los mismos y usan tu GPU. La imagen
-     de la opción B ocupa unos 9,4 GB. Si tu driver es demasiado antiguo, el contenedor fallará al
-     arrancar: actualiza el driver o borra `.env` para volver a la opción A.
-
-3. **Solo en Linux:** para que los ficheros que escribe el contenedor sean tuyos, añade tu
-   usuario al fichero `.env` (se crea si no existe). En Windows y macOS no hace falta.
-
-   ```bash
-   printf '\nHOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
-   ```
-
-   El salto de línea inicial evita pegarse a la última línea del `.env` de la opción B.
-
-   **Con Docker sin root (*rootless*) o con Podman** el usuario `root` del contenedor ya
-   corresponde a tu usuario del host: en ese caso pon en `.env` `HOST_UID=0` y `HOST_GID=0`
-   (comprobado que la imagen funciona con el UID 0; sin probar en un Docker *rootless* real).
-
-4. Construye la imagen. La primera vez tarda unos minutos; la imagen de la opción A ocupa unos
-   1,9 GB:
-
-   ```bash
-   docker compose build
-   ```
-
-5. Comprueba que funciona:
-
-   ```bash
-   docker compose run --rm pipeline --help
-   ```
-
-   Debe mostrar los comandos `qc`, `features`, `train`, `evaluate` y `report`.
-
-## Comprobar la instalación
-
-```bash
-docker compose run --rm --entrypoint python pipeline -m pytest -rs
-```
-
-Tarda alrededor de un minuto. Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
-lista los tests saltados y por qué: sin los datos descargados se saltan los que los necesitan
-(dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
-features first`). En la opción A se saltan los de determinismo en CUDA (dicen `no CUDA here`) y
-en la opción B el que comprueba el error sin GPU (dice `this machine has CUDA`). Saltarse no es
-un error. Cuando hayas descargado los datos y calculado los rasgos (`features`, más abajo),
-vuelve a lanzarlo: solo deben saltarse los de CUDA (4 en la opción A, 1 en la B).
-
-| Cuándo lo lanzas | Opción A (CPU) | Opción B (GPU) |
-|---|---|---|
-| Recién instalado, sin datos | Se saltan 11: 7 necesitan los audios o los rasgos, y 4 son de determinismo en CUDA | Se saltan 8: los 7 de los datos y el que comprueba el error sin GPU |
-| Con los datos y los rasgos | Se saltan 4 (CUDA) | Se salta 1 (error sin GPU) |
-
-Los tests cubren todas las partes: control de calidad, LOFAR y DEMON con señales sintéticas,
-particiones y fugas, los modelos de las rondas 1 y 2, el motor de la ronda 3 (transformer,
-híbrido, elección sin test, comparaciones), la interpretabilidad, las figuras y el informe.
-Todos usan datos sintéticos pequeños salvo los que comprueban los datos reales.
-
-## Datos
-
-Los audios **no están en este repositorio**. Se descargan del repositorio público de los
-autores de DeepShip, fijado en una versión concreta para que todos usemos exactamente los mismos
-ficheros. Licencia, contenido y detalles: [datasets/README.md](datasets/README.md).
-
-Los mismos datos sirven para todas las rondas y todos los modelos. **No hacen falta para leer
-los resultados ni para regenerar el informe**: solo para evaluar (rondas 1 y 2), reentrenar o
-reproducir la ronda 3.
-
-Necesitas unos **1,2 GB** libres: unos 700 MB de audio y unos 500 MB del historial de git de
-DeepShip (la carpeta `.git`), que es lo que permite comprobar que los ficheros están íntegros.
-Desde la carpeta `sonar_investigacion`, ejecuta estos dos
-comandos (el primero tarda alrededor de un minuto, según tu conexión):
-
-```bash
-git clone -c core.autocrlf=false https://github.com/irfankamboh/DeepShip.git datasets/raw/DeepShip
-git -C datasets/raw/DeepShip checkout 77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6
-```
-
-**En Windows**, si el repositorio está en una carpeta con una ruta muy larga, el primer comando
-puede fallar con `Filename too long`. Clónalo en una ruta corta (por ejemplo `C:\proyectos`) o
-activa las rutas largas una vez con `git config --global core.longpaths true`.
-
-El segundo comando muestra un aviso de *detached HEAD*. Es normal: significa que estás en esa
-versión fija.
-
-Para comprobar que la descarga es correcta:
-
-```bash
-git -C datasets/raw/DeepShip status
-```
-
-Debe decir `HEAD detached at 7772572` y `nothing to commit, working tree clean`. Eso garantiza
-que los ficheros son idénticos a los de la versión fijada. Deben quedar 63 ficheros `.wav`
-repartidos en `Cargo/` (12), `Passengership/` (20), `Tanker/` (28) y `Tug/` (3).
-
-Si ya lo habías descargado, no hace falta repetirlo.
-
-## Control de calidad y rasgos
-
-Con los datos descargados, desde la carpeta `sonar_investigacion`:
-
-```bash
-docker compose run --rm pipeline qc
-docker compose run --rm pipeline features
-```
-
-- `qc` revisa los 63 WAV (formato, duración, offset DC, saturación...) en unos segundos y escribe
-  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero. Es normal que marque `flag_dc` en
-  casi todas las grabaciones: todas tienen un offset DC, y `features` lo corrige (D-009).
-- `features` tarda menos de un minuto. Comprueba que cada WAV es idéntico al de la versión
-  fijada (SHA-256 de `datasets/manifests/vessels.csv`), quita el offset DC de cada grabación, la
-  corta en segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación
-  de la cavitación, 0 a 100 Hz) de cada segmento. Debe decir `63 recordings, 1889 segments` y
-  escribir en `datasets/processed/` unos 82 MB: un `features_<partición>.npz` por partición
-  (train, val y test), `index.csv` (una fila por segmento) y `features_meta.json` (parámetros
-  usados). Esa carpeta no se sube a git.
-
-Figuras de ejemplo (en `outputs/figures/`, que no se sube a git):
-
-```bash
-docker compose run --rm pipeline features --figures
-docker compose run --rm --entrypoint python pipeline -m pytest tests/test_figures.py --figures-dir outputs/figures
-```
-
-- El primero calcula los rasgos y dibuja, para la grabación más larga de cada clase dentro de
-  la partición de entrenamiento (para no mirar val ni test), su LOFARgram y su DEMON medio:
-  `example_<clase>.png`.
-- El segundo dibuja la validación con señales sintéticas: un tono de 440 Hz debe salir en
-  440 Hz en el LOFAR (`validation_lofar.png`), y un ruido modulado a 12 Hz debe dar un pico en
-  12 Hz en el DEMON (`validation_demon.png`).
-
-## Evaluar con los pesos entrenados (rondas 1 y 2)
-
-Evalúa **solo los 3 modelos de las rondas 1 y 2** (línea base, CNN y CNN con aumento), con sus
-pesos ya versionados y sin entrenar nada. Puntúa la partición fija de esas rondas con los pesos
-de `models/` (en total menos de 1 MB). Con los rasgos ya
-calculados (`features`, sección anterior):
-
-```bash
-docker compose run --rm pipeline evaluate
-```
-
-Tarda unos 30 segundos en CPU. Puntúa la partición de test con los tres modelos y escribe
-`outputs/results/metrics.json` y las figuras `outputs/figures/results_*.png`. Debe mostrar estas
-cifras de F1 macro por segmento, idénticas a las del informe (`docs/results/eval2.json`). La
-reproducción exacta está comprobada en x86-64 (ver "Equipo de referencia"); en otros
-procesadores, sobre todo ARM (Apple Silicon), puede variar la última cifra:
-
-| Modelo | Debe salir |
-|---|---|
-| `baseline` | `segment F1 0.374 (0.27-0.47)` |
-| `cnn` | `segment F1 0.115 (0.07-0.16)` |
-| `cnn_aug` | `segment F1 0.252 (0.17-0.34)` |
-
-Para comprobarlo de una vez (mismos pesos y todas las cifras de test dentro de ±0,005, que
-admite variaciones de la última cifra en otros procesadores):
-
-```bash
-docker compose run --rm --entrypoint python pipeline tools/check_reproduction.py
-```
-
-Debe decir `Reproduces the reference evaluation`.
-
-Si comparas tu `metrics.json` con `docs/results/eval2.json`, el `code_sha256` será distinto: el
-código cambió después de la evaluación 2 sin afectar a las cifras (detalle en
-[docs/results/README.md](docs/results/README.md)). Las métricas y los `weights_sha256` deben
-coincidir.
-
-Otras opciones de `evaluate`:
-
-- `--plot-only`: redibuja las figuras desde `metrics.json` sin volver a puntuar.
-- `--interpretability`: qué bandas de frecuencia usa cada modelo (sobre val, unos 30 s).
-- Para la ronda 3, ver la sección siguiente.
-
-Para regenerar el informe (`docs/report.md`, que cubre todas las rondas), la figura de datos y
-las 15 gráficas de la ronda 3 (`docs/figures/round3/`) desde los resultados versionados (no hace
-falta haber descargado los datos ni entrenar; las figuras de las rondas 1 y 2 y las de señal son
-fijas):
-
-```bash
-docker compose run --rm pipeline report
-```
-
-## Reproducir la ronda 3 (opcional, solo GPU)
-
-> ⏱️ **Tiempo: ~1 h 40 min con GPU (RTX 4060); del orden de 10 a 30 h solo con CPU.**
-
-**Modelos que se entrenan (7, en este orden):** línea base, CNN, CNN con aumento, híbrido,
-híbrido con aumento, transformer y transformer con aumento. Cada red prueba 4
-configuraciones (la línea base, 5 valores de C) en las 25 particiones, y la elegida se entrena
-con 3 semillas.
-
-No hace falta para leer los resultados: el informe y sus 15 gráficas se regeneran desde los
-resúmenes versionados (`docker compose run --rm pipeline report`). Reproducir la ronda 3 entrena
-**900 redes y 125 líneas base**, así que solo tiene sentido con la opción B (GPU): en CPU, el paso
-1 tarda ~1 min 20 s y mide unos 2-2,6 s por época en la CNN y el híbrido, lo que da del orden de
-10 a 30 horas para la ronda completa. Necesitas los
-rasgos (`features`) y unos 400 MB libres para los pesos.
-
-| Paso | Comando | Tiempo (RTX 4060) |
-|---|---|---|
-| 1. Medir antes (opcional) | `docker compose run --rm pipeline train --round 3 --measure` | ~1 min |
-| 2. Entrenar los 7 modelos | `docker compose run --rm pipeline train --round 3` | ~1 h 40 min |
-| 3. Interpretabilidad | `docker compose run --rm pipeline evaluate --round 3 --interpretability --results-dir docs/results --device cuda` | ~10 min |
-| 4. Datos de las gráficas | `docker compose run --rm pipeline evaluate --round 3 --details --results-dir docs/results --device cuda` | ~1 min |
-| 5. Informe y gráficas | `docker compose run --rm pipeline report` | ~1 min |
-
-- **Paso 1:** entrena 2 épocas de cada configuración en la primera partición y muestra el tiempo
-  por época y la memoria de GPU. Solo escribe `outputs/round3/measure.json` y añade líneas a
-  `outputs/round3/run.log`.
-- **Paso 2:** entrena los modelos uno detrás de otro: línea base, CNN, CNN con aumento, híbrido,
-  híbrido con aumento, transformer y transformer con aumento. **Si se interrumpe, al relanzarlo
-  continúa** donde lo dejó: no repite los entrenamientos terminados con el mismo código. Si un
-  modelo falla, apunta el error en `outputs/round3/<modelo>/error.txt` y sigue con los demás.
-  `--only cnn hybrid` entrena solo esos modelos. Escribe:
-  - `models/round3/<modelo>/`: todos los pesos, cada entrenamiento en su fichero. No se suben a
-    git.
-  - `outputs/round3/<modelo>/`: un JSON por entrenamiento, con la configuración, el código y los
-    datos usados, el coste (parámetros, MFLOPs), la velocidad (segmentos/s, tokens/s, latencia,
-    memoria de GPU), la curva de aprendizaje, los resultados y las predicciones por grabación.
-  - `docs/results/round3.json` y `models/round3/representative/`: **sobrescribe los versionados**.
-    Compara con `git diff`, y vuelve a ellos con `git checkout -- docs/results models/round3`.
-- **Paso 3:** mide los 7 modelos finales sobre validación (oclusión, saliencia o permutación
-  por banda); la atención, solo en el transformer y el híbrido.
-- **Paso 4:** resume los 7 modelos (velocidad, curvas, calibración, acierto por buque...).
-- **Pasos 3 y 4:** no entrenan nada, y test solo se lee de lo que guardó el paso 2. Sin
-  `--device cuda` corren en CPU (más despacio, y las cifras pueden variar en la última
-  cifra); el dispositivo queda registrado en cada JSON.
-- Las redes son deterministas en el mismo tipo de GPU. En otra GPU, o en CPU, las cifras
-  cambian algo.
-
-`models/round3/representative/` guarda, versionado, un modelo de cada red (repetición 0, vuelta 0,
-semilla 0, con la configuración elegida), con un `.json` que dice su configuración: sirve para
-inspeccionar la arquitectura sin entrenar.
-
-## Reentrenar los modelos de F3 (opcional)
-
-Son los tres modelos de las rondas 1 y 2. Reentrenar **sobrescribe los pesos de `models/`**. Para volver a los versionados:
-`git checkout -- models/`.
-
-| Comando | Qué hace | CPU | GPU (opción B) |
-|---|---|---|---|
-| `docker compose run --rm pipeline train --model duration` | Comprobación de DT-005: clasificador que solo ve la duración de la grabación | segundos | — |
-| `docker compose run --rm pipeline train --model baseline` | Línea base (regresión logística) | ~30 s | (usa CPU) |
-| `docker compose run --rm pipeline train --model cnn` | CNN: 4 configuraciones y 3 semillas | ~2-3 min (estimado) | ~40 s (23 s de entrenamiento) |
-| `docker compose run --rm pipeline train --model cnn-aug` | CNN con aumento de datos (necesita `cnn` antes) | ~1-2 min (estimado) | ~30 s (15 s de entrenamiento) |
-| `docker compose run --rm pipeline train --model baseline --permutation-test 200` | Test de permutación de la línea base | ~18 min | (usa CPU) |
-
-- Los tiempos son los del equipo de referencia (abajo) e incluyen arrancar el contenedor; los de
-  las CNN en CPU son una estimación a partir del tiempo por época medido.
-- La línea base y la comprobación de duración dan exactamente los mismos resultados en x86-64;
-  en otros procesadores puede variar la última cifra.
-- Las CNN son deterministas en el mismo tipo de dispositivo, pero los pesos versionados se
-  entrenaron en GPU (una RTX 4060): reentrenar en CPU, o en otra GPU, da pesos y cifras algo
-  distintos.
-
-## Datos y señal en gráficas
-
-Comunes a todas las rondas: qué datos hay y qué mide cada rasgo.
-
-### 1. Datos
-
-![Minutos por clase y partición](docs/figures/data_minutes.png)
+![Datos por clase](docs/figures/data_classes.png)
 
 **Las cuatro clases de buque:**
 
@@ -364,15 +48,15 @@ Comunes a todas las rondas: qué datos hay y qué mide cada rasgo.
 
 **Entrenamiento, validación y test.** Con *entrenamiento* aprende el modelo; con *validación* se
 eligen sus ajustes; *test* se reserva para medir el resultado final sin haberlo usado antes. La
-partición se hace **por buque**: si el mismo barco estuviera en entrenamiento y en test, el
+partición se hace siempre **por buque**: si el mismo barco estuviera en entrenamiento y en test, el
 modelo podría reconocer *ese barco concreto* en vez de su tipo, y el resultado saldría inflado.
 
-**Cómo se lee.** Cada barra son minutos de audio; encima, `b` es el número de buques y `g` el de
-grabaciones. Destacan el desequilibrio (Cargo tiene mucho más audio que el resto) y que Tug solo
-tiene 3 buques. La figura muestra la partición fija de las rondas 1 y 2; en la ronda 3 cada
-buque pasa por entrenamiento, validación y test (ver su protocolo).
+**Cómo se lee.** Cada barra son los minutos de audio de una clase, con sus buques y sus
+grabaciones encima. En total, 95 minutos de 63 grabaciones de 43 buques. Destacan el
+desequilibrio (Cargo tiene casi el doble de audio que Passengership, y cuatro veces el de Tug) y
+que **Tug solo tiene 3 buques**, una sola grabación de cada uno.
 
-### 2. Señal: qué son LOFAR y DEMON
+### Qué son LOFAR y DEMON
 
 Un sonar pasivo no emite nada: solo escucha con un hidrófono el ruido que radia el barco. Ese
 ruido lleva dos tipos de información, y cada técnica extrae uno:
@@ -394,11 +78,11 @@ en 440 Hz en el LOFAR, lo que comprueba que el eje de frecuencias es correcto. U
 línea discontinua marca la frecuencia conocida: si el pico cae sobre ella, el procesado es
 fiable.
 
-### 3. Un buque real
+### Un buque real
 
 ![Ejemplo Passengership](docs/figures/signal/example_passengership.png)
 
-Grabación de entrenamiento de un Passengership (el MALASPINA).
+Una grabación de un Passengership (el MALASPINA).
 
 - **LOFARgram (arriba).** En horizontal, la frecuencia (0 a 2000 Hz); en vertical, el tiempo
   hacia abajo; el color indica cuánto sobresale cada frecuencia del ruido de fondo, en dB. Las
@@ -413,27 +97,12 @@ Grabación de entrenamiento de un Passengership (el MALASPINA).
 Estos son los rasgos que un clasificador debería aprender para distinguir buques: qué líneas
 tonales tiene cada barco y a qué ritmo late su hélice.
 
-## Ronda 3 (F5): la evaluación principal
+## Protocolo de evaluación: validación cruzada 5 × 5
 
-La ronda 3 compara **7 modelos**: la línea base y, sin y con aumento de datos, una CNN, un
-transformer y un híbrido CNN + transformer. **Todos se entrenan desde cero** con estos datos:
-ninguno está preentrenado. El diseño completo se fijó por escrito **antes de ver ningún
-resultado** ([D-024](DECISIONS.md) y sus ajustes).
-
-> ℹ️ **Resultados reentrenados (F5-T10).** En la primera versión de la ronda 3, el
-> transformer y el híbrido (sin y con aumento) entrenaron con un *learning rate* máximo de
-> 4,1e-4 en lugar de los 5e-4 declarados, por un fallo del calentamiento que encontró la
-> revisión del código: el lr subía bien durante las 5 épocas de calentamiento, pero al
-> terminarlas se quedaba en el 82 % en vez de pasar al 100 %. Se arregló y se reentrenó la
-> ronda completa: estos son los resultados reentrenados. La línea base y la CNN no tenían
-> calentamiento y dan exactamente lo mismo que antes; las cuatro redes afectadas eligen la
-> misma configuración y ninguna conclusión cambia. Como el reentrenamiento se hizo **después de
-> haber visto test**, se declara igual que la ronda 2: es un arreglo de implementación
-> decidido por la revisión del código, no por las cifras ([ajuste 3 de D-024](DECISIONS.md)).
-> Los resultados iniciales se conservan en
-> [docs/results/round3_initial/](docs/results/round3_initial/), y el informe los compara.
-
-### Protocolo: validación cruzada 5 × 5
+Se comparan **7 modelos**: una línea base (regresión logística) y, sin y con aumento de datos,
+una CNN, un transformer y un híbrido CNN + transformer. **Todos se entrenan desde cero** con
+estos datos: ninguno está preentrenado. El diseño completo se fijó por escrito **antes de ver
+ningún resultado** ([D-024](DECISIONS.md) y sus ajustes).
 
 Los 43 buques se reparten al azar en 5 grupos por clase, con buques enteros y minutos
 equilibrados. En cada vuelta, un grupo es test, otro validación y los otros tres entrenamiento
@@ -449,6 +118,13 @@ repartos distintos: **25 particiones**, y cada buque de Cargo, Passengership y T
 - **Comparación:** con el F1 macro de test de cada partición y la prueba t corregida de Nadeau y
   Bengio, que tiene en cuenta que las particiones comparten buques. Hay 13 comparaciones fijadas
   de antemano, con corrección de Holm por hacerlas a la vez.
+
+![Las 25 particiones](docs/figures/data_partitions.png)
+
+**Cómo se lee.** Una fila por buque, agrupados por clase, y una columna por partición (5
+repeticiones × 5 vueltas). El color dice qué papel tiene ese buque en esa partición:
+entrenamiento, validación o test. En cada repetición, cada buque de Cargo, Passengership y
+Tanker pasa una vez por test y una por validación; los 3 Tug rotan 1/1/1.
 
 **Por qué así (literatura):**
 
@@ -492,21 +168,21 @@ Referencias:
   acoustic ship classification benchmark datasets. arXiv:2609.13659.
   [arXiv](https://arxiv.org/html/2609.13659)
 
-### Los modelos por dentro
+## Los modelos por dentro
 
 Todos los modelos ven lo mismo de cada segmento de 3 s: el **LOFARgram** (11 instantes × 1001
 frecuencias de 2 Hz, de 0 a 2000 Hz) y el **DEMON** (301 frecuencias de modulación, de 0 a
 100 Hz). Antes de entrar en una red, cada entrada se normaliza con la media y la desviación de
 **su partición de entrenamiento**; esos dos números se guardan con los pesos.
 
-#### Línea base: regresión logística
+### Línea base: regresión logística
 
 Ve un resumen de cada segmento: el LOFAR promediado en el tiempo y el DEMON, 1302 números, cada
 uno estandarizado. Aprende un peso por número y clase (5212 parámetros) y da la probabilidad de
 cada clase. `C` es la inversa de la regularización: cuanto más pequeño, más se frenan los pesos
 para que no memoricen. Usa pesos por clase para compensar el desequilibrio.
 
-#### CNN: dos ramas convolucionales (D-018)
+### CNN: dos ramas convolucionales (D-018)
 
 Una **red convolucional** aprende pequeños filtros que recorren la entrada buscando patrones
 locales, como una línea tonal o un pico de modulación, estén donde estén.
@@ -534,7 +210,7 @@ DEMON 301 ───────────► 2 bloques 1D ──────�
 - Tamaño: 79 076 parámetros y 75,3 MFLOPs por segmento (millones de operaciones de coma flotante
   para clasificar un segmento: mide el coste de cálculo).
 
-#### Transformer: bandas de frecuencia como palabras
+### Transformer: bandas de frecuencia como palabras
 
 Un **transformer** trata la entrada como una secuencia de **tokens** (como las palabras de una
 frase) y aprende, con la **atención**, qué tokens deben mirar a qué otros. Aquí cada token es una
@@ -588,7 +264,7 @@ token de clase (aprendido) ─────────────────�
 - **Tamaño de la configuración elegida (B):** `dim` 64, 1 bloque, 4 cabezas y 2 grupos. Tiene
   80 068 parámetros y cuesta 6,9 MFLOPs por segmento, 11 veces menos que la CNN.
 
-#### Híbrido: la CNN como extractor y el transformer encima
+### Híbrido: la CNN como extractor y el transformer encima
 
 Une lo mejor de cada uno: la CNN detecta patrones locales (líneas, picos) y el transformer los
 relaciona entre sí a lo largo de la frecuencia.
@@ -609,7 +285,7 @@ token de clase ─────────────────────�
   parámetros. Con un solo grupo, todas las cabezas comparten claves y valores: es el caso
   extremo de GQA, llamado *multi-query attention*.
 
-#### Cómo se entrena (igual en las tres redes)
+### Cómo se entrena (igual en las tres redes)
 
 | Técnica | Qué hace | Valor |
 |---|---|---|
@@ -635,9 +311,9 @@ token de clase ─────────────────────�
 - La CNN tiene BatchNorm después de cada convolución (Ioffe y Szegedy, 2015), que estabiliza
   las activaciones desde la primera época, y no tiene *softmax* internos. Las CNN se entrenan
   bien sin calentamiento, y es lo habitual.
-- Además, la CNN de la ronda 3 (configuración A) tenía que ser la misma que la de las rondas 1
-  y 2, que no tenía calentamiento: si se lo hubiéramos añadido, no sabríamos si un cambio en el
-  resultado venía del 5 × 5 o del calentamiento.
+- Además, la configuración A de la CNN es la CNN de partida (D-018), que no tenía
+  calentamiento: si se lo hubiéramos añadido, no sabríamos si un cambio en el resultado venía de
+  la red o del calentamiento.
 
 Referencias:
 
@@ -648,10 +324,10 @@ Referencias:
 - Ioffe, S. y Szegedy, C. (2015). Batch normalization: Accelerating deep network training by
   reducing internal covariate shift. *ICML*. [arXiv](https://arxiv.org/abs/1502.03167)
 
-### Por qué cada configuración
+## Por qué cada configuración
 
 Cada red prueba 4 configuraciones, fijadas antes de entrenar. Cada una responde a una pregunta
-concreta: **¿qué falla, la capacidad o la regularización?** En F3 las CNN memorizaban
+concreta: **¿qué falla, la capacidad o la regularización?** En las pruebas previas, la CNN memorizaba
 (entrenamiento casi perfecto, validación pobre). La primera configuración es siempre la más
 simple, y en caso de empate gana ella. La versión sin aumento y la versión con aumento eligen por
 separado. Abajo, el F1 medio de validación de cada configuración en las 25 particiones (en
@@ -659,13 +335,13 @@ negrita, la elegida); la figura de elección es
 [docs/figures/round3/round3_selection.png](docs/figures/round3/round3_selection.png).
 
 **Línea base: C ∈ {0,001; 0,01; 0,1; 1; 10}** (A a E). Es la rejilla clásica de 5 órdenes de
-magnitud, de muy regularizado a casi libre. La de F3 eligió C = 10.
+magnitud, de muy regularizado a casi libre.
 
 | A (0,001) | B (0,01) | C (0,1) | D (1) | E (10) |
 |---|---|---|---|---|
 | 0,312 | 0,315 | 0,316 | 0,318 | **0,337** |
 
-Ganó E, el borde de la rejilla, como en F3. Pero todas están dentro de ±0,09 de desviación entre
+Ganó E, el borde de la rejilla. Pero todas están dentro de ±0,09 de desviación entre
 particiones, así que la regularización apenas cambia el resultado. Con C = 10 la línea base
 acierta el 100 % de entrenamiento y es el modelo peor calibrado (ECE 0,45; el ECE, *expected
 calibration error*, mide cuánto se aleja la confianza del modelo de su acierto real: 0 es
@@ -675,10 +351,10 @@ perfecto).
 
 | Config. | Qué cambia | Hipótesis que prueba | CNN | CNN + aum. |
 |---|---|---|---|---|
-| A | Nada: es la CNN de las rondas 1 y 2 (16-32-64 / 16-32 filtros) | Referencia | 0,396 | 0,397 |
+| A | Nada: es la CNN de partida, D-018 (16-32-64 / 16-32 filtros) | Referencia | 0,396 | 0,397 |
 | B | La mitad de filtros (8-16-32 / 8-16) | ¿Sobra capacidad y por eso memoriza? | 0,369 | 0,380 |
 | C | Más regularización: dropout 0,5 y `wd` 5e-2 | ¿Falta freno? | **0,399** | 0,390 |
-| D | lr 3e-4 | En F3 lo mejor llegaba en las épocas 3-10: ¿aprende demasiado deprisa? | 0,380 | **0,398** |
+| D | lr 3e-4 | En las pruebas previas lo mejor llegaba en las épocas 3-10: ¿aprende demasiado deprisa? | 0,380 | **0,398** |
 
 Reducir la capacidad (B) empeora; más regularización (C) y un lr menor (D) dan lo mismo que A.
 Las diferencias (≤ 0,03) son mucho menores que la desviación entre particiones (~0,10): **es
@@ -700,13 +376,28 @@ dropout (D) no lo arregla. El híbrido se queda con un solo bloque: B sin aument
 aumento, a menos de 0,02 de distancia de la siguiente. Otra vez, las diferencias entre configuraciones son mucho menores
 que la variación entre particiones.
 
-### Resultados de la ronda 3 en gráficas
+## Resultados
 
-Las 15 gráficas acordadas, con su explicación y todas las cifras, están en el informe
-([docs/report.md](docs/report.md#4-ronda-3-f5-validación-cruzada-5--5--evaluación-principal)).
-Aquí van las principales. Cada figura indica en su título que es de la ronda 3.
+### Resumen de resultados
 
-#### 4. Resultados en test
+F1 macro de test por segmento (4 clases), media ± desviación de las 25 particiones. El azar
+medido es 0,242 con 4 clases y ≈ 0,5 dentro de cada época, donde solo hay 2 clases.
+
+| Modelo | Config. | F1 de test | Mín.-máx. | 2016: Passengership frente a Tanker | 2017: Cargo frente a Tug | Parámetros | MFLOPs |
+|---|---|---|---|---|---|---|---|
+| Línea base | E (C = 10) | **0,331 ± 0,046** | 0,21-0,41 | 0,53 | 0,53 | 5 212 | 0,01 |
+| CNN | C | 0,316 ± 0,135 | 0,15-0,56 | 0,56 | 0,66 | 79 076 | 75,3 |
+| CNN + aum. | D | 0,299 ± 0,130 | 0,10-0,51 | 0,59 | 0,63 | 79 076 | 75,3 |
+| Híbrido | B | **0,336 ± 0,126** | 0,13-0,57 | 0,51 | 0,73 | 76 132 | 57,3 |
+| Híbrido + aum. | A | 0,304 ± 0,136 | 0,11-0,55 | 0,48 | 0,65 | 32 036 | 52,2 |
+| Transformer | B | 0,239 ± 0,085 | 0,12-0,53 | 0,53 | 0,50 | 80 068 | 6,9 |
+| Transformer + aum. | B | 0,249 ± 0,092 | 0,14-0,53 | 0,52 | 0,54 | 80 068 | 6,9 |
+
+Ninguna de las 13 comparaciones fijadas de antemano es significativa. Las 15 gráficas siguientes
+lo explican desde todos los ángulos acordados; las cifras completas están en el
+[informe](docs/report.md).
+
+### 1. Resultados en test: las 25 particiones
 
 ![F1 de test en las 25 particiones](docs/figures/round3/round3_box.png)
 
@@ -722,27 +413,39 @@ las condiciones de grabación son las mismas.
 - Con 4 clases, la línea base (0,331), la CNN (0,316) y el híbrido (0,336) quedan cerca. El
   transformer (0,239) queda **en el azar**.
 - **La altura de las cajas es lo más importante:** las redes van de ~0,1 a ~0,57 según qué
-  buques les toquen en test. Una sola partición, como en las rondas 1 y 2, podía dar casi
-  cualquier cifra; por eso se hizo el 5 × 5.
+  buques les toquen en test. Una sola partición fija podría dar casi cualquier cifra; por eso se
+  usa el 5 × 5.
 - **Cargo frente a Tug (2017):** el híbrido (0,73) y la CNN (0,66) están por encima del 0,5 de
   media, pero sus cajas bajan hasta el azar en muchas particiones. Además, Tug solo tiene 3
   buques: no basta para afirmar que reconozcan la firma del buque.
 
-#### Comparaciones entre modelos
+### 2. Comparaciones entre modelos
 
 ![Comparaciones fijadas de antemano](docs/figures/round3/round3_pairs.png)
 
 **Cómo se lee.** Cada fila es la diferencia media de F1 entre dos modelos en las mismas 25
 particiones, con su **intervalo del 95 %** corregido por Nadeau y Bengio (que tiene en cuenta que
 las particiones comparten buques). Si el intervalo cruza la línea del 0, la diferencia no se
-distingue del ruido. A la derecha, el p sin corregir y con Holm.
+distingue del ruido. A la derecha, el p sin corregir y con Holm (corrección por hacer 13
+comparaciones a la vez).
 
 **Qué se ve.** **Ninguna de las 13 diferencias es significativa.** Todos los intervalos cruzan el
 0; el más cercano a no cruzarlo es el del transformer frente a la línea base (−0,092, de −0,194
-a +0,010, p = 0,075), y tras Holm nada se acerca (p ≥ 0,97). El aumento de datos tampoco cambia
-nada en ninguna arquitectura (diferencias de −0,032 a +0,010).
+a +0,010, p = 0,075), y tras Holm nada se acerca (p ≥ 0,97).
 
-#### Precisión frente a coste
+### 3. Efecto del aumento de datos
+
+![Efecto del aumento de datos](docs/figures/round3/round3_augmentation.png)
+
+**Cómo se lee.** Para cada arquitectura y cada partición, el F1 con aumento menos el F1 sin
+aumento. Por encima de la línea del 0, el aumento ayudó en esa partición; encima de cada caja, en
+cuántas de las 25.
+
+**Qué se ve.** El aumento **no ayuda de forma consistente** en ninguna arquitectura: mejora la CNN
+en 8 de 25 particiones, el híbrido en 9 y el transformer en 16, con diferencias medias de −0,017,
+−0,032 y +0,010. En el híbrido el efecto es muy variable (de −0,33 a +0,19 según la partición).
+
+### 4. Precisión frente a coste
 
 ![Precisión frente a coste](docs/figures/round3/round3_cost.png)
 
@@ -751,10 +454,80 @@ segmento, número de parámetros y segundos de entrenamiento, en escala logarít
 más caro solo compensa si sube.
 
 **Qué se ve.** La línea base, con 5212 parámetros y unas 13 000 operaciones por segmento (5800
-veces menos que la CNN), rinde igual que las redes y varía mucho menos. El transformer es el más
-barato de las redes (6,9 MFLOPs) y el peor.
+veces menos que la CNN), rinde igual que las redes y varía mucho menos. El transformer es la red
+más barata (6,9 MFLOPs) y la peor.
 
-#### Matrices de confusión
+### 5. Velocidad y memoria
+
+![Velocidad y memoria](docs/figures/round3/round3_speed.png)
+
+**Cómo se lee.** Medidas en la RTX 4060 (la línea base, en CPU): latencia de un segmento,
+segmentos y tokens por segundo al entrenar (los tokens solo existen en el transformer y el
+híbrido), qué parte del entrenamiento se va en formar los minibatches (casi toda es el aumento de
+datos) y memoria máxima de GPU.
+
+**Qué se ve.** Todo es muy pequeño para la GPU: como mucho 571 MiB de memoria y ~1,2 ms por
+segmento. El transformer es la red más rápida (~9900 segmentos/s, ~514 000 tokens/s). El aumento
+de datos cuesta: se lleva el 26 % del entrenamiento en el transformer con aumento y el 12-14 % en
+la CNN y el híbrido con aumento, frente a menos del 3 % sin aumento.
+
+### 6. Curvas de aprendizaje
+
+![Curvas de aprendizaje](docs/figures/round3/round3_curves.png)
+
+**Cómo se lee.** Media (y banda de ± 1 desviación) de los entrenamientos finales, época a época:
+pérdida de entrenamiento, pérdida de validación, F1 de validación y norma del gradiente (en escala
+logarítmica). Si la pérdida de entrenamiento baja mientras la de validación sube, el modelo está
+memorizando: es el **sobreajuste**. Si la norma del gradiente crece, los pasos del entrenamiento
+se hacen más grandes y menos estables.
+
+**Qué se ve.** En todas las redes la pérdida de entrenamiento baja casi a 0 mientras la de
+validación **sube desde las primeras épocas**: memorizan los buques de entrenamiento. Aun así, el
+F1 de validación sigue subiendo despacio, porque la red acierta más clases aunque esté más
+confiada en sus errores. La parada temprana elige de media la época 9-14. La norma del gradiente
+baja en la CNN y el transformer, pero **crece en el híbrido con aumento** (de ~3 a ~6,5): su
+entrenamiento es el menos estable.
+
+### 7. Brecha de generalización
+
+![Brecha de generalización](docs/figures/round3/round3_generalisation.png)
+
+**Cómo se lee.** F1 del modelo final (media de sus semillas) en entrenamiento, validación y test,
+con media y desviación de las 25 particiones. La distancia entre el círculo (entrenamiento) y el
+rombo (test) es lo que el modelo memoriza y no generaliza.
+
+**Qué se ve.** Todos memorizan mucho: en entrenamiento aciertan de 0,78 a 1,0 (la línea base, el
+100 %) y en test, de 0,24 a 0,34. Validación queda algo por encima de test (de 0,32 a 0,44)
+porque se usa para elegir la configuración y la época: es el optimismo que describen Varma y
+Simon, y por eso la cifra que se da es la de test.
+
+### 8. De dónde viene la variación
+
+![De dónde viene la variación](docs/figures/round3/round3_variance.png)
+
+**Cómo se lee.** Para cada red, la desviación del F1 de test **entre particiones** (con la media de
+sus semillas) y **entre semillas** dentro de una misma partición.
+
+**Qué se ve.** La partición pesa más que la semilla en todas las redes (0,07-0,10 frente a
+0,03-0,09), como dicen Bouthillier et al. (2021): por eso se usan 25 particiones y no más
+semillas. Pero en las CNN y el híbrido la semilla también pesa mucho (0,06-0,09): con estos datos,
+entrenar dos veces la misma red puede dar cifras bastante distintas.
+
+### 9. Elección de configuración
+
+![Elección de configuración](docs/figures/round3/round3_selection.png)
+
+**Cómo se lee.** F1 de validación (media ± desviación de las 25 particiones) de cada
+configuración; la rellena es la elegida y el rombo su F1 de test. Si las barras se solapan mucho,
+la elección es casi un empate. Las configuraciones se explican en
+[Por qué cada configuración](#por-qué-cada-configuración).
+
+**Qué se ve.** En todas las redes las barras se solapan casi por completo: la elección es
+prácticamente un empate, y la configuración importa mucho menos que la partición. En las redes,
+el test de la elegida queda entre 0,07 y 0,10 por debajo de su validación: es el optimismo de
+elegir con validación. En la línea base casi coinciden (0,337 frente a 0,331).
+
+### 10. Matrices de confusión
 
 ![Matrices de confusión conjuntas](docs/figures/round3/round3_confusion.png)
 
@@ -764,10 +537,49 @@ diagonal son los aciertos.
 
 **Qué se ve.** Todas las redes predicen mucho **Tanker** (de 0,40 a 0,48 de los Cargo acaban ahí)
 y confunden Passengership con Cargo y Tanker. El híbrido es el que más acierta Tug (0,45). La
-línea base acierta sobre todo Cargo y Tanker, pero manda casi la mitad de los Tug a Cargo, la otra clase
-de 2017: encaja con aprender la época más que el buque.
+línea base acierta sobre todo Cargo y Tanker, pero manda casi la mitad de los Tug a Cargo, la
+otra clase de 2017: encaja con aprender la época más que el buque.
 
-#### Qué frecuencias usa cada modelo
+### 11. Acierto por buque
+
+![Acierto por buque](docs/figures/round3/round3_vessels.png)
+
+**Cómo se lee.** Una fila por buque y una columna por modelo: fracción de las veces que ese buque
+estuvo en test en que sus grabaciones se clasificaron bien (de blanco, 0, a azul oscuro, 1).
+
+**Qué se ve.** Hay buques que **casi ningún modelo acierta**: Cargo ULTRA EXCELLENCE y Tanker
+CARIBBEAN SPIRIT, como mucho 1 de cada 5 veces con cualquier modelo. Otros se aciertan de media
+el 70-80 % de las veces (Tanker ARGENT SUNRISE, NAVE ORBIT, HIGH ENDURANCE). El
+resultado depende mucho de qué buques concretos caen en test, que es lo que se ve en la gráfica 1.
+
+### 12. Acuerdo entre modelos
+
+![Acuerdo entre modelos](docs/figures/round3/round3_agreement.png)
+
+**Cómo se lee.** Para cada pareja de modelos, en qué fracción de las grabaciones de test predicen
+lo mismo (izquierda) y en qué fracción fallan los dos (derecha). Si dos modelos fallan en sitios
+distintos, combinarlos podría ayudar.
+
+**Qué se ve.** Las versiones sin y con aumento de cada red se parecen mucho (predicen lo mismo en
+el 58-72 % de las grabaciones). La línea base es la que más difiere de las redes (lo mismo en solo
+el 35-43 %), y con ella al menos uno de los dos acierta en el 62-65 % de las grabaciones: son
+las parejas que más podrían ganar combinándose, aunque no se ha probado.
+
+### 13. Calibración
+
+![Calibración](docs/figures/round3/round3_calibration.png)
+
+**Cómo se lee.** Si un modelo dice "80 % seguro", ¿acierta el 80 % de las veces? La diagonal es la
+calibración perfecta; por debajo, el modelo está demasiado seguro. **ECE** (*expected calibration
+error*: cuánto se aleja la confianza del acierto real) y **Brier** (error de las probabilidades):
+cuanto más bajos, mejor.
+
+**Qué se ve.** Todos están **demasiado seguros**: sus curvas quedan por debajo de la diagonal. La
+línea base es la peor calibrada (ECE 0,45; dice estar muy segura y acierta poco); las redes
+quedan entre 0,20 y 0,28. Ninguna probabilidad de estos modelos debería leerse como una
+confianza real.
+
+### 14. Qué frecuencias usa cada modelo
 
 ![Qué frecuencias usa cada modelo](docs/figures/round3/round3_interpretability.png)
 
@@ -788,117 +600,304 @@ transformer y del híbrido. Todo sobre validación.
 - No hay líneas tonales fijas de una época, y las relaciones con la diferencia entre épocas son
   débiles y poco fiables (bandas vecinas correlacionadas).
 
-**En resumen:** con 43 buques y la clase pegada a la época, ningún modelo, ni el más sencillo ni
-el transformer, demuestra reconocer la firma del buque. El 5 × 5 deja claro que las diferencias
-entre modelos son menores que lo que cambia el resultado según qué buques tocan en test. Para
-avanzar hacen falta **más buques y clases grabadas en las mismas condiciones**, no modelos más
-complejos.
+### 15. ROC de clasificación
 
-## Rondas 1 y 2 (F3): partición fija · histórico
+![ROC de clasificación](docs/figures/round3/round3_roc.png)
 
-**Etapa anterior, no comparable directamente con la ronda 3.** Usaron una sola partición fija
-(12 buques en test) y test se miró dos veces. Con una sola partición, la cifra depende mucho de
-qué buques tocaron en test: la ronda 3 muestra que, según la partición, las mismas redes van
-de ~0,1 a ~0,57. Se conservan como histórico; el detalle de las dos rondas y de qué código
-produjo cada cifra está en [docs/results/README.md](docs/results/README.md).
+**Cómo se lee.** Para cada clase frente al resto: probabilidad de acertarla (Pd) frente a la de
+confundir otra clase con ella (Pfa), con los segmentos de test de las 25 particiones juntos. El
+número de la leyenda es el área bajo la curva (AUC): 0,5 es el azar y 1 la perfección. Es una
+ROC de clasificación, no de detección (DeepShip no tiene grabaciones sin buque), y al juntar
+particiones se mezclan 25 modelos distintos, así que el AUC es orientativo.
 
-### Resultados en test (ronda 2)
+**Qué se ve.** **Tug es la clase que mejor separan la CNN y el híbrido** (AUC 0,73-0,86, el
+híbrido el mejor), aunque solo hay 3 Tug; el transformer apenas (0,56-0,58). **Cargo, la peor**: las redes quedan en el azar o por debajo
+(0,41-0,52), y solo la línea base la separa algo (0,68). Passengership y Tanker quedan entre 0,48
+y 0,66.
 
-![F1 con intervalos](docs/figures/eval2/results_f1.png)
+## Conclusiones
 
-**Los tres modelos usan exactamente los mismos datos** (los mismos segmentos de 3 s y la misma
-partición); solo cambia el modelo y cómo se entrena:
+1. **El modelo más simple es tan bueno como el más complejo:** la regresión logística rinde igual
+   que las redes, es unas 5800 veces más barata y varía mucho menos entre particiones.
+2. **Qué buques caen en test pesa más que el modelo elegido:** el F1 de una misma red va de ~0,1
+   a ~0,57 según la partición. Una sola partición fija puede dar casi cualquier cifra.
+3. **El transformer no funciona con tan pocos datos:** queda en el azar. El híbrido tiene la
+   mejor media, pero sin diferencia significativa.
+4. **El aumento de datos no ayuda** en ninguna arquitectura, y cuesta hasta un 26 % del tiempo de
+   entrenamiento.
+5. **Los modelos no demuestran escuchar al buque:** las redes dependen sobre todo de 0-80 Hz, donde
+   dominan el mar y la plataforma, y la línea base usa bandas que delatan la época de grabación.
+   Además, todos están demasiado seguros de sus predicciones.
+6. **Siguiente paso:** más buques y clases grabadas en las mismas condiciones (por ejemplo
+   ShipsEar, o el benchmark UniqueShip), no modelos más complejos.
 
-- **Línea base:** una regresión logística, el modelo más simple. Ve un resumen de cada segmento
-  (el LOFAR promediado en el tiempo más el DEMON: 1302 números) y aprende un peso por frecuencia.
-  Sirve de referencia.
-- **CNN sin aumento:** una red neuronal convolucional que ve el LOFARgram completo (11 instantes
-  × 1001 frecuencias) y el DEMON, y puede aprender patrones más complejos.
-- **CNN con aumento:** la misma red, pero durante el entrenamiento cada segmento se altera al azar
-  (se tapan bandas de frecuencia o instantes y se desplaza un poco en el tiempo) para que no lo
-  memorice. Validación y test nunca se alteran.
+## Puesta en marcha
 
-**Ronda 1 y ronda 2.** En la ronda 1 se entrenaron los modelos y se evaluó test por primera vez.
-Después, una revisión del código encontró fallos de implementación y de medida (por ejemplo, dos
-de las ocho salidas de la rama DEMON de la CNN valían siempre cero). Se arreglaron **sin cambiar
-nada para mejorar la cifra**, se reentrenaron las dos CNN y se evaluó test una segunda y última
-vez: es la **ronda 2**, la de esta gráfica. La línea base no cambió.
+Todo lo necesario para instalarlo, comprobarlo y, si quieres, reproducirlo. Solo hacen falta
+git y Docker.
 
-**Cómo se lee.** El *F1 macro* va de 0 a 1 (1 es acertar todo) y pondera igual las cuatro clases.
-Cada punto lleva su **intervalo del 95 %** (la barra vertical) y la línea discontinua es el
-**azar medido** (lo que sacaría un clasificador que responde al azar). El grupo de la izquierda
-usa las 4 clases; los otros dos comparan clases **grabadas en la misma época** (Cargo frente a
-Tug, de 2017; Passengership frente a Tanker, de 2016), que es lo que de verdad mide la firma del
-buque, porque en esas parejas las condiciones de grabación son las mismas.
+### Requisitos
 
-**Conclusión.** Solo la línea base tiene todo su intervalo por encima del azar con 4 clases, y
-dentro de cada época ningún modelo lo supera.
+- git
+- Docker con Docker Compose v2 (en Windows y macOS, Docker Desktop)
 
-### Matrices de confusión (ronda 2)
+No hace falta instalar Python ni ninguna librería: todo se ejecuta dentro del contenedor, con
+Python 3.11.17 y versiones fijadas de cada librería. Lo que tengas instalado en tu ordenador no
+se usa, así que no necesitas un entorno virtual ni preocuparte por las versiones (D-021).
 
-![Matrices de confusión](docs/figures/eval2/results_confusion.png)
+### Instalación
 
-**Cómo se leen.** Las **filas** son la clase real y las **columnas**, la clase que predijo el
-modelo. La **diagonal** son los aciertos. Cada número es qué fracción de esa clase real acabó en
-esa columna (entre paréntesis, el recuento). Arriba, **por segmento** (cada trozo de 3 s); abajo,
-**por grabación** (la media de todos sus segmentos).
+1. Clona el repositorio (es privado; necesitas que David te dé acceso):
 
-**Por qué la CNN sin aumento lo predice casi todo como Passengership y la CNN con aumento casi
-todo como Cargo.** Es un síntoma de que **no generalizan**, no una preferencia real por esas
-clases. Con solo 43 buques, la red **memoriza los buques de entrenamiento** (su mejor resultado en
-validación llega hacia la época 3 y después solo memoriza); ante buques que nunca ha visto, sus
-salidas **se colapsan hacia una sola clase**. Qué clase "gana" no tiene un significado físico:
-depende del azar del entrenamiento (la semilla y el aumento), y por eso cambia de una CNN a otra.
-Es una explicación razonada a partir de las curvas de entrenamiento, no algo demostrado con un
-experimento específico.
+   ```bash
+   git clone https://github.com/davidmorgadocarames/sonar_investigacion.git
+   cd sonar_investigacion
+   ```
 
-La **línea base** acierta sobre todo Cargo y Tanker, y confunde Tug con Cargo, dos clases grabadas en la
-misma época, lo que encaja con la limitación de la época.
+2. Elige una opción **una sola vez**:
 
-### Qué frecuencias usa cada modelo (ronda 2)
+   - **Opción A · CPU (por defecto).** No hagas nada: funciona en cualquier ordenador. Es todo lo
+     que necesitas para la comprobación rápida y para regenerar el informe.
+   - **Opción B · GPU NVIDIA (solo para reproducir los entrenamientos).** Necesitas una GPU NVIDIA de la
+     serie RTX 20 / GTX 16 o posterior, con el driver 580 o más nuevo, y Docker Desktop con WSL2
+     en Windows (o el NVIDIA Container Toolkit en Linux). Crea en la carpeta
+     `sonar_investigacion` un fichero llamado `.env` con estas dos líneas:
 
-![Interpretabilidad por bandas](docs/figures/eval2/interpretability_bands.png)
+     ```
+     COMPOSE_PATH_SEPARATOR=:
+     COMPOSE_FILE=compose.yaml:compose.gpu.yaml
+     ```
 
-**Eje horizontal:** bandas de 40 Hz del LOFAR, de 0 a 2000 Hz. **Eje vertical, panel a panel:**
+     A partir de ahí, todos los comandos de este README son los mismos y usan tu GPU. La imagen
+     de la opción B ocupa unos 9,4 GB. Si tu driver es demasiado antiguo, el contenedor fallará al
+     arrancar: actualiza el driver o borra `.env` para volver a la opción A.
 
-1. **Línea base:** cuánto **baja el F1** si se desordena esa banda entre segmentos (se rompe su
-   relación con la clase). Cuanto más alta la barra, más depende el modelo de esa banda; los
-   valores negativos o cercanos a cero indican que la banda no le sirve.
-2. y 3. **Las dos CNN:** cuánto **baja la probabilidad de acertar la clase real** si se tapa esa
-   banda (se rellena con el valor medio).
-4. **Diferencia entre épocas:** cuánto difiere el **nivel medio de cada banda entre las
-   grabaciones de 2016 y las de 2017**, en dB. Una barra alta indica una banda que delata la época
-   de grabación.
+3. **Solo en Linux:** para que los ficheros que escribe el contenedor sean tuyos, añade tu
+   usuario al fichero `.env` (se crea si no existe). En Windows y macOS no hace falta.
 
-**Qué se busca y qué se ve.** Si las bandas que usa un modelo coinciden con las que delatan la
-época, el modelo podría estar aprendiendo la época y no el buque. La línea base usa sobre todo
-40-80, 1240-1280 y 1440-1480 Hz, y **las dos últimas están entre las que más difieren entre
-épocas**. Las CNN dependen sobre todo de **0-40 Hz**, frecuencias muy bajas donde dominan el ruido
-del mar y de la plataforma de grabación más que la firma del buque. Todas las importancias son
-pequeñas: ninguna banda decide por sí sola.
+   ```bash
+   printf '\nHOST_UID=%s\nHOST_GID=%s\n' "$(id -u)" "$(id -g)" >> .env
+   ```
+
+   El salto de línea inicial evita pegarse a la última línea del `.env` de la opción B.
+
+   **Con Docker sin root (*rootless*) o con Podman** el usuario `root` del contenedor ya
+   corresponde a tu usuario del host: en ese caso pon en `.env` `HOST_UID=0` y `HOST_GID=0`
+   (comprobado que la imagen funciona con el UID 0; sin probar en un Docker *rootless* real).
+
+4. Construye la imagen. La primera vez tarda unos minutos; la imagen de la opción A ocupa unos
+   1,9 GB:
+
+   ```bash
+   docker compose build
+   ```
+
+5. Comprueba que funciona:
+
+   ```bash
+   docker compose run --rm pipeline --help
+   ```
+
+   Debe mostrar los comandos `qc`, `features`, `train`, `evaluate` y `report`.
+
+### Comprobar la instalación
+
+```bash
+docker compose run --rm --entrypoint python pipeline -m pytest -rs
+```
+
+Tarda alrededor de un minuto. Debe terminar con todos los tests en verde (`passed`). La opción `-rs`
+lista los tests saltados y por qué: sin los datos descargados se saltan los que los necesitan
+(dicen `not found` o `without WAVs`, y los que necesitan los rasgos dicen `has no features: run
+features first`). En la opción A se saltan los de determinismo en CUDA (dicen `no CUDA here`) y
+en la opción B el que comprueba el error sin GPU (dice `this machine has CUDA`). Saltarse no es
+un error. Cuando hayas descargado los datos y calculado los rasgos (`features`, más abajo),
+vuelve a lanzarlo: solo deben saltarse los de CUDA (4 en la opción A, 1 en la B).
+
+| Cuándo lo lanzas | Opción A (CPU) | Opción B (GPU) |
+|---|---|---|
+| Recién instalado, sin datos | Se saltan 11: 7 necesitan los audios o los rasgos, y 4 son de determinismo en CUDA | Se saltan 8: los 7 de los datos y el que comprueba el error sin GPU |
+| Con los datos y los rasgos | Se saltan 4 (CUDA) | Se salta 1 (error sin GPU) |
+
+Los tests cubren todas las partes: control de calidad, LOFAR y DEMON con señales sintéticas,
+particiones y fugas, los modelos (línea base, CNN, transformer e
+híbrido), el motor de la validación cruzada (elección sin test, comparaciones), la interpretabilidad, las figuras y el informe.
+Todos usan datos sintéticos pequeños salvo los que comprueban los datos reales.
+
+### Descargar los datos
+
+Los audios **no están en este repositorio**. Se descargan del repositorio público de los
+autores de DeepShip, fijado en una versión concreta para que todos usemos exactamente los mismos
+ficheros. Licencia, contenido y detalles: [datasets/README.md](datasets/README.md).
+
+Los datos sirven para todos los modelos. **No hacen falta para leer los resultados ni para
+regenerar el informe**: solo para la comprobación rápida y para reproducir los resultados.
+
+Necesitas unos **1,2 GB** libres: unos 700 MB de audio y unos 500 MB del historial de git de
+DeepShip (la carpeta `.git`), que es lo que permite comprobar que los ficheros están íntegros.
+Desde la carpeta `sonar_investigacion`, ejecuta estos dos
+comandos (el primero tarda alrededor de un minuto, según tu conexión):
+
+```bash
+git clone -c core.autocrlf=false https://github.com/irfankamboh/DeepShip.git datasets/raw/DeepShip
+git -C datasets/raw/DeepShip checkout 77725726a33d6aef4ce1d0fe70f67c0bbee4b5b6
+```
+
+**En Windows**, si el repositorio está en una carpeta con una ruta muy larga, el primer comando
+puede fallar con `Filename too long`. Clónalo en una ruta corta (por ejemplo `C:\proyectos`) o
+activa las rutas largas una vez con `git config --global core.longpaths true`.
+
+El segundo comando muestra un aviso de *detached HEAD*. Es normal: significa que estás en esa
+versión fija.
+
+Para comprobar que la descarga es correcta:
+
+```bash
+git -C datasets/raw/DeepShip status
+```
+
+Debe decir `HEAD detached at 7772572` y `nothing to commit, working tree clean`. Eso garantiza
+que los ficheros son idénticos a los de la versión fijada. Deben quedar 63 ficheros `.wav`
+repartidos en `Cargo/` (12), `Passengership/` (20), `Tanker/` (28) y `Tug/` (3).
+
+Si ya lo habías descargado, no hace falta repetirlo.
+
+### Control de calidad y rasgos
+
+Con los datos descargados, desde la carpeta `sonar_investigacion`:
+
+```bash
+docker compose run --rm pipeline qc
+docker compose run --rm pipeline features
+```
+
+- `qc` revisa los 63 WAV (formato, duración, offset DC, saturación...) en unos segundos y escribe
+  `outputs/qc/qc.csv`. No modifica ni excluye ningún fichero. Es normal que marque `flag_dc` en
+  casi todas las grabaciones: todas tienen un offset DC, y `features` lo corrige (D-009).
+- `features` tarda menos de un minuto. Comprueba que cada WAV es idéntico al de la versión
+  fijada (SHA-256 de `datasets/manifests/vessels.csv`), quita el offset DC de cada grabación, la
+  corta en segmentos de 3 s y calcula el LOFAR (líneas tonales, 0 a 2 kHz) y el DEMON (modulación
+  de la cavitación, 0 a 100 Hz) de cada segmento. Debe decir `63 recordings, 1889 segments` y
+  escribir en `datasets/processed/` unos 82 MB: los segmentos repartidos en tres ficheros
+  `features_*.npz` (la validación cruzada los junta), `index.csv` (una fila por segmento) y `features_meta.json` (parámetros
+  usados). Esa carpeta no se sube a git.
+
+Figuras de ejemplo (en `outputs/figures/`, que no se sube a git):
+
+```bash
+docker compose run --rm pipeline features --figures
+docker compose run --rm --entrypoint python pipeline -m pytest tests/test_figures.py --figures-dir outputs/figures
+```
+
+- El primero calcula los rasgos y dibuja, para una grabación larga de cada clase, su LOFARgram y
+  su DEMON medio: `example_<clase>.png`.
+- El segundo dibuja la validación con señales sintéticas: un tono de 440 Hz debe salir en
+  440 Hz en el LOFAR (`validation_lofar.png`), y un ruido modulado a 12 Hz debe dar un pico en
+  12 Hz en el DEMON (`validation_demon.png`).
+
+### Comprobación rápida de los resultados
+
+Con los rasgos calculados, comprueba en CPU que tu instalación da las mismas cifras que las
+publicadas:
+
+```bash
+docker compose run --rm pipeline evaluate --round 3 --check
+```
+
+Tarda unos segundos. Usa los 7 modelos representativos versionados (uno por modelo, de la
+primera partición y la semilla 0), puntúa el test de esa partición y lo compara con lo guardado
+en `docs/results/round3.json`. No entrena ni elige nada. Debe decir `Reproduces the round 3
+results`. Los modelos se entrenaron en GPU, así que en CPU algún segmento puede cambiar de clase:
+se admiten diferencias de hasta ±0,01 de F1 (2 o 3 segmentos). En el equipo de referencia sale
+idéntico en 6 modelos y +0,0045 en el híbrido con aumento.
+
+### Regenerar el informe
+
+El informe completo (`docs/report.md`) y todas sus gráficas se regeneran desde los resúmenes
+versionados, sin datos ni entrenamiento:
+
+```bash
+docker compose run --rm pipeline report
+```
+
+Tarda menos de un minuto. Con `git status` puedes comprobar que no cambia ningún fichero.
+
+### Reproducir los resultados (opcional, solo GPU)
+
+Los comandos llevan `--round 3`: es el nombre que tiene esta evaluación en el código.
+
+> ⏱️ **Tiempo: ~1 h 40 min con GPU (RTX 4060); del orden de 10 a 30 h solo con CPU.**
+
+**Modelos que se entrenan (7, en este orden):** línea base, CNN, CNN con aumento, híbrido,
+híbrido con aumento, transformer y transformer con aumento. Cada red prueba 4
+configuraciones (la línea base, 5 valores de C) en las 25 particiones, y la elegida se entrena
+con 3 semillas.
+
+No hace falta para leer los resultados. Reproducirlos entrena
+**900 redes y 125 líneas base**, así que solo tiene sentido con la opción B (GPU): en CPU, el paso
+1 tarda ~1 min 20 s y mide unos 2-2,6 s por época en la CNN y el híbrido, lo que da del orden de
+10 a 30 horas para todo. Necesitas los
+rasgos (`features`) y unos 400 MB libres para los pesos.
+
+| Paso | Comando | Tiempo (RTX 4060) |
+|---|---|---|
+| 1. Medir antes (opcional) | `docker compose run --rm pipeline train --round 3 --measure` | ~1 min |
+| 2. Entrenar los 7 modelos | `docker compose run --rm pipeline train --round 3` | ~1 h 40 min |
+| 3. Interpretabilidad | `docker compose run --rm pipeline evaluate --round 3 --interpretability --device cuda` | ~10 min |
+| 4. Datos de las gráficas | `docker compose run --rm pipeline evaluate --round 3 --details --device cuda` | ~1 min |
+| 5. Informe y gráficas | `docker compose run --rm pipeline report` | ~1 min |
+
+- **Paso 1:** entrena 2 épocas de cada configuración en la primera partición y muestra el tiempo
+  por época y la memoria de GPU. Solo escribe `outputs/round3/measure.json` y añade líneas a
+  `outputs/round3/run.log`.
+- **Paso 2:** entrena los modelos uno detrás de otro: línea base, CNN, CNN con aumento, híbrido,
+  híbrido con aumento, transformer y transformer con aumento. **Si se interrumpe, al relanzarlo
+  continúa** donde lo dejó: no repite los entrenamientos terminados con el mismo código. Si un
+  modelo falla, apunta el error en `outputs/round3/<modelo>/error.txt` y sigue con los demás.
+  `--only cnn hybrid` entrena solo esos modelos. Escribe:
+  - `models/round3/<modelo>/`: todos los pesos, cada entrenamiento en su fichero. No se suben a
+    git.
+  - `outputs/round3/<modelo>/`: un JSON por entrenamiento, con la configuración, el código y los
+    datos usados, el coste (parámetros, MFLOPs), la velocidad (segmentos/s, tokens/s, latencia,
+    memoria de GPU), la curva de aprendizaje, los resultados y las predicciones por grabación.
+  - `docs/results/round3.json` y `models/round3/representative/`: **sobrescribe los versionados**.
+    Compara con `git diff`, y vuelve a ellos con `git checkout -- docs/results models/round3`.
+- **Paso 3:** mide los 7 modelos finales sobre validación (oclusión, saliencia o permutación
+  por banda); la atención, solo en el transformer y el híbrido.
+- **Paso 4:** resume los 7 modelos (velocidad, curvas, calibración, acierto por buque...).
+- **Pasos 3 y 4:** no entrenan nada, y test solo se lee de lo que guardó el paso 2. Sin
+  `--device cuda` corren en CPU (más despacio, y las cifras pueden variar en la última
+  cifra); el dispositivo queda registrado en cada JSON.
+- Las redes son deterministas en el mismo tipo de GPU. En otra GPU, o en CPU, las cifras
+  cambian algo.
+
+`models/round3/representative/` guarda, versionado, un modelo de cada red (repetición 0, vuelta 0,
+semilla 0, con la configuración elegida), con un `.json` que dice su configuración: sirve para
+inspeccionar la arquitectura sin entrenar.
 
 ## Limitaciones
 
-Explicadas en el informe ([docs/report.md](docs/report.md), sección 6). En resumen:
+Explicadas en el [informe](docs/report.md). En resumen:
 
 - **Clase y época coinciden** (DT-005): Cargo y Tug se grabaron en 2017, y Passengership y
   Tanker en 2016. El resultado de 4 clases no distingue el tipo de buque de las condiciones de
   grabación; solo las comparaciones dentro de una época están libres de ese efecto.
-- **Pocos buques:** 43 en total, y Tug solo 3. En la ronda 3, cada Tug cae en test 8 o 9 veces,
-  y el solapamiento entre particiones en esa clase es mayor del que corrige la prueba de Nadeau y
+- **Pocos buques:** 43 en total, y Tug solo 3. Cada Tug cae en test 8 o 9 veces, y el
+  solapamiento entre particiones en esa clase es mayor del que corrige la prueba de Nadeau y
   Bengio.
-- **El resultado depende mucho de la partición:** en la ronda 3 las redes varían ~0,09-0,14 de
-  F1 entre particiones, y las semillas de una misma partición ~0,03-0,09.
+- **El resultado depende mucho de la partición:** las redes varían ~0,09-0,14 de F1 entre
+  particiones, y las semillas de una misma partición ~0,03-0,09.
 - **La ROC es de clasificación**, no de detección: DeepShip no tiene grabaciones sin buque
   (DT-007).
-- **Rondas 1 y 2:** test se evaluó dos veces (la segunda, tras arreglar los fallos de la primera
-  revisión).
+- **Las figuras conjuntas** (matrices, ROC, calibración) juntan predicciones de 25 modelos
+  distintos: las cifras por partición son las de referencia.
 
 ## Procedencia
 
-Qué código produjo cada resultado, con su `code_sha256` y su commit:
-[docs/results/README.md](docs/results/README.md). La ronda 3 reentrenada, su interpretabilidad y
-sus detalles salen del código del commit `7df7a96`; la ronda 3 inicial, del de `c96865f`.
+Antes de estos resultados hubo evaluaciones exploratorias y un reentrenamiento tras corregir un
+fallo de implementación; su detalle está en el [informe completo](docs/report.md) y en
+[docs/results/README.md](docs/results/README.md), con qué código produjo cada cifra. Los
+resultados de este README salen del código del commit `7df7a96`.
 
 ## Equipo de referencia
 
@@ -916,9 +915,9 @@ Todos los tiempos y resultados de este README se midieron en:
 | Carpeta | Qué contiene |
 |---|---|
 | `datasets/` | Manifiestos versionados (`manifests/`); audios y rasgos, no (`raw/`, `processed/`). |
-| `models/` | Pesos de las rondas 1 y 2 y su configuración, versionados. En `models/round3/`, los de la ronda 3: solo se versionan los representativos (`representative/`). |
+| `models/` | En `models/round3/representative/`, los 7 modelos representativos, versionados; el resto de pesos de la validación cruzada se guarda en `models/round3/` sin versionar. Los ficheros de la raíz de `models/` son de las evaluaciones exploratorias anteriores ([docs/results/README.md](docs/results/README.md)). |
 | `docs/` | Informe, resúmenes de resultados y figuras, versionados (montada en el contenedor para `report`). |
-| `outputs/` | Resultados y figuras de cada ejecución (en `round3/`, un JSON por entrenamiento). No se suben a git. |
+| `outputs/` | Resultados de cada ejecución (en `round3/`, un JSON por entrenamiento). No se suben a git. |
 | `src/sonar_pipeline/` | Código de la pipeline. |
 | `tests/`, `tools/` | Tests y scripts de apoyo. |
 

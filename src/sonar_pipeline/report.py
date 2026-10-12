@@ -80,42 +80,44 @@ def collect_figures(source: Path, figures_dir: Path) -> list[Path]:
 
 
 def data_section(manifests_dir: Path, figures_dir: Path) -> list[str]:
-    from sonar_pipeline.figures import data_minutes, plot_data_minutes
+    """Data per class, without any fixed split (F5-T11), and the 25 partitions of round 3."""
+    from sonar_pipeline.figures import class_data, plot_class_data, plot_cv_partitions
 
-    vessels, split = manifests_dir / "vessels.csv", manifests_dir / "split.csv"
-    plot_data_minutes(vessels, split, figures_dir / "data_minutes.png")
-    table = data_minutes(vessels, split)
-    total = sum(c["minutes"] for s in table.values() for c in s.values())
-    n_vessels = sum(c["vessels"] for s in table.values() for c in s.values())
-    n_recordings = sum(c["recordings"] for s in table.values() for c in s.values())
+    vessels = manifests_dir / "vessels.csv"
+    plot_class_data(vessels, figures_dir / "data_classes.png")
+    table = class_data(vessels)
+    total = sum(c["minutes"] for c in table.values())
+    n_vessels = sum(c["vessels"] for c in table.values())
+    n_recordings = sum(c["recordings"] for c in table.values())
+    cv_splits = manifests_dir / "cv_splits.csv"
+    partitions = []
+    if cv_splits.is_file():
+        plot_cv_partitions(cv_splits, figures_dir / "data_partitions.png")
+        partitions = [
+            "![Las 25 particiones](figures/data_partitions.png)",
+            "",
+        ]
     lines = [
         "## 1. Datos",
         "",
         (
             f"Subconjunto público de DeepShip ({n_recordings} grabaciones, {n_vessels} buques, "
-            f"{num(total, 1)} minutos de audio; 4 clases). La partición es **por buque**: ningún "
-            "buque aparece en dos particiones (D-007, D-013)."
+            f"{num(total, 1)} minutos de audio; 4 clases). Toda partición es **por buque**: "
+            "ningún buque aparece en dos papeles a la vez (D-007, D-013, D-024)."
         ),
         "",
-        "| Clase | " + " | ".join(SPLIT_NAMES[s] for s in SPLIT_NAMES) + " |",
-        "|---|" + "---|" * len(SPLIT_NAMES),
-    ]
-    for cls in CLASSES:
-        cells = []
-        for split in SPLIT_NAMES:
-            c = table.get(cls, {}).get(split)
-            cells.append(
-                f"{num(c['minutes'], 1)} min · {c['vessels']} b · {c['recordings']} g"
-                if c
-                else "—"
-            )
-        lines.append(f"| {cls} | " + " | ".join(cells) + " |")
-    lines += [
+        "| Clase | Minutos | Buques | Grabaciones |",
+        "|---|---|---|---|",
+        *[
+            f"| {cls} | {num(table[cls]['minutes'], 1)} | {table[cls]['vessels']} | "
+            f"{table[cls]['recordings']} |"
+            for cls in CLASSES
+            if cls in table
+        ],
         "",
-        "b = buques, g = grabaciones.",
+        "![Datos por clase](figures/data_classes.png)",
         "",
-        "![Minutos por clase y partición](figures/data_minutes.png)",
-        "",
+        *partitions,
     ]
     return lines
 

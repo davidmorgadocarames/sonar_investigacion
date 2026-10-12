@@ -215,8 +215,9 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument(
         "--results-dir",
         type=Path,
-        default=Path("outputs/results"),
-        help="Folder for metrics.json (default: %(default)s).",
+        default=None,
+        help="Folder for metrics.json (default: outputs/results; with --round 3, docs/results, "
+        "where round3.json is versioned).",
     )
     evaluate.add_argument(
         "--figures-dir",
@@ -252,6 +253,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("outputs/round3"),
         help="--round 3: the per-training JSON written by train --round 3 "
         "(default: %(default)s).",
+    )
+    evaluate.add_argument(
+        "--check",
+        action="store_true",
+        help="--round 3: quick check (CPU, about a minute) that the 7 representative models in "
+        "models/round3/representative/ reproduce their test F1 recorded in round3.json.",
     )
     evaluate.add_argument(
         "--details",
@@ -652,14 +659,50 @@ def details_round3(args: argparse.Namespace) -> int:
     return 0
 
 
+def check_round3_cmd(args: argparse.Namespace) -> int:
+    from sonar_pipeline.check_round3 import check_round3
+    from sonar_pipeline.interpret_cv import load_round3_summary
+
+    result = check_round3(
+        args.processed_dir,
+        args.splits,
+        args.models_dir / "round3" / "representative",
+        load_round3_summary(args.results_dir / "round3.json"),
+    )
+    print(
+        "Round 3 quick check (representative models, partition rep0_fold0, seed 0, CPU):"
+    )
+    for name, entry in result["models"].items():
+        print(
+            f"  {name:<16} test F1 {entry['test_f1_macro']:.4f}  reference "
+            f"{entry['reference']:.4f}  difference {entry['difference']:+.4f}"
+        )
+    if result["problems"]:
+        print("Does NOT reproduce the round 3 results:")
+        for problem in result["problems"]:
+            print(f"  {problem}")
+        return 1
+    print(
+        f"Reproduces the round 3 results: same weights, every test F1 within "
+        f"±{result['tolerance']:g}."
+    )
+    return 0
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
+    if args.results_dir is None:
+        args.results_dir = Path(
+            "docs/results" if args.round == 3 else "outputs/results"
+        )
     if args.round == 3:
+        if args.check:
+            return check_round3_cmd(args)
         if args.details:
             return details_round3(args)
         if not args.interpretability:
             print(
-                "--round 3 is only for --interpretability or --details (test is scored by "
-                "train --round 3).",
+                "--round 3 is only for --check, --interpretability or --details (test is "
+                "scored by train --round 3).",
                 file=sys.stderr,
             )
             return 1

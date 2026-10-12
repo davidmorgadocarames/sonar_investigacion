@@ -123,7 +123,7 @@ def test_report_chapter_reads_the_numbers(round3):
     text = "\n".join(round3_section(summary, details, interp, "round3"))
     cnn = summary["models"]["cnn"]["test"]["f1_macro_segment"]
     assert f"{cnn['mean']:.3f}".replace(".", ",") in text
-    assert text.count("![Ronda 3") == 15
+    assert text.count("](figures/round3/") == 15
     for name in TOY_CONFIGS["transformer"]:
         assert f"{name} " in text
     lines = summary_lines(summary)
@@ -171,3 +171,43 @@ def test_report_shows_the_retraining_against_the_initial_results(round3):
     assert all(row.endswith("| 0,000 |") for row in rows)  # same results: no difference
     plain = "\n".join(round3_section(summary, details, interp, "round3"))
     assert "Resultados reentrenados" not in plain
+
+
+def test_quick_check_reproduces_the_round(round3, tmp_path):
+    import shutil
+
+    from sonar_pipeline.check_round3 import check_round3
+
+    tmp, _, summary, _, _ = round3
+    folder = tmp / "p"
+    representative = tmp / "models" / "round3" / "representative"
+    result = check_round3(folder, folder / "cv_splits.csv", representative, summary)
+    assert result["problems"] == []
+    assert set(result["models"]) == set(MODELS)
+    assert all(abs(m["difference"]) <= 0.01 for m in result["models"].values())
+    # Other weights or another reference are caught.
+    copy = tmp_path / "representative"
+    shutil.copytree(representative, copy)
+    (copy / "cnn.pt").write_bytes((copy / "transformer.pt").read_bytes())
+    bad = check_round3(folder, folder / "cv_splits.csv", copy, summary)
+    assert any(p.startswith("cnn: weights differ") for p in bad["problems"])
+    wrong = json.loads(json.dumps(summary))
+    wrong["models"]["baseline"]["per_partition"][0]["test_f1_macro_per_seed"] = [0.0]
+    assert check_round3(folder, folder / "cv_splits.csv", representative, wrong)[
+        "problems"
+    ]
+
+
+def test_cli_quick_check(tmp_path, capsys):
+    folder = write_round3_toy(tmp_path / "p")
+    argv = ["train", "--round", "3", "--only", "baseline", "cnn", "--max-epochs", "1"]
+    argv += ["--processed-dir", str(folder), "--splits", str(folder / "cv_splits.csv")]
+    argv += ["--models-dir", str(tmp_path / "m"), "--outputs-dir", str(tmp_path / "o")]
+    argv += ["--summary", str(tmp_path / "r" / "round3.json"), "--device", "cpu"]
+    argv += ["--bootstrap", "5"]
+    assert main(argv) == 0
+    argv = ["evaluate", "--round", "3", "--check"]
+    argv += ["--processed-dir", str(folder), "--splits", str(folder / "cv_splits.csv")]
+    argv += ["--models-dir", str(tmp_path / "m"), "--results-dir", str(tmp_path / "r")]
+    assert main(argv) == 0
+    assert "Reproduces the round 3 results" in capsys.readouterr().out

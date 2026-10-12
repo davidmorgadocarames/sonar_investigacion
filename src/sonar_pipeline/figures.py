@@ -536,3 +536,110 @@ def plot_data_minutes(vessels_csv: Path, split_csv: Path, path: Path) -> Path:
     )
     _style(ax)
     return _save(fig, path)
+
+
+def class_data(vessels_csv: Path) -> dict:
+    """Minutes of audio, recordings and vessels of every class, without any split (F5-T11)."""
+    import csv
+
+    table = {}
+    with vessels_csv.open(newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            cell = table.setdefault(
+                r["vessel_class"], {"minutes": 0.0, "recordings": 0, "vessels": set()}
+            )
+            cell["minutes"] += float(r["wav_duration_s"]) / 60
+            cell["recordings"] += 1
+            cell["vessels"].add(r["vessel_group"])
+    return {
+        cls: {**cell, "vessels": len(cell["vessels"])} for cls, cell in table.items()
+    }
+
+
+def plot_class_data(vessels_csv: Path, path: Path) -> Path:
+    """Bars: minutes of audio per class, labelled with vessels and recordings."""
+    table = class_data(vessels_csv)
+    classes = [c for c in CLASS_SHORT if c in table]
+    fig, ax = plt.subplots(figsize=(7.5, 4), layout="constrained")
+    fig.suptitle(
+        "Datos: minutos de audio, buques y grabaciones por clase",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    values = [table[c]["minutes"] for c in classes]
+    ax.bar(range(len(classes)), values, width=0.6, color=LINE)
+    for x, c, v in zip(range(len(classes)), classes, values, strict=True):
+        ax.text(
+            x,
+            v + 1,
+            f"{v:.1f} min\n".replace(".", ",")
+            + f"{table[c]['vessels']} buques · {table[c]['recordings']} grabaciones",
+            ha="center",
+            va="bottom",
+            color=INK,
+            fontsize=7.5,
+        )
+    ax.set_xticks(range(len(classes)), classes)
+    ax.set_ylabel("Minutos de audio")
+    ax.set_ylim(0, max(values) * 1.25)
+    ax.grid(axis="y", color=GRID, linewidth=0.6)
+    ax.set_axisbelow(True)
+    _style(ax)
+    return _save(fig, path)
+
+
+def cv_roles(cv_splits_csv: Path) -> tuple[list[str], list[str], np.ndarray]:
+    """(vessels sorted by class, partitions "r.k", roles matrix 0 train / 1 val / 2 test)."""
+    import csv
+
+    roles, vessels, partitions = {}, {}, set()
+    with cv_splits_csv.open(newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            key = (int(r["repetition"]), int(r["fold"]))
+            partitions.add(key)
+            vessels[r["vessel_group"]] = r["vessel_class"]
+            roles[(r["vessel_group"], key)] = SPLIT_ORDER.index(r["split"])
+    order = list(CLASS_SHORT)
+    names = sorted(vessels, key=lambda v: (order.index(vessels[v]), v))
+    keys = sorted(partitions)
+    matrix = np.array([[roles[(v, k)] for k in keys] for v in names])
+    return names, [f"{r}.{k}" for r, k in keys], matrix
+
+
+def plot_cv_partitions(cv_splits_csv: Path, path: Path) -> Path:
+    """Matrix vessels x partitions coloured by role: how every vessel rotates in the 5 x 5."""
+    from matplotlib.colors import ListedColormap
+    from matplotlib.patches import Patch
+
+    names, partitions, matrix = cv_roles(cv_splits_csv)
+    fig, ax = plt.subplots(figsize=(10, 0.17 * len(names) + 1.8), layout="constrained")
+    fig.suptitle(
+        "Validación cruzada 5 × 5: papel de cada buque en cada una de las 25 particiones",
+        color=INK,
+        fontsize=11,
+        x=0.02,
+        ha="left",
+    )
+    cmap = ListedColormap([SPLIT_COLOURS[s] for s in SPLIT_ORDER])
+    ax.imshow(matrix, cmap=cmap, vmin=0, vmax=2, aspect="auto", interpolation="nearest")
+    ax.set_xticks(range(len(partitions)), partitions, fontsize=6.5, rotation=90)
+    ax.set_yticks(range(len(names)), [n.replace("/", " · ") for n in names], fontsize=6)
+    ax.set_xlabel("Partición (repetición.vuelta)")
+    for x in np.arange(5, len(partitions), 5) - 0.5:  # between repetitions
+        ax.axvline(x, color="white", linewidth=2)
+    classes = [n.split("/")[0] for n in names]
+    for y in [i for i in range(1, len(names)) if classes[i] != classes[i - 1]]:
+        ax.axhline(y - 0.5, color="white", linewidth=2)
+    ax.legend(
+        handles=[
+            Patch(color=SPLIT_COLOURS[s], label=SPLIT_LABELS[s]) for s in SPLIT_ORDER
+        ],
+        loc="upper left",
+        bbox_to_anchor=(1.01, 1),
+        frameon=False,
+        fontsize=8,
+    )
+    _style(ax)
+    return _save(fig, path)

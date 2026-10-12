@@ -1,8 +1,8 @@
 """Figures of round 3 (F5-T08): drawn only from the versioned summaries in docs/results/.
 
 round3.json (scores per partition, comparisons), round3_details.json (speed, curves,
-generalisation, vessels, agreement, calibration, ROC) and round3_interpretability.json. Every
-title starts with "Ronda 3" so a figure seen on its own is not mixed up with rounds 1 and 2.
+generalisation, vessels, agreement, calibration, ROC) and round3_interpretability.json. The
+titles do not name the round: the README presents these results only (F5-T11).
 Each architecture has one hue; its version with augmentation is a lighter tone of it, and every
 model is also named on the axis or in the legend, so identity never relies on colour alone.
 """
@@ -77,7 +77,7 @@ def comma(value: float, digits: int = 2) -> str:
 
 
 def _title(fig, text: str) -> None:
-    fig.suptitle(f"Ronda 3 · {text}", color=INK, fontsize=11, x=0.01, ha="left")
+    fig.suptitle(text[:1].upper() + text[1:], color=INK, fontsize=11, x=0.01, ha="left")
 
 
 def _ygrid(ax) -> None:

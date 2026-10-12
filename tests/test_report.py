@@ -33,8 +33,18 @@ def write_manifests(folder: Path) -> Path:
     ]
     with (folder / "vessels.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, lineterminator="\n")
-        w.writerow(["wav_path", "wav_duration_s"])
-        w.writerows((r[0], r[4]) for r in rows)
+        w.writerow(["wav_path", "vessel_class", "vessel_group", "wav_duration_s"])
+        w.writerows((r[0], r[1], r[2], r[4]) for r in rows)
+    with (folder / "cv_splits.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow(
+            ["repetition", "fold", "wav_path", "vessel_class", "vessel_group", "split"]
+        )
+        for fold, roles in enumerate(
+            (("train", "val", "test"), ("test", "train", "val"))
+        ):
+            for r, role in zip(rows, (*roles, "train"), strict=True):
+                w.writerow([0, fold, r[0], r[1], r[2], role])
     with (folder / "split.csv").open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow(["wav_path", "vessel_class", "vessel_group", "split"])
@@ -82,8 +92,9 @@ def test_report_numbers_come_from_the_summaries(versioned, tmp_path, monkeypatch
     chance = eval2["models"]["baseline"]["test"]["segment"]["chance_f1_macro"]
     assert f"*{num(chance)}*" in text
     assert "## 5. Limitaciones" in text and "DT-005" in text and "DT-007" in text
-    assert "| Cargo | 2,0 min · 1 b · 1 g |" in text  # data table from the manifests
-    assert (tmp_path / "docs" / "figures" / "data_minutes.png").is_file()
+    assert "| Cargo | 2,0 | 1 | 1 |" in text  # data table from the manifests, no split
+    assert (tmp_path / "docs" / "figures" / "data_classes.png").is_file()
+    assert (tmp_path / "docs" / "figures" / "data_partitions.png").is_file()
 
 
 def test_report_is_reproducible(versioned, tmp_path):
