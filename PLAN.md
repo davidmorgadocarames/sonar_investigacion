@@ -5,7 +5,7 @@ quedan a alto nivel.
 
 - **Formato de tarea:** `- [ ] F1-T01 · descripción · responsable · criterio de aceptación verificable`
 - **Estados:** `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado (con motivo)
-- **Fase actual:** ninguna obligatoria: F0-F4 hechas (`v0.1`, `v0.1.1`); F5 es opcional
+- **Fase actual:** **F5 Mejoras opcionales** (F0-F4 hechas: `v0.1`, `v0.1.1`)
 
 | Fase | Nombre | Estado |
 |---|---|---|
@@ -14,7 +14,7 @@ quedan a alto nivel.
 | F2 | Señal | [x] |
 | F3 | Modelo | [x] |
 | F4 | Entrega | [x] |
-| F5 | Mejoras opcionales | [ ] |
+| F5 | Mejoras opcionales | [~] |
 
 ---
 
@@ -150,22 +150,53 @@ quedan a alto nivel.
 - [x] F4-T06 · Pasada del friend-tester (clon en `%TEMP%\tmp.XXXXXXXXXX\sonar_investigacion`, aprobado por David) · friend-tester · siguiendo solo el README por la opción A: build, descarga, `qc`, `features`, tests con `-rs` y `evaluate`; reproduce exactamente las cifras de `docs/results/eval2.json` (la reproducción se declara en la tabla de procedencia); tiempos, espacio y atascos
 - [x] F4-T07 · Reviewer, cierre de F4 y etiqueta `v0.1` · reviewer + orquestador · sin hallazgos bloqueantes; etiqueta creada y publicada
 
-## F5 · Mejoras opcionales — después de F4
+## F5 · Mejoras opcionales — [~] en curso (tareas aprobadas por David el 2026-10-12)
 
-- **Objetivo (David, 2026-10-11):** fase completamente opcional, al terminar el proyecto entero:
-  comparar con la CNN base una capa pequeña que pondere las 11 tramas de tiempo y un transformer
-  diminuto sobre trozos de frecuencia.
-- **Nota:** con 43 buques el riesgo de sobreajuste es alto; la comparación se hace con las mismas
-  reglas que F3 (val para decidir, test una sola vez).
-- **Nota (David, 2026-10-11): reducir el sobreajuste de las CNN.** En F3 las dos CNN alcanzan su
-  mejor val en las épocas 3-10 mientras la pérdida de train baja a 0,06-0,10, y el F1 de val
-  varía mucho entre semillas (ronda 1: ±0,028 sin aumento y ±0,110 con aumento; ronda 2,
-  tras F3-T12: ±0,069 y ±0,044; en la ronda 2 el mejor val llega en la época 3). Opciones a valorar: red más
-  pequeña, más dropout o weight decay, lr más bajo, más aumento de datos, promediar semillas.
-  Cualquier cambio se aplica igual a las dos CNN (mismo weight decay y misma curva de lr) para
-  que la comparación siga siendo justa. **Test ya se habrá mirado en F3-T09**, así que el
-  informe debe declarar que estas mejoras se hicieron después.
-- **Nota (D-023, David, 2026-10-11): reproducción en ARM.** Construir la imagen para
-  `linux/arm64` con `docker buildx` (emulación) y comprobar `evaluate` con
-  `tools/check_reproduction.py`; puntúa test solo para comprobar la reproducción y se
-  declara en la tabla de procedencia.
+- **Objetivo:** ronda 3 con **7 modelos** (línea base; CNN, transformer e híbrido CNN +
+  transformer, cada uno sin y con aumento de datos), evaluados con **validación cruzada repetida
+  5 × 5** por buque, para reducir el sobreajuste de las CNN y comparar arquitecturas.
+- **Entregable:** particiones 5 × 5 versionadas, motor de validación cruzada, transformer e
+  híbrido, `docs/results/round3.json`, informe y README ampliados, etiqueta `v0.2`.
+- **Principios (David, 2026-10-12):**
+  - Nunca modelos preentrenados: todo se entrena desde cero con el DeepShip descargado.
+  - 25 particiones 60/20/20 por buque (5 repeticiones × 5 folds, rotando entrenamiento,
+    validación y test), equilibrando clases y minutos; cada buque en test 5 veces; las mismas
+    para los 7 modelos. Justificación con literatura en el README.
+  - 4 configuraciones por tipo de red (compartidas entre sin y con aumento), elegidas con la media
+    de validación de las 25 particiones y 1 semilla; **test nunca interviene en ninguna
+    elección**. Modelo final: 25 particiones × 3 semillas, probabilidades promediadas.
+  - Técnicas: AdamW, weight decay sin sesgos ni normalizaciones, minibatches, decaimiento del lr;
+    transformer e híbrido con calentamiento del lr, RMSNorm, RoPE, SwiGLU y GQA configurable; CNN
+    con BatchNorm y LeakyReLU.
+  - Comparación entre modelos con la prueba t corregida de Nadeau y Bengio.
+  - Un JSON por entrenamiento: MLOps (trazabilidad), coste y rendimiento (parámetros, MFLOPs,
+    FLOPs de entrenamiento, segmentos/s, tokens/s, latencia, memoria de GPU, tiempos por fase),
+    curva de aprendizaje, resultados (con calibración y predicciones por grabación), datos de la
+    partición e interpretabilidad.
+  - Diseño fijado por escrito (D-024) antes de ver resultados; las rondas 1 y 2 se conservan
+    aparte, declarando que sus buques de test ya se habían mirado.
+  - **Avisar a David con el tiempo medido y esperar su visto bueno antes de cada entrenamiento.**
+  - README y documentación **organizados por etapas**: cronología (F1-F2, rondas 1 y 2 en F3,
+    entrega F4, ronda 3 en F5), uso común separado de los resultados, ronda 3 como evaluación
+    principal y rondas 1 y 2 como histórico no comparable directamente; figuras y resúmenes en
+    carpetas por ronda y cada figura con su ronda en el título.
+- **Fuera de F5 (David, 2026-10-12):** la prueba en ARM (el amigo no usa Mac) y cualquier modelo
+  preentrenado.
+- **Criterio de salida:** los 7 modelos evaluados con el 5 × 5, comparados con la prueba de
+  Nadeau y Bengio; informe y README organizados por etapas; la pasada del reviewer no deja
+  hallazgos graves abiertos; etiqueta `v0.2`.
+
+- [~] F5-T01 · Protocolo y diseño fijado (D-024) y sección del README con la literatura · orquestador → David · D-024 aprobada con las configuraciones A-D de cada tipo de red, la rejilla de C, el calentamiento, las reglas de elección y las semillas, la política de pesos y la reproducción por el amigo; sección "Protocolo de F5" del README con las 9 referencias
+- [ ] F5-T02 · Particiones 5 × 5 por buque · data-engineer · `datasets/manifests/cv_splits.csv` versionado: 25 particiones 60/20/20 con minutos equilibrados, cada buque en test 5 veces, al menos un Tug en entrenamiento en cada partición; sin fugas en ninguna; al regenerarlo salen los mismos bytes
+- [ ] F5-T03 · Motor de validación cruzada y JSON por entrenamiento · orquestador · entrena y evalúa cualquier modelo en las 25 particiones, elige con validación, combina semillas, se puede reanudar; JSON por entrenamiento, por modelo y global con todos los datos acordados; prueba de Nadeau y Bengio; tests sintéticos, incluido uno que demuestra que test no entra en la elección
+- [ ] F5-T04 · Transformer puro · orquestador · trozos de 40 Hz del LOFAR y DEMON, RMSNorm, atención con RoPE y GQA, SwiGLU, calentamiento, mapas de atención; tests: aprende un toy, GQA con tantos grupos como cabezas equivale a la atención clásica, RoPE depende solo de la distancia, determinismo en CUDA
+- [ ] F5-T05 · Híbrido CNN + transformer · orquestador · bloques CNN sobre el LOFARgram → secuencia en frecuencia → bloques transformer como en F5-T04; tests equivalentes
+- [ ] F5-T06 · Ronda 3: los 7 modelos · orquestador · tiempo por época medido y visto bueno de David antes de lanzar; por bloques (línea base y CNN, híbrido, transformer) con commit entre bloques; `docs/results/round3.json` y procedencia
+- [ ] F5-T07 · Interpretabilidad · orquestador · saliencia, oclusión y atención de las configuraciones finales sobre validación; comparación con las bandas de época (DT-005)
+- [ ] F5-T08 · Gráficas, informe y README · orquestador · las 15 gráficas y análisis acordados en el informe; en el README, diagrama de caja del F1 de test, comparación por parejas o efecto del aumento, precisión frente a coste, matrices conjuntas e interpretabilidad, cada una explicada; README e informe organizados por etapas; tabla de procedencia actualizada
+- [ ] F5-T09 · Reviewer, cierre de F5 y etiqueta `v0.2` · reviewer + orquestador · sin hallazgos críticos ni altos abiertos; etiqueta publicada
+
+- **Contexto previo (F3 y F4):** en F3 las dos CNN alcanzan su mejor val en las épocas 3-10
+  mientras la pérdida de train baja a 0,06-0,10, y el F1 de val varía mucho entre semillas (ronda
+  1: ±0,028 sin aumento y ±0,110 con aumento; ronda 2: ±0,069 y ±0,044). Test se miró en F3-T09 y
+  F3-T12: el informe declara que la ronda 3 llega después.
