@@ -1,0 +1,19 @@
+{
+  "code_sha256": "50fb6ba435865ee38a84f3f9a9019ad44763478a8d3a68f32e1dd20df1d3f7f2",
+  "config": "B",
+  "cv_splits_sha256": "7a5b1da0e46286b2cbf1103c37d3d9febfa98b18fc6bae67439961aa19850bb2",
+  "hyperparameters": {
+    "dim": 64,
+    "dropout": 0.3,
+    "groups": 2,
+    "heads": 4,
+    "layers": 1,
+    "lr": 0.0005,
+    "weight_decay": 0.05
+  },
+  "model": "transformer_aug",
+  "partition": "rep0_fold0",
+  "schema": 1,
+  "seed": 0,
+  "weights_sha256": "7a4023857bf7f208b3c4273f1eb5540fd80b00379acd8284799c1e46c16e8c5f"
+}

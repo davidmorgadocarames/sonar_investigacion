@@ -1,0 +1,19 @@
+{
+  "code_sha256": "50fb6ba435865ee38a84f3f9a9019ad44763478a8d3a68f32e1dd20df1d3f7f2",
+  "config": "B",
+  "cv_splits_sha256": "7a5b1da0e46286b2cbf1103c37d3d9febfa98b18fc6bae67439961aa19850bb2",
+  "hyperparameters": {
+    "dim": 64,
+    "dropout": 0.3,
+    "groups": 2,
+    "heads": 4,
+    "layers": 1,
+    "lr": 0.0005,
+    "weight_decay": 0.05
+  },
+  "model": "transformer",
+  "partition": "rep0_fold0",
+  "schema": 1,
+  "seed": 0,
+  "weights_sha256": "24067749b48355bf983722b59eeb6c5f25c316308e29d380190796e7b0cec26f"
+}

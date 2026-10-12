@@ -17,6 +17,26 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5-T06 cerrada: ronda 3 completa (7 modelos, 5 × 5)
+- **Qué se hizo:** ronda 3 en la RTX 4060, en tres bloques seguidos (04:51-06:33, unas
+  1 h 40 min), sin fallos, con commit y push tras cada bloque (autorizado por David). F1 macro
+  de test por segmento (media ± desviación de las 25 particiones; azar medido 0,242):
+  línea base (C = 10) 0,331 ± 0,046; CNN (config. C) 0,316 ± 0,135; CNN con aumento (D)
+  0,299 ± 0,130; híbrido (B) 0,343 ± 0,126; híbrido con aumento (A) 0,340 ± 0,139; transformer
+  (B) 0,235 ± 0,080; transformer con aumento (B) 0,240 ± 0,085. Ninguna de las 13 comparaciones
+  es significativa con Holm; la más cercana es transformer frente a línea base (−0,096,
+  p = 0,052, Holm 0,68). Dentro de época (azar ≈ 0,5): 2017 (Cargo frente a Tug) híbrido 0,71
+  y CNN 0,66; 2016 (Passengership frente a Tanker) todos entre 0,49 y 0,59. Memoria de GPU
+  máxima 571 MiB. Todo en `docs/results/round3.json`; pesos representativos en
+  `models/round3/representative/`; JSON por entrenamiento en `outputs/round3/` (no versionados).
+- **Qué quedó a medias:** nada de F5-T06. Sin interpretar todavía con David.
+- **Ficheros tocados:** `docs/results/round3.json`, `models/round3/representative/`, `PLAN.md`,
+  `HANDOFF.md`.
+- **Cómo verificarlo:** `python -c "import json; print(json.load(open('docs/results/round3.json'))['comparisons'])"`
+  y `outputs/round3/run.log`.
+- **Siguiente paso exacto:** revisar los resultados con David y empezar F5-T07
+  (interpretabilidad de las configuraciones finales sobre validación).
+
 ## 2026-10-12 · F5-T03, T04 y T05 cerradas; ronda 3 lanzada (F5-T06)
 - **Qué se hizo:** motor de la ronda 3 (`src/sonar_pipeline/cv.py`) y comando único
   `train --round 3` (`--only`, `--measure`); transformer e híbrido
@@ -103,18 +123,3 @@ Plantilla:
 - **Ficheros tocados:** `DECISIONS.md`, `README.md`, `PLAN.md`, `HANDOFF.md`.
 - **Cómo verificarlo:** leer D-024 y la sección del protocolo en el README.
 - **Siguiente paso exacto:** F5-T02: particiones 5 × 5 con el subagente data-engineer.
-
-## 2026-10-11 · README con las gráficas explicadas (`v0.1.1`)
-- **Qué se hizo:** a petición de David, la sección "En gráficas" del README explica cada figura:
-  qué son Cargo, Passengership, Tanker y Tug, y entrenamiento, validación y test (y por qué se
-  parte por buque); qué son LOFAR y DEMON y qué prueban los 440 Hz y 12 Hz sintéticos; cómo leer
-  el LOFARgram y el DEMON del MALASPINA (líneas tonales hacia 80, 594 y 682 Hz; eje hacia
-  2,8-3 Hz; paso de pala cada 11,3 Hz y armónicos, que sugieren 4 palas; cifras comprobadas con
-  los rasgos); los tres modelos, las dos rondas y cómo leer el F1 con intervalos y azar; las
-  matrices de confusión y por qué las CNN colapsan hacia una clase (explicación razonada, no
-  demostrada); y qué mide el eje vertical de cada panel de bandas. Solo el README (no el
-  informe). Etiqueta `v0.1.1` sobre este commit (`v0.1` no se mueve, regla 9).
-- **Qué quedó a medias:** nada.
-- **Ficheros tocados:** `README.md`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** ver el README en GitHub en la etiqueta `v0.1.1`.
-- **Siguiente paso exacto:** ninguno obligatorio; F5 (opcional) si David la pide.
