@@ -1,0 +1,19 @@
+{
+  "code_sha256": "50fb6ba435865ee38a84f3f9a9019ad44763478a8d3a68f32e1dd20df1d3f7f2",
+  "config": "B",
+  "cv_splits_sha256": "7a5b1da0e46286b2cbf1103c37d3d9febfa98b18fc6bae67439961aa19850bb2",
+  "hyperparameters": {
+    "dim": 64,
+    "dropout": 0.3,
+    "groups": 2,
+    "heads": 4,
+    "layers": 1,
+    "lr": 0.0005,
+    "weight_decay": 0.05
+  },
+  "model": "hybrid",
+  "partition": "rep0_fold0",
+  "schema": 1,
+  "seed": 0,
+  "weights_sha256": "fb9f1b1fb1127065b51bcd7e5cb5c20646e297091cdd7e04175369203ae65510"
+}
