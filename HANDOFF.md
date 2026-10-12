@@ -17,6 +17,21 @@ Plantilla:
 
 ---
 
+## 2026-10-12 · F5 empezada; F5-T01 cerrada: protocolo de la ronda 3 (D-024)
+- **Qué se hizo:** David aprobó F5 (9 tareas, sin ARM ni preentrenados) y D-024: validación
+  cruzada repetida 5 × 5 por buque (60/20/20, rotando entrenamiento, validación y test; cada buque
+  en test 5 veces), 7 modelos (línea base; CNN, transformer puro e híbrido, sin y con aumento),
+  4 configuraciones A-D por tipo de red elegidas con la media de validación y 1 semilla, modelo
+  final con 3 semillas promediadas, técnicas (AdamW, calentamiento, RMSNorm, RoPE, SwiGLU, GQA),
+  prueba de Nadeau y Bengio con Holm, JSON por entrenamiento (MLOps, MFLOPs, tokens/s...), pesos
+  de F5 sin versionar, reproducción por el amigo opcional y solo GPU. README: sección "Ronda 3
+  (F5, en curso): protocolo de evaluación" con 9 referencias verificadas; "En gráficas" titulada
+  como rondas 1 y 2. La reorganización completa por etapas del README va en F5-T08.
+- **Qué quedó a medias:** nada.
+- **Ficheros tocados:** `DECISIONS.md`, `README.md`, `PLAN.md`, `HANDOFF.md`.
+- **Cómo verificarlo:** leer D-024 y la sección del protocolo en el README.
+- **Siguiente paso exacto:** F5-T02: particiones 5 × 5 con el subagente data-engineer.
+
 ## 2026-10-11 · README con las gráficas explicadas (`v0.1.1`)
 - **Qué se hizo:** a petición de David, la sección "En gráficas" del README explica cada figura:
   qué son Cargo, Passengership, Tanker y Tug, y entrenamiento, validación y test (y por qué se
@@ -91,20 +106,3 @@ Plantilla:
   pipeline -m pytest -q`.
 - **Siguiente paso exacto:** F4-T06: pasada del friend-tester (clon en la carpeta temporal
   aprobada; opción A; debe reproducir `docs/results/eval2.json`).
-
-## 2026-10-11 · F4-T04 cerrada: README completo
-- **Qué se hizo:** README reescrito: resultado en una frase con enlace al informe; requisitos y
-  por qué no hace falta virtualenv (D-021); opción A (CPU) y B (GPU NVIDIA con `.env`);
-  "Comprobar la instalación" con `-rs` y qué saltos son normales; datos; QC y rasgos; evaluar
-  con los pesos entrenados (cifras que deben salir, idénticas a `docs/results/eval2.json`);
-  `report`; reentrenar (tiempos: medidos en GPU y para la línea base, estimados para las CNN en
-  CPU; los pesos versionados se entrenaron en GPU); limitaciones; carpetas; cita exacta de
-  DeepShip y supuesto de licencia. **Corrección encontrada al probarlo:** en Windows `.env` con
-  solo `COMPOSE_FILE=compose.yaml:compose.gpu.yaml` falla (el separador por defecto es `;`);
-  hace falta `COMPOSE_PATH_SEPARATOR=:` delante. Comprobado con `docker compose config
-  --images` (da `sonar-pipeline:gpu`) y corregido en el README y en `compose.gpu.yaml`. D-019 cita
-  la versión antigua: pendiente de que David apruebe el ajuste (regla 2). Sin entrenamientos.
-- **Qué quedó a medias:** el ajuste de D-019 y la nota de Linux (UID), que llega con F4-T05.
-- **Ficheros tocados:** `README.md`, `compose.gpu.yaml`, `PLAN.md`, `HANDOFF.md`.
-- **Cómo verificarlo:** leer el README; `docker compose config --images` con y sin `.env`.
-- **Siguiente paso exacto:** F4-T05: pagar DT-001 (UID y GID del host).

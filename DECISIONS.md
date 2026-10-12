@@ -463,6 +463,63 @@ anterior se apunta como entrada nueva que la sustituye, y la antigua no se borra
 - **Motivo:** dar al amigo un criterio claro y una salida en esos casos sin añadir
   infraestructura. Aprobado por David.
 
+### D-024 · Protocolo de la ronda 3 (F5), fijado antes de ver resultados
+- **Fecha:** 2026-10-12
+- **Contexto:** F5 compara 7 modelos (línea base; CNN, transformer puro e híbrido CNN +
+  transformer, cada uno sin y con aumento de datos). Test fijo ya se miró dos veces (rondas 1 y
+  2) y val tiene solo 13 grabaciones, muy inestable. David pidió evaluar rotando también test y
+  justificar los números con literatura.
+- **Decisión:**
+  - **Particiones:** validación cruzada repetida **5 × 5 = 25 particiones**. En cada repetición
+    (semillas 0 a 4) los 43 buques se reparten al azar en 5 folds por clase, con buques enteros y
+    minutos equilibrados; en la vuelta k, test = fold k, validación = fold k + 1 (circular),
+    entrenamiento = los otros 3 (60/20/20). Cada buque pasa una vez por test y una por
+    validación en cada repetición; sin fugas; al menos un buque de Tug en entrenamiento en cada
+    partición. Las 25 particiones son las mismas para los 7 modelos.
+  - **Elección:** semilla 0; la configuración con mejor media del F1 macro de validación por
+    segmento sobre las 25 particiones; empates a la primera de la lista (la más simple). **Test no
+    interviene en ninguna elección.**
+  - **Modelo final:** semillas 0, 1 y 2 en las 25 particiones; probabilidades promediadas (y cada
+    semilla guardada por separado).
+  - **Entrenamiento común:** AdamW, minibatches de 32, hasta 60 épocas con parada temprana
+    (paciencia 10) por F1 de validación, pérdida con pesos por clase, ReduceLROnPlateau (× 0,5
+    tras 3 épocas sin mejora), sin weight decay en sesgos ni normalizaciones, determinismo y 4
+    hilos. Aumento ("con aumento"): el de D-018, igual en las tres arquitecturas y antes de
+    trocear. Transformer e híbrido: calentamiento lineal de 5 épocas desde el 10 % del lr.
+  - **Configuraciones** (A, la más simple):
+    - Línea base: C ∈ {0,001; 0,01; 0,1; 1; 10}.
+    - CNN (D-018): A filtros 16-32-64 / 16-32, dropout 0,3, wd 1e-2, lr 1e-3; B filtros
+      8-16-32 / 8-16; C dropout 0,5 y wd 5e-2; D lr 3e-4 (el resto como A).
+    - Transformer puro: 50 tokens de 40 Hz del LOFAR (20 bins × 11 tramas; se descarta el bin de
+      2000 Hz), 1 token del DEMON y 1 token de clase (52); capa lineal; bloques pre-norm con
+      RMSNorm, atención con RoPE sobre la posición en frecuencia (DEMON y clase sin posición) y
+      GQA, y SwiGLU (oculta ≈ 8/3 de la dimensión); clasificación desde el token de clase; lr
+      5e-4, wd 5e-2. A: dim 32, 1 capa, 2 cabezas / 1 grupo, dropout 0,3; B: dim 64, 1 capa,
+      4 / 2, 0,3; C: dim 64, 2 capas, 4 / 2, 0,3; D: como C con dropout 0,5.
+    - Híbrido: los dos primeros bloques de la CNN sobre el LOFARgram (62 posiciones × 32
+      canales, media en el tiempo) como tokens, más un token del DEMON (rama 1D) y uno de clase;
+      bloques transformer y configuraciones A-D como el transformer.
+  - **Métricas:** cifra principal, F1 macro de test por segmento (4 clases), media ± desviación
+    sobre las 25 particiones; además por grabación, dentro de cada época, matriz de confusión
+    conjunta, azar medido, calibración y el JSON por entrenamiento acordado (MLOps, MFLOPs, FLOPs
+    de entrenamiento, segmentos/s, tokens/s, latencia, memoria de GPU, tiempos por fase, curvas,
+    predicciones por grabación, interpretabilidad).
+  - **Comparaciones fijadas de antemano** con la prueba t corregida de Nadeau y Bengio y
+    corrección de Holm: cada red frente a la línea base; con aumento frente a sin aumento en cada
+    arquitectura; transformer frente a CNN e híbrido frente a CNN.
+  - **Pesos:** los de F5 no se versionan (1050 modelos; se regeneran con el código, las
+    particiones y las semillas); se versionan `docs/results/round3.json` y la procedencia. Los
+    JSON por entrenamiento quedan en `outputs/`.
+  - **Reproducción por el amigo:** opcional y solo con GPU (unas 3,5 h); el informe y las
+    gráficas se regeneran sin entrenar desde los resúmenes versionados.
+  - **Nunca modelos preentrenados.** Las rondas 1 y 2 se conservan como histórico, declarando que
+    sus buques de test ya se habían mirado; cualquier cambio de este diseño después de ver
+    resultados se anota como ajuste.
+- **Motivo:** la variación por partición pesa más que la de semilla (Bouthillier et al., 2021);
+  la validación cruzada repetida estima mejor que el hold-out repetido (Kim, 2009); 5 folds
+  permiten el 60/20/20 con Tug en entrenamiento; 5 repeticiones como en UniqueShip (Hashemi et
+  al., 2026). Referencias completas en el README. Aprobado por David.
+
 ## Deuda técnica
 
 | ID | Descripción | Por qué se acepta | Impacto | Cuándo pagarla | Estado |

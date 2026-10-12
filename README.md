@@ -12,9 +12,11 @@ WAV → control de calidad → preprocesado → LOFAR y DEMON → clasificador �
 lo supera, así que con estos datos no se puede afirmar que se reconozca la firma del buque.
 Informe completo: [docs/report.md](docs/report.md).
 
-## En gráficas
+## En gráficas (rondas 1 y 2, F3)
 
-Las figuras principales, con lo necesario para leerlas. Las cifras completas están en el informe.
+Las figuras principales de las rondas 1 y 2 (partición fija), con lo necesario para leerlas.
+Las cifras completas están en el informe. La ronda 3 (F5) está en curso: ver su protocolo más
+abajo.
 
 ### 1. Datos
 
@@ -152,6 +154,62 @@ misma época, lo que encaja con la limitación de la época.
 épocas**. Las CNN dependen sobre todo de **0-40 Hz**, frecuencias muy bajas donde dominan el ruido
 del mar y de la plataforma de grabación más que la firma del buque. Todas las importancias son
 pequeñas: ninguna banda decide por sí sola.
+
+## Ronda 3 (F5, en curso): protocolo de evaluación
+
+La ronda 3 compara **7 modelos**: la línea base y, sin y con aumento de datos, una CNN, un
+transformer y un híbrido CNN + transformer, todos entrenados desde cero con estos datos (nunca
+preentrenados). El diseño completo está fijado antes de ver resultados en
+[D-024](DECISIONS.md).
+
+**Validación cruzada repetida 5 × 5.** Los 43 buques se reparten al azar en 5 grupos por clase
+(buques enteros, minutos equilibrados); en cada vuelta un grupo es test, otro validación y los
+otros tres entrenamiento (60/20/20), y se rota hasta que cada buque ha estado una vez en test. Se
+repite 5 veces con repartos distintos: **25 particiones**, cada buque en test 5 veces. La
+configuración de cada modelo se elige con la media de validación de las 25 (test nunca
+interviene) y el modelo final se entrena con 3 semillas por partición.
+
+**Por qué así (literatura):**
+
+| Referencia | Qué aporta a esta decisión |
+|---|---|
+| Kohavi (1995) | La validación cruzada estratificada es el método recomendado para elegir modelo; 10 folds es el estándar clásico. Aquí se usan 5 para poder repartir entrenamiento, validación y test 60/20/20 y que Tug (3 buques) quede siempre en entrenamiento. |
+| Dietterich (1998) | Comparar algoritmos exige repetir con particiones distintas (prueba 5×2cv), porque mide la variación debida a qué datos tocan en entrenamiento. |
+| Bouckaert y Frank (2004) | Un resultado es poco replicable si depende de la partición concreta; proponen repetir la validación cruzada (10×10). |
+| Kim (2009) | Con el mismo cómputo, la validación cruzada repetida estima mejor que el *hold-out* repetido (Monte Carlo) y que el bootstrap: por eso rotar y no solo sortear particiones. |
+| Bengio y Grandvalet (2004) | La varianza de la validación cruzada se subestima si se tratan los folds como independientes. |
+| Nadeau y Bengio (2003) | Prueba t corregida para remuestreo, que tiene en cuenta ese solapamiento: la que se usa para comparar modelos. |
+| Varma y Simon (2006) | Elegir hiperparámetros e informar con la misma validación es optimista: aquí se elige con validación y se informa con test, que no interviene en la elección. |
+| Bouthillier et al. (2021) | La variación por partición de los datos pesa más que la de la semilla: más particiones antes que más semillas. |
+| Hashemi et al. (2026), *UniqueShip* | En sonar pasivo hay que partir por buque; usan 5 repeticiones con buques disjuntos, y al quitar las fugas en DeepShip el F1 cae de ~0,70 a ~0,56. |
+
+Referencias:
+
+- Kohavi, R. (1995). A study of cross-validation and bootstrap for accuracy estimation and model
+  selection. *IJCAI*, 1137-1145. [dblp](https://dblp.uni-trier.de/rec/conf/ijcai/Kohavi95.html)
+- Dietterich, T. G. (1998). Approximate statistical tests for comparing supervised classification
+  learning algorithms. *Neural Computation*, 10(7), 1895-1923.
+  [Semantic Scholar](https://www.semanticscholar.org/paper/Approximate-Statistical-Tests-for-Comparing-Dietterich/22f0579f212dfb568fbda317cba67c8654d84ccd)
+- Bouckaert, R. R. y Frank, E. (2004). Evaluating the replicability of significance tests for
+  comparing learning algorithms. *PAKDD*, LNCS 3056.
+  [Springer](https://link.springer.com/chapter/10.1007/978-3-540-24775-3_3)
+- Kim, J.-H. (2009). Estimating classification error rate: Repeated cross-validation, repeated
+  hold-out and bootstrap. *Computational Statistics & Data Analysis*, 53(11), 3735-3745.
+  [RePEc](https://ideas.repec.org/a/eee/csdana/v53y2009i11p3735-3745.html)
+- Bengio, Y. y Grandvalet, Y. (2004). No unbiased estimator of the variance of K-fold
+  cross-validation. *JMLR*, 5, 1089-1105.
+  [JMLR](https://www.jmlr.org/papers/volume5/grandvalet04a/grandvalet04a.pdf)
+- Nadeau, C. y Bengio, Y. (2003). Inference for the generalization error. *Machine Learning*,
+  52, 239-281. [Springer](https://link.springer.com/content/pdf/10.1023/a:1024068626366.pdf)
+- Varma, S. y Simon, R. (2006). Bias in error estimation when using cross-validation for model
+  selection. *BMC Bioinformatics*, 7, 91.
+  [resumen](https://transferlab.ai/refs/varma_bias_2006/)
+- Bouthillier, X. et al. (2021). Accounting for variance in machine learning benchmarks.
+  *MLSys*.
+  [MLSys](https://proceedings.mlsys.org/paper_files/paper/2021/file/0184b0cd3cfb185989f858a1d9f5c1eb-Paper.pdf)
+- Hashemi, C., Stout, T., Hoogs, A. y Parham, J. (2026). UniqueShip: Mitigating data leakage in
+  acoustic ship classification benchmark datasets. arXiv:2609.13659.
+  [arXiv](https://arxiv.org/html/2609.13659)
 
 ## Requisitos
 
