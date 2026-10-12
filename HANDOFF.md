@@ -23,10 +23,13 @@ Plantilla:
   para que después la ronda 3 corra con un solo comando sin acciones suyas (quiere dejarla
   entrenando de noche). Diseño en D-024 y su ajuste 1; particiones en
   `datasets/manifests/cv_splits.csv`.
-- **Qué quedó a medias:** F5-T03 recién empezada (sin código aún). Preguntas a David pendientes
-  de respuesta: autorización para lanzar la ronda 3 sin esperarle si los tests pasan y la
-  estimación medida es ≤ 4 h de GPU; qué hacer si un bloque falla; commit y push automáticos de
-  los resultados.
+- **Qué quedó a medias:** F5-T03 recién empezada. **Respuestas de David (2026-10-12):**
+  autoriza lanzar la ronda 3 sin esperarle si todos los tests pasan (sin límite de horas dado);
+  ejecutar los entrenamientos **en serie**; **medir antes la memoria de GPU** de cada red; si un
+  bloque falla, **seguir con los demás** y anotarlo; al terminar, **commit y push automáticos**
+  de `docs/results/round3.json` y de la entrada de HANDOFF. Deja el PC encendido con Docker y la
+  sesión abiertos. **Pesos:** quiere todos los pesos guardados, cada modelo en su propio
+  directorio (p. ej. `models/round3/<modelo>/...`); pendiente de confirmar si se versionan en git.
 - **Ficheros tocados:** `PLAN.md`, `HANDOFF.md`.
 - **Cómo verificarlo:** PLAN.md (F5-T03 en `[~]`).
 - **Siguiente paso exacto:** escribir el motor de F5-T03 (`src/sonar_pipeline/cv.py`: entrena
